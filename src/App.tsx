@@ -4,15 +4,30 @@ import Controls from "./components/Controls";
 import JSONDataService from "./services/JSONDataService";
 import { DataType } from "./services/DataType";
 import useRaf from "@rooks/use-raf";
+import { Stage, Container, Sprite } from '@inlet/react-pixi'
 
 
 const App = () => {
   const data: DataType = JSONDataService('./data/data.json');
+  const stageProps = {
+    height: 1024,
+    width: 640,
+    options: {
+      backgroundAlpha: 0,
+      antialias: true,
+    },
+  }
 
   return (
     <div id="wrapper">
       <div id="canvasWrapper">
-        <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
+        <Stage
+          {...stageProps}
+        >
+          <Sprite
+            image="https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/coin.png"
+          />
+        </Stage>
       </div>
       <div id="controls">
         <button id="playPause">pause</button>
