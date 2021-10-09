@@ -1,47 +1,43 @@
-const Mesh = () => {
-  const pointsMesh    = [];
-  const trianglesMesh = [];
+import Triangle from "./Triangle";
+import Point3D from "./Point3D";
 
-  const renderMesh = (container) => {
-    for (const i in trianglesMesh) {
-      trianglesMesh[i].render(container);
+
+class Mesh {
+  pointsMesh: Point3D[] = [];
+  trianglesMesh: Triangle[] = [];
+
+  renderMesh(container: any) {
+    for (const i in this.trianglesMesh) {
+      this.trianglesMesh[i].render(container);
     }
   }
 
-  const changeFocal = (value) => {
-    for (const i in trianglesMesh) {
-      trianglesMesh[i].changeFocal(value);
+  changeFocal(value: number) {
+    for (const i in this.trianglesMesh) {
+      this.trianglesMesh[i].changeFocal(value);
     }
   };
 
-  const changeOffsetZ = (value) => {
-    for (const i in trianglesMesh) {
-      trianglesMesh[i].changeOffsetZ(value);
+  changeOffset(value: number) {
+    for (const i in this.trianglesMesh) {
+      this.trianglesMesh[i].changeOffsetZ(value);
     }
   };
 
-  const transformMesh = (rot) => {
-    for (const i in pointsMesh) {
-      pointsMesh[i].transformPt(rot);
+  transformMesh(rot: number[][]) {
+    for (const i in this.pointsMesh) {
+      this.pointsMesh[i].transformPt(rot);
     }
   };
 
-  const setMesh = (points, triangles) => {
-    for (const i in pointsMesh) {
-      pointsMesh[i] = points[i];
+  setMesh(points: Point3D[], triangles: Triangle[]) {
+    for (const i in this.pointsMesh) {
+      this.pointsMesh[i] = points[i];
     }
 
     for (const i in triangles) {
-      trianglesMesh [i] = triangles[i];
+      this.trianglesMesh [i] = triangles[i];
     }
-  }
-
-  return {
-    renderMesh,
-    changeFocal,
-    changeOffsetZ,
-    transformMesh,
-    setMesh,
   }
 };
 

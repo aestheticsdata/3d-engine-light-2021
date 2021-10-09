@@ -1,9 +1,10 @@
-export type Point2DType = (x: number, y: number) => {x: number, y: number};
+class Point2D {
+  x: number;
+  y: number;
 
-const Point2D: Point2DType = (x, y) => {
-  return {
-    x,
-    y,
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
   }
 }
 

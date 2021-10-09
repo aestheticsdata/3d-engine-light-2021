@@ -15,15 +15,16 @@ const make3DObjects = (jsonData: DataType) => {
     const trianglesTmp = [];
 
     for (const n in pointsJSON) {
-      pointsTmp.push(Point3D(pointsJSON[n][0], pointsJSON[n][1], pointsJSON[n][2]));
+      pointsTmp.push(new Point3D(pointsJSON[n][0], pointsJSON[n][1], pointsJSON[n][2]));
     }
 
     for (const m in trianglesJSON) {
-      trianglesTmp.push(Triangle(
-        pointsTmp[ trianglesJSON[m][0] ],
-        pointsTmp[ trianglesJSON[m][1] ],
-        pointsTmp[ trianglesJSON[m][2] ],
-        trianglesJSON[m][3]));
+      trianglesTmp.push(new Triangle(
+        pointsTmp[trianglesJSON[m][0]],
+        pointsTmp[trianglesJSON[m][1]],
+        pointsTmp[trianglesJSON[m][2]],
+        trianglesJSON[m][3])
+      );
     }
 
     objects3D.push({points: pointsTmp, triangles: trianglesTmp});

@@ -1,41 +1,40 @@
-const Matrix3D = () => {
-  let roll;
-  let pitch;
-  let yaw;
+class Matrix3D {
+  roll!: number[][];
+  pitch!: number[][];
+  yaw!: number[][];
+  cos: number = 0;
+  sin: number = 0;
 
-  let cos = 0, sin = 0;
+  setMatrix3D() {
+    this.roll = [
+      [this.cos, -this.sin, 0, 0],
+      [this.sin,  this.cos, 0, 0],
+      [0,         0,        1, 0],
+      [0,         0,        0, 1],
+    ];
 
-  const setMatrix3D = function () {
-    roll  = [[cos, -sin, 0, 0],
-            [sin,  cos, 0, 0],
-            [0,    0  , 1, 0],
-            [0,    0  , 0, 1]];
+    this.pitch = [
+      [1,  0,         0,        0],
+      [0,  this.cos, -this.sin, 0],
+      [0,  this.sin,  this.cos, 0],
+      [0,  0,         0,        1],
+    ];
 
-    pitch = [[1,  0  ,  0  , 0],
-            [0,  cos, -sin, 0],
-            [0,  sin,  cos, 0],
-            [0,  0  ,  0  , 1]];
-
-    yaw = [[ cos, 0,  sin, 0],
-          [ 0  , 1,  0  , 0],
-          [-sin, 0,  cos, 0],
-          [ 0  , 0,  0  , 1]];
+    this.yaw = [
+      [ this.cos, 0,  this.sin, 0],
+      [0,         1,  0,        0],
+      [-this.sin, 0,  this.cos, 0],
+      [0,         0,  0,        1],
+    ];
   };
 
-  const setAngle = function (agl) {
-    let angle = agl * (Math.PI/180); // radian angle
+  setAngle(agl: number) {
+    let angle = agl * (Math.PI / 180); // radian angle
 
-    cos = Math.cos(angle);
-    sin = Math.sin(angle);
+    this.cos = Math.cos(angle);
+    this.sin = Math.sin(angle);
 
-    setMatrix3D();
-  };
-
-  return {
-    roll,
-    pitch,
-    yaw,
-    setAngle,
+    this.setMatrix3D();
   };
 }
 

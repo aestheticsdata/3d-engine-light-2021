@@ -17,8 +17,8 @@ const App = () => {
       <div id="controls">
         <button id="playPause">pause</button>
         <div id="selectButton">
-          <select id="primitives">
-          </select>
+          {/*<select id="primitives">*/}
+          {/*</select>*/}
         </div>
         <span className="fpsCounter">FPS : </span><span id="fpsCounterNb" className="fpsCounter" />
         <br/>

@@ -1,26 +1,22 @@
-const Surface3D = () => {
-  const meshes = [];
-  let surface3DContainer;
+import Mesh from "./Mesh";
 
-  const renderSurface3D = () => {
-    for (const i in meshes) {
-      meshes[i].renderMesh(surface3DContainer);
+class Surface3D {
+  meshes: Mesh[] = [];
+  surface3DContainer: any;
+
+  renderSurface3D() {
+    for (const i in this.meshes) {
+      this.meshes[i].renderMesh(this.surface3DContainer);
     }
   };
 
-  const addmesh = (mesh) => {
-    meshes.push(mesh);
+  addmesh(mesh: Mesh) {
+    this.meshes.push(mesh);
   };
 
-  const setContainer = (container) => {
-    surface3DContainer = container;
+  setContainer(container: any) {
+    this.surface3DContainer = container;
   };
-
-  return {
-    renderSurface3D,
-    addmesh,
-    setContainer,
-  }
 };
 
 export default Surface3D;
