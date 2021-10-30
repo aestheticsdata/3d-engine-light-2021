@@ -66,7 +66,7 @@ class Main {
   }
 
   // https://www.growingwiththeweb.com/2017/12/fast-simple-js-fps-counter.html
-  fpsCounter = () => {
+  fpsCounter() {
     const now = performance.now();
     while (this.times.length > 0 && this.times[0] <= now - 1000) {
       this.times.shift();
@@ -76,7 +76,7 @@ class Main {
     this.fpsNode.textContent = String(Math.floor(this.fps));
   }
 
-  renderFrame (timestamp) {
+  renderFrame(_timestamp) {
     if (this.isPlaying) {
       this.matrix3D.setAngle((this.pitch - this.centerY) / 50);
       this.mesh.transformMesh(this.matrix3D.pitch);
@@ -106,7 +106,7 @@ class Main {
     this.fpsNode.textContent = String(0);
   }
 
-  init = (primitive: string) => {
+  init(primitive: string){
     this.make3DObjects(data);
     this.matrix3D = new Matrix3D();
     this.primitive = this.primitiveName.indexOf(primitive);
