@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="styles/main.css">
+    <script type="module" src="index.ts"></script>
+  </head>
+
+  <body>
+    <div id="wrapper">
+      <div id="canvasWrapper">
+        <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
+      </div>
+      <div id="controls">
+        <button id="playPause">pause</button>
+        <div id="selectButton">
+          <select id="primitives">
+          </select>
+        </div>
+        <span class="fpsCounter">FPS : </span><span id="fpsCounterNb" class="fpsCounter"></span>
+        <br />
+        <br />
+        <span class="sliderText">focal</span><input id="focalSlider" type="range" min="170" max="500" value="300" />
+        <span class="sliderText">z offset</span><input id="zOffsetSlider" type="range" min="-50" max="500" value="0" />
+        <span class="sliderText">pitch</span><input id="pitchSlider" type="range" min="0" max="800" value="400" />
+        <span class="sliderText">yaw</span><input id="yawSlider" type="range" min="0" max="800" value="400" />
+        <span class="sliderText">roll</span><input id="rollSlider" type="range" min="-1000" max="1200" value="200" />
+      </div>
+    </div>
+  </body>
+</html>

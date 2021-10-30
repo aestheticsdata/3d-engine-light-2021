@@ -1,7 +1,7 @@
 class Matrix3D {
-  roll!: number[][];
-  pitch!: number[][];
-  yaw!: number[][];
+  roll: number[][];
+  pitch: number[][];
+  yaw: number[][];
   cos: number = 0;
   sin: number = 0;
 
@@ -29,10 +29,9 @@ class Matrix3D {
   };
 
   setAngle(agl: number) {
-    let angle = agl * (Math.PI / 180); // radian angle
-
-    this.cos = Math.cos(angle);
-    this.sin = Math.sin(angle);
+    agl = agl * (Math.PI / 180); // radian angle
+    this.cos = Math.cos(agl);
+    this.sin = Math.sin(agl);
 
     this.setMatrix3D();
   };

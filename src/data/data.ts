@@ -1,4 +1,13 @@
-{ 
+type triangle = [number, number, number, string];
+
+export interface Data3D {
+	[k: string]: {
+		points: number[][];
+		triangles: triangle[];
+	}
+}
+
+const data: Data3D = {
 	"cube": {
 		"points":
 			[[-100, -100, -100],
@@ -69,3 +78,5 @@
 			]
 	}
 }
+
+export default data;
