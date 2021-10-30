@@ -1,1 +1,4 @@
-# 3d-engine-light-2021 with ReactPixi
+# 3d-engine-light-2021
+
+100% TypeScript
+Parcel bundler
