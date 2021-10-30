@@ -22,13 +22,6 @@ class Triangle {
     this.bproj = this.b.convert3D2D();
     this.cproj = this.c.convert3D2D();
 
-    // console.log('-----------');
-    // console.log(this.aproj.x);
-    // console.log(this.bproj.x);
-    // console.log(this.cproj.x);
-    // console.log('-----------');
-
-    // context.globalAlpha = 0.5;
     context.fillStyle = this.color;
     context.beginPath();
     context.moveTo(this.aproj.x, this.aproj.y);
