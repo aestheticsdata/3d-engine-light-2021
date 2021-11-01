@@ -4,6 +4,7 @@ import Triangle from "./primitives/Triangle";
 import Surface3D from "./primitives/Surface3D";
 import Matrix3D from "./primitives/Matrix3D";
 import Mesh from "./primitives/Mesh";
+import Controls from "./controls";
 
 class Main {
   times: number[];
@@ -78,6 +79,7 @@ class Main {
 
   renderFrame(_timestamp) {
     if (this.isPlaying) {
+      console.log('pitch', this.pitch);
       this.matrix3D.setAngle((this.pitch - this.centerY) / 50);
       this.mesh.transformMesh(this.matrix3D.pitch);
 
@@ -112,6 +114,7 @@ class Main {
     this.primitive = this.primitiveName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
+    (new Controls(this.mesh, this.pitch, this.yaw, this.roll));
     this.start();
   }
 }
