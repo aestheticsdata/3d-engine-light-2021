@@ -4,8 +4,8 @@ class Point3D {
   private x: number;
   private y: number;
   private z: number;
-  private fl: number = 300;
-  private zOffset: number = 0;
+  public fl: number = 300;
+  public zOffset: number = 0;
   private canvas: HTMLCanvasElement = document.querySelector('canvas');
   private readonly vpX: number;
   private readonly vpY: number;

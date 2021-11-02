@@ -26,8 +26,10 @@ class Main {
   private pitch: number;
   private yaw: number;
   private roll: number;
+  private controls: Controls;
 
   constructor() {
+    this.controls = new Controls();
     this.stage = document.querySelector('canvas').getContext('2d');
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
@@ -46,11 +48,11 @@ class Main {
     this.make3DObjects(data);
   }
 
-  // callback with arrow function to keep 'this' /////
-  changePitch = (pitch: number) => this.pitch = pitch;
-  changeYaw = (yaw: number) => this.yaw = yaw;
-  changeRoll = (roll: number) => this.roll = roll;
-  // ////////////////////////////////////////////////
+  // callback with arrow function to keep 'this' ///////////////
+  private changePitch = (pitch: number) => this.pitch = pitch;
+  private changeYaw = (yaw: number) => this.yaw = yaw;
+  private changeRoll = (roll: number) => this.roll = roll;
+  // //////////////////////////////////////////////////////////
 
   private make3DObjects(data3D: Data3D) {
     this.primitivesName = Object.keys(data3D);
@@ -69,8 +71,7 @@ class Main {
 
         this.objects3D.push({points: pointsTmp, triangles: trianglesTmp});
     }
-};
-
+  }
 
   // https://www.growingwiththeweb.com/2017/12/fast-simple-js-fps-counter.html
   private fpsCounter() {
@@ -122,18 +123,17 @@ class Main {
     this.primitive = this.primitivesName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
+    this.controls.attachListener('#focalSlider', 'changeFocal', this.mesh);
+    this.controls.attachListener('#zOffsetSlider', 'changeOffsetZ', this.mesh);
+    this.controls.attachListener('#pitchSlider', this.changePitch);
+    this.controls.attachListener('#yawSlider', this.changeYaw);
+    this.controls.attachListener('#rollSlider', this.changeRoll);
   }
 
   public init(primitive: string) {
+    this.controls.createSelectButton(this.primitivesName, this.putObjectToScene);
     this.make3DObjects(data);
     this.putObjectToScene(primitive);
-    const controls = new Controls();
-    controls.attachListener('#focalSlider', 'changeFocal', this.mesh);
-    controls.attachListener('#zOffsetSlider', 'changeOffsetZ', this.mesh);
-    controls.attachListener('#pitchSlider', this.changePitch);
-    controls.attachListener('#yawSlider', this.changeYaw);
-    controls.attachListener('#rollSlider', this.changeRoll);
-    controls.createSelectButton(this.primitivesName, this.putObjectToScene);
     this.start();
   }
 }
