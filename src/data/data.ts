@@ -1,10 +1,12 @@
 type triangle = [number, number, number, string];
 
+export interface Object3D {
+	points: number[][];
+	triangles: triangle[];
+}
+
 export interface Data3D {
-	[k: string]: {
-		points: number[][];
-		triangles: triangle[];
-	}
+	[k: string]: Object3D
 }
 
 const data: Data3D = {

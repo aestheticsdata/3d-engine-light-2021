@@ -1,15 +1,7 @@
 import Mesh from "./primitives/Mesh";
 
 class Controls {
-  constructor(mesh: Mesh, changePitch, changeYaw, changeRoll) {
-    this.attachListener('#focalSlider', 'changeFocal', mesh);
-    this.attachListener('#zOffsetSlider', 'changeOffsetZ', mesh);
-    this.attachListener('#pitchSlider', changePitch);
-    this.attachListener('#yawSlider', changeYaw);
-    this.attachListener('#rollSlider', changeRoll);
-  }
-
-  attachListener(domID, callback, mesh?) {
+  attachListener(domID: string, callback, mesh?: Mesh) {
     document.querySelector(domID).addEventListener('change', (e) => {
       mesh ?
         mesh[callback](parseInt((e.currentTarget as HTMLInputElement).value))
@@ -17,6 +9,18 @@ class Controls {
         callback(parseInt((e.currentTarget as HTMLInputElement).value));
     })
   }
+
+  createSelectButton(primitiveName, putObjectToScene) {
+    const primitives = document.querySelector('#primitives');
+    primitiveName.forEach(primitive => {
+      const option = '<option name="'+primitive+'">'+primitive+'</option>';
+      primitives.insertAdjacentHTML('beforeend', option);
+    });
+    primitives.addEventListener('change', function (e) {
+      e.preventDefault();
+      putObjectToScene((e.currentTarget as HTMLSelectElement).value);
+    });
+  };
 }
 
 export default Controls;

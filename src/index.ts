@@ -1,10 +1,11 @@
-import data, { Data3D } from "./data/data";
+import data, { Data3D, Object3D } from "./data/data";
 import Point3D from "./primitives/Point3D";
 import Triangle from "./primitives/Triangle";
 import Surface3D from "./primitives/Surface3D";
 import Matrix3D from "./primitives/Matrix3D";
 import Mesh from "./primitives/Mesh";
 import Controls from "./controls";
+
 
 class Main {
   times: number[];
@@ -13,7 +14,7 @@ class Main {
   pauseBtn: HTMLElement;
   requestAnimationID: number;
   isPlaying: boolean;
-  objects3D: any[];
+  objects3D: any;
   primitiveName: string[];
   primitive;
   stage: CanvasRenderingContext2D;
@@ -114,13 +115,23 @@ class Main {
     this.fpsNode.textContent = String(0);
   }
 
-  init(primitive: string) {
-    this.make3DObjects(data);
+  putObjectToScene = (primitive) => {
     this.matrix3D = new Matrix3D();
     this.primitive = this.primitiveName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
-    new Controls(this.mesh, this.changePitch, this.changeYaw, this.changeRoll);
+  }
+
+  init(primitive: string) {
+    this.make3DObjects(data);
+    this.putObjectToScene(primitive);
+    const controls = new Controls();
+    controls.attachListener('#focalSlider', 'changeFocal', this.mesh);
+    controls.attachListener('#zOffsetSlider', 'changeOffsetZ', this.mesh);
+    controls.attachListener('#pitchSlider', this.changePitch);
+    controls.attachListener('#yawSlider', this.changeYaw);
+    controls.attachListener('#rollSlider', this.changeRoll);
+    controls.createSelectButton(this.primitiveName, this.putObjectToScene);
     this.start();
   }
 }
