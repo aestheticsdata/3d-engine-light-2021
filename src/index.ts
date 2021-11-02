@@ -42,6 +42,10 @@ class Main {
     this.make3DObjects(data);
   }
 
+  changePitch = (pitch: number) => this.pitch = pitch;
+  changeYaw = (yaw: number) => this.yaw = yaw;
+  changeRoll = (roll: number) => this.roll = roll;
+
   make3DObjects = (data3D: Data3D) => {
     this.primitiveName = Object.keys(data3D);
 
@@ -79,7 +83,6 @@ class Main {
 
   renderFrame(_timestamp) {
     if (this.isPlaying) {
-      console.log('pitch', this.pitch);
       this.matrix3D.setAngle((this.pitch - this.centerY) / 50);
       this.mesh.transformMesh(this.matrix3D.pitch);
 
@@ -114,7 +117,7 @@ class Main {
     this.primitive = this.primitiveName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
-    (new Controls(this.mesh, this.pitch, this.yaw, this.roll));
+    (new Controls(this.mesh, this.changePitch, this.changeYaw, this.changeRoll));
     this.start();
   }
 }
