@@ -2,6 +2,9 @@
   "name": "parceltest",
   "version": "1.0.0",
   "main": "index.js",
+  "targets": {
+    "main": false
+  },
   "license": "MIT",
   "source": "src/index.html", 
   "scripts": {
