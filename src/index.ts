@@ -42,11 +42,13 @@ class Main {
     this.make3DObjects(data);
   }
 
+  // callback with arrow function to keep 'this' /////
   changePitch = (pitch: number) => this.pitch = pitch;
   changeYaw = (yaw: number) => this.yaw = yaw;
   changeRoll = (roll: number) => this.roll = roll;
+  // ////////////////////////////////////////////////
 
-  make3DObjects = (data3D: Data3D) => {
+  make3DObjects(data3D: Data3D) {
     this.primitiveName = Object.keys(data3D);
 
     for (const k of this.primitiveName) {
@@ -65,10 +67,6 @@ class Main {
     }
 };
 
-  togglePause = () => {
-    this.isPlaying ? this.stop() : this.start();
-    this.isPlaying = !this.isPlaying;
-  }
 
   // https://www.growingwiththeweb.com/2017/12/fast-simple-js-fps-counter.html
   fpsCounter() {
@@ -96,6 +94,11 @@ class Main {
     }
   }
 
+  togglePause = () => {
+    this.isPlaying ? this.stop() : this.start();
+    this.isPlaying = !this.isPlaying;
+  }
+
   step = (_timestamp) => {
     this.renderFrame(_timestamp);
     this.fpsCounter();
@@ -111,13 +114,13 @@ class Main {
     this.fpsNode.textContent = String(0);
   }
 
-  init(primitive: string){
+  init(primitive: string) {
     this.make3DObjects(data);
     this.matrix3D = new Matrix3D();
     this.primitive = this.primitiveName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
-    (new Controls(this.mesh, this.changePitch, this.changeYaw, this.changeRoll));
+    new Controls(this.mesh, this.changePitch, this.changeYaw, this.changeRoll);
     this.start();
   }
 }

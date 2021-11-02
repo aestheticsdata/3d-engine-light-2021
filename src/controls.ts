@@ -1,29 +1,20 @@
 import Mesh from "./primitives/Mesh";
 
 class Controls {
-  mesh: Mesh;
-
   constructor(mesh: Mesh, changePitch, changeYaw, changeRoll) {
-    this.mesh = mesh;
+    this.attachListener('#focalSlider', 'changeFocal', mesh);
+    this.attachListener('#zOffsetSlider', 'changeOffsetZ', mesh);
+    this.attachListener('#pitchSlider', changePitch);
+    this.attachListener('#yawSlider', changeYaw);
+    this.attachListener('#rollSlider', changeRoll);
+  }
 
-    document.querySelector('#focalSlider').addEventListener('change', (e) => {
-      this.mesh.changeFocal(parseInt((e.currentTarget as HTMLInputElement).value));
-    });
-
-    document.querySelector('#zOffsetSlider').addEventListener('change', (e) => {
-      this.mesh.changeOffsetZ(parseInt((e.currentTarget as HTMLInputElement).value));
-    })
-
-    document.querySelector('#pitchSlider').addEventListener('change', (e) => {
-      changePitch(parseInt((e.currentTarget as HTMLInputElement).value));
-    })
-
-    document.querySelector('#yawSlider').addEventListener('change', (e) => {
-      changeYaw(parseInt((e.currentTarget as HTMLInputElement).value));
-    })
-
-    document.querySelector('#rollSlider').addEventListener('change', (e) => {
-      changeRoll(parseInt((e.currentTarget as HTMLInputElement).value));
+  attachListener(domID, callback, mesh?) {
+    document.querySelector(domID).addEventListener('change', (e) => {
+      mesh ?
+        mesh[callback](parseInt((e.currentTarget as HTMLInputElement).value))
+        :
+        callback(parseInt((e.currentTarget as HTMLInputElement).value));
     })
   }
 }
