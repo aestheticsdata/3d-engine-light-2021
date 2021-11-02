@@ -3,39 +3,38 @@ import Point3D from "./Point3D";
 
 
 class Mesh {
-  points: Point3D[] = [];
-  triangles: Triangle[] = [];
+  private readonly points: Point3D[] = [];
+  private readonly triangles: Triangle[] = [];
 
   constructor(points: Point3D[], triangles: Triangle[]) {
     this.points = [...points];
     this.triangles = [...triangles];
   }
 
-  renderMesh(context: any) {
+  public renderMesh(context: CanvasRenderingContext2D) {
     for (const i in this.triangles) {
       this.triangles[i].render(context);
     }
   }
 
-  changeFocal(value: number) {
+  public changeFocal(value: number) {
     for (const i in this.triangles) {
       this.triangles[i].changeFocal(value);
     }
   };
 
-  changeOffsetZ(value: number) {
+  public changeOffsetZ(value: number) {
     for (const i in this.triangles) {
       this.triangles[i].changeOffsetZ(value);
     }
   };
 
-  transformMesh(rot: number[][]) {
+  public transformMesh(rot: number[][]) {
     for (const i in this.points) {
       this.points[i].transformPt(rot);
     }
   };
-
-};
+}
 
 export default Mesh;
 

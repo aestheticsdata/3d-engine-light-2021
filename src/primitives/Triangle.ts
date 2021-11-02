@@ -2,13 +2,13 @@ import Point3D from "./Point3D";
 import Point2D from "./Point2D";
 
 class Triangle {
-  a: Point3D;
-  b: Point3D;
-  c: Point3D;
-  aproj: Point2D;
-  bproj: Point2D;
-  cproj: Point2D;
-  color: string;
+  private a: Point3D;
+  private b: Point3D;
+  private c: Point3D;
+  public aproj: Point2D;
+  public bproj: Point2D;
+  public cproj: Point2D;
+  public color: string;
 
   constructor(a: Point3D, b: Point3D, c: Point3D, color: string) {
     this.a = a;
@@ -17,7 +17,7 @@ class Triangle {
     this.color = color;
   }
 
-  render(context: CanvasRenderingContext2D): void {
+  public render(context: CanvasRenderingContext2D): void {
     this.aproj = this.a.convert3D2D();
     this.bproj = this.b.convert3D2D();
     this.cproj = this.c.convert3D2D();
@@ -32,11 +32,11 @@ class Triangle {
     context.fill();
   };
 
-  changeFocal(value: number) {
+  public changeFocal(value: number) {
     this.a.fl = this.b.fl = this.c.fl = value;
   };
 
-  changeOffsetZ(value: number) {
+  public changeOffsetZ(value: number) {
     this.a.zOffset = this.b.zOffset = this.c.zOffset = value;
   }
 }

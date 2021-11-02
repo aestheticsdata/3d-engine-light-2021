@@ -8,29 +8,29 @@ import Controls from "./controls";
 
 
 class Main {
-  times: number[];
-  fps: number;
-  fpsNode: HTMLElement;
-  pauseBtn: HTMLElement;
-  requestAnimationID: number;
-  isPlaying: boolean;
-  objects3D: any;
-  primitiveName: string[];
-  primitive;
-  stage: CanvasRenderingContext2D;
-  centerX: number;
-  centerY: number;
-  surface3D: Surface3D;
-  matrix3D: Matrix3D;
-  mesh: Mesh;
-  pitch: number;
-  yaw: number;
-  roll: number;
+  private readonly times: number[];
+  private fps: number;
+  private fpsNode: HTMLElement;
+  private pauseBtn: HTMLElement;
+  private requestAnimationID: number;
+  private isPlaying: boolean;
+  private objects3D: any;
+  private primitivesName: string[];
+  private primitive;
+  private readonly stage: CanvasRenderingContext2D;
+  private readonly centerX: number;
+  private readonly centerY: number;
+  private surface3D: Surface3D;
+  private matrix3D: Matrix3D;
+  private mesh: Mesh;
+  private pitch: number;
+  private yaw: number;
+  private roll: number;
 
   constructor() {
     this.stage = document.querySelector('canvas').getContext('2d');
-    this.centerX = (this.stage.canvas.width)  >> 1;
-    this.centerY = (this.stage.canvas.height) >> 1;
+    this.centerX = this.stage.canvas.width >> 1;
+    this.centerY = this.stage.canvas.height >> 1;
     this.pitch = 300;
     this.yaw = 300;
     this.roll = 200;
@@ -41,7 +41,7 @@ class Main {
     this.isPlaying = true;
     this.objects3D = [];
     this.matrix3D = new Matrix3D();
-    this.primitiveName = [];
+    this.primitivesName = [];
     this.primitive = "";
     this.make3DObjects(data);
   }
@@ -52,10 +52,10 @@ class Main {
   changeRoll = (roll: number) => this.roll = roll;
   // ////////////////////////////////////////////////
 
-  make3DObjects(data3D: Data3D) {
-    this.primitiveName = Object.keys(data3D);
+  private make3DObjects(data3D: Data3D) {
+    this.primitivesName = Object.keys(data3D);
 
-    for (const k of this.primitiveName) {
+    for (const k of this.primitivesName) {
         const pointsJSON = data3D[k].points; // [[x,y,z], [x,y,z],...]
         const trianglesJSON = data3D[k].triangles; // [[a,b,c,color], [a,b,c,color],...]
         const pointsTmp: Point3D[] = [];
@@ -73,7 +73,7 @@ class Main {
 
 
   // https://www.growingwiththeweb.com/2017/12/fast-simple-js-fps-counter.html
-  fpsCounter() {
+  private fpsCounter() {
     const now = performance.now();
     while (this.times.length > 0 && this.times[0] <= now - 1000) {
       this.times.shift();
@@ -83,7 +83,7 @@ class Main {
     this.fpsNode.textContent = String(Math.floor(this.fps));
   }
 
-  renderFrame(_timestamp) {
+  private renderFrame(_timestamp) {
     if (this.isPlaying) {
       this.matrix3D.setAngle((this.pitch - this.centerY) / 50);
       this.mesh.transformMesh(this.matrix3D.pitch);
@@ -98,33 +98,33 @@ class Main {
     }
   }
 
-  togglePause = () => {
+  private togglePause = () => {
     this.isPlaying ? this.stop() : this.start();
     this.isPlaying = !this.isPlaying;
   }
 
-  step = (_timestamp) => {
+  private step = (_timestamp) => {
     this.renderFrame(_timestamp);
     this.fpsCounter();
     this.requestAnimationID = window.requestAnimationFrame(this.step);
   }
 
-  start = () => {
+  private start = () => {
     this.requestAnimationID = window.requestAnimationFrame(this.step);
   }
 
-  stop = () => {
+  private stop = () => {
     cancelAnimationFrame(this.requestAnimationID);
     this.fpsNode.textContent = String(0);
   }
 
-  putObjectToScene = (primitive: string) => {
-    this.primitive = this.primitiveName.indexOf(primitive);
+  private putObjectToScene = (primitive: string) => {
+    this.primitive = this.primitivesName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);
   }
 
-  init(primitive: string) {
+  public init(primitive: string) {
     this.make3DObjects(data);
     this.putObjectToScene(primitive);
     const controls = new Controls();
@@ -133,7 +133,7 @@ class Main {
     controls.attachListener('#pitchSlider', this.changePitch);
     controls.attachListener('#yawSlider', this.changeYaw);
     controls.attachListener('#rollSlider', this.changeRoll);
-    controls.createSelectButton(this.primitiveName, this.putObjectToScene);
+    controls.createSelectButton(this.primitivesName, this.putObjectToScene);
     this.start();
   }
 }
