@@ -1,7 +1,7 @@
 import Mesh from "./primitives/Mesh";
 
 class Controls {
-  attachListener(domID: string, callback, mesh?: Mesh) {
+  public attachListener(domID: string, callback, mesh?: Mesh) {
     document.querySelector(domID).addEventListener('change', (e) => {
       mesh ?
         mesh[callback](parseInt((e.currentTarget as HTMLInputElement).value))
@@ -10,7 +10,7 @@ class Controls {
     })
   }
 
-  createSelectButton(primitiveName, putObjectToScene) {
+  public createSelectButton(primitiveName, putObjectToScene) {
     // https://stackoverflow.com/a/49461484/5671836
     const primitives = document.querySelector('#primitives');
     primitiveName.forEach(primitive => {
