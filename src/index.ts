@@ -40,6 +40,9 @@ class Main {
     this.pauseBtn.addEventListener('click', this.togglePause);
     this.isPlaying = true;
     this.objects3D = [];
+    this.matrix3D = new Matrix3D();
+    this.primitiveName = [];
+    this.primitive = "";
     this.make3DObjects(data);
   }
 
@@ -115,8 +118,7 @@ class Main {
     this.fpsNode.textContent = String(0);
   }
 
-  putObjectToScene = (primitive) => {
-    this.matrix3D = new Matrix3D();
+  putObjectToScene = (primitive: string) => {
     this.primitive = this.primitiveName.indexOf(primitive);
     this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
     this.surface3D = new Surface3D(this.stage, this.mesh);

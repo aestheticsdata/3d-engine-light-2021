@@ -11,6 +11,7 @@ class Controls {
   }
 
   createSelectButton(primitiveName, putObjectToScene) {
+    // https://stackoverflow.com/a/49461484/5671836
     const primitives = document.querySelector('#primitives');
     primitiveName.forEach(primitive => {
       const option = '<option name="'+primitive+'">'+primitive+'</option>';
