@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "targets": {
-    "main": false
+    "main": false,
+    "default": {
+      "publicUrl": "./"
+    }
   },
   "license": "MIT",
   "source": "src/index.html", 
