@@ -6,7 +6,6 @@ import Matrix3D from "./primitives/Matrix3D";
 import Mesh from "./primitives/Mesh";
 import Controls from "./controls";
 
-
 class Main {
   private readonly times: number[];
   private fps: number;
@@ -30,16 +29,16 @@ class Main {
 
   constructor() {
     this.controls = new Controls();
-    this.stage = document.querySelector('canvas').getContext('2d');
+    this.stage = document.querySelector("canvas").getContext("2d");
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
     this.pitch = 300;
     this.yaw = 300;
     this.roll = 200;
     this.times = [];
-    this.fpsNode = document.getElementById('fpsCounterNb');
-    this.pauseBtn = document.getElementById('playPause');
-    this.pauseBtn.addEventListener('click', this.togglePause);
+    this.fpsNode = document.getElementById("fpsCounterNb");
+    this.pauseBtn = document.getElementById("playPause");
+    this.pauseBtn.addEventListener("click", this.togglePause);
     this.isPlaying = true;
     this.objects3D = [];
     this.matrix3D = new Matrix3D();
@@ -49,27 +48,36 @@ class Main {
   }
 
   // callback with arrow function to keep 'this' ///////////////
-  private changePitch = (pitch: number) => this.pitch = pitch;
-  private changeYaw = (yaw: number) => this.yaw = yaw;
-  private changeRoll = (roll: number) => this.roll = roll;
+  private changePitch = (pitch: number) => (this.pitch = pitch);
+  private changeYaw = (yaw: number) => (this.yaw = yaw);
+  private changeRoll = (roll: number) => (this.roll = roll);
   // //////////////////////////////////////////////////////////
 
   private make3DObjects(data3D: Data3D) {
     this.primitivesName = Object.keys(data3D);
 
     for (const k of this.primitivesName) {
-        const pointsJSON = data3D[k].points; // [[x,y,z], [x,y,z],...]
-        const trianglesJSON = data3D[k].triangles; // [[a,b,c,color], [a,b,c,color],...]
-        const pointsTmp: Point3D[] = [];
-        const trianglesTmp: Triangle[] = [];
+      const pointsJSON = data3D[k].points; // [[x,y,z], [x,y,z],...]
+      const trianglesJSON = data3D[k].triangles; // [[a,b,c,color], [a,b,c,color],...]
+      const pointsTmp: Point3D[] = [];
+      const trianglesTmp: Triangle[] = [];
 
-        pointsJSON.forEach(point => {pointsTmp.push(new Point3D(point[0], point[1], point[2]))});
+      pointsJSON.forEach((point) => {
+        pointsTmp.push(new Point3D(point[0], point[1], point[2]));
+      });
 
-        trianglesJSON.forEach(triangle => {
-          trianglesTmp.push(new Triangle(pointsTmp[triangle[0]], pointsTmp[triangle[1]], pointsTmp[triangle[2]], triangle[3]));
-        });
+      trianglesJSON.forEach((triangle) => {
+        trianglesTmp.push(
+          new Triangle(
+            pointsTmp[triangle[0]],
+            pointsTmp[triangle[1]],
+            pointsTmp[triangle[2]],
+            triangle[3]
+          )
+        );
+      });
 
-        this.objects3D.push({points: pointsTmp, triangles: trianglesTmp});
+      this.objects3D.push({ points: pointsTmp, triangles: trianglesTmp });
     }
   }
 
@@ -102,41 +110,45 @@ class Main {
   private togglePause = () => {
     this.isPlaying ? this.stop() : this.start();
     this.isPlaying = !this.isPlaying;
-  }
+  };
 
   private step = (_timestamp) => {
     this.renderFrame(_timestamp);
     this.fpsCounter();
     this.requestAnimationID = window.requestAnimationFrame(this.step);
-  }
+  };
 
   private start = () => {
     this.requestAnimationID = window.requestAnimationFrame(this.step);
-  }
+  };
 
   private stop = () => {
     cancelAnimationFrame(this.requestAnimationID);
     this.fpsNode.textContent = String(0);
-  }
+  };
 
   private putObjectToScene = (primitive: string) => {
     this.primitive = this.primitivesName.indexOf(primitive);
-    this.mesh = new Mesh(this.objects3D[this.primitive].points, this.objects3D[this.primitive].triangles);
+    this.mesh = new Mesh(
+      this.objects3D[this.primitive].points,
+      this.objects3D[this.primitive].triangles
+    );
     this.surface3D = new Surface3D(this.stage, this.mesh);
-    this.controls.attachListener('#focalSlider', 'changeFocal', this.mesh);
-    this.controls.attachListener('#zOffsetSlider', 'changeOffsetZ', this.mesh);
-    this.controls.attachListener('#pitchSlider', this.changePitch);
-    this.controls.attachListener('#yawSlider', this.changeYaw);
-    this.controls.attachListener('#rollSlider', this.changeRoll);
-  }
+    this.controls.attachListener("#focalSlider", "changeFocal", this.mesh);
+    this.controls.attachListener("#zOffsetSlider", "changeOffsetZ", this.mesh);
+    this.controls.attachListener("#pitchSlider", this.changePitch);
+    this.controls.attachListener("#yawSlider", this.changeYaw);
+    this.controls.attachListener("#rollSlider", this.changeRoll);
+  };
 
   public init(primitive: string) {
-    this.controls.createSelectButton(this.primitivesName, this.putObjectToScene);
-    this.make3DObjects(data);
+    this.controls.createSelectButton(
+      this.primitivesName,
+      this.putObjectToScene
+    );
     this.putObjectToScene(primitive);
     this.start();
   }
 }
 
-(new Main()).init('cube');
-
+new Main().init(Object.keys(data)[0]);
