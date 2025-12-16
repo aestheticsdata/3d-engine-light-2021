@@ -1,5 +1,5 @@
-import Triangle from "./Triangle";
-import Point3D from "./Point3D";
+import Triangle from "@primitives/Triangle";
+import Point3D from "@primitives/Point3D";
 
 
 class Mesh {

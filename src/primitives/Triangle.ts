@@ -1,5 +1,5 @@
-import Point3D from "./Point3D";
-import Point2D from "./Point2D";
+import Point3D from "@primitives/Point3D";
+import Point2D from "@primitives/Point2D";
 
 class Triangle {
   private a: Point3D;

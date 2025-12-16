@@ -1,4 +1,4 @@
-import Point2D from "./Point2D";
+import Point2D from "@primitives/Point2D";
 
 class Point3D {
   private x: number;

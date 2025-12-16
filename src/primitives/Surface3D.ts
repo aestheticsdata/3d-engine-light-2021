@@ -1,4 +1,4 @@
-import Mesh from "./Mesh";
+import Mesh from "@primitives/Mesh";
 
 class Surface3D {
   private meshes: Mesh[] = [];

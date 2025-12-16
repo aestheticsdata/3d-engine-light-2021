@@ -1,9 +1,9 @@
-import data, { Data3D, Object3D } from "./data/data";
-import Point3D from "./primitives/Point3D";
-import Triangle from "./primitives/Triangle";
-import Surface3D from "./primitives/Surface3D";
-import Matrix3D from "./primitives/Matrix3D";
-import Mesh from "./primitives/Mesh";
+import data, { Data3D, Object3D } from "@data/data";
+import Point3D from "@primitives/Point3D";
+import Triangle from "@primitives/Triangle";
+import Surface3D from "@primitives/Surface3D";
+import Matrix3D from "@primitives/Matrix3D";
+import Mesh from "@primitives/Mesh";
 import Controls from "./controls";
 
 class Main {

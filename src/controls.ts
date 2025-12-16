@@ -1,4 +1,4 @@
-import Mesh from "./primitives/Mesh";
+import Mesh from "@primitives/Mesh";
 
 class Controls {
   public attachListener(domID: string, callback, mesh?: Mesh) {
