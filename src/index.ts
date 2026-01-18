@@ -110,6 +110,7 @@ class Main {
   private togglePause = () => {
     this.isPlaying ? this.stop() : this.start();
     this.isPlaying = !this.isPlaying;
+    this.pauseBtn.textContent = this.isPlaying ? "pause" : "play";
   };
 
   private step = (_timestamp) => {
