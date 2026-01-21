@@ -97,6 +97,22 @@ depth = (A.z + B.z + C.z) / 3;
 
 The renderer then draws triangles from **farthest to nearest**, ensuring closer elements cover the ones behind them.
 
+### 5. **Texture Mapping & UVs (`Triangle.ts` & `builder.ts`)**
+
+The engine supports mapping images onto triangles using **UV coordinates**.
+Since the standard Canvas 2D API (`drawImage`) assumes a rectangular image, we cannot simply skew it into a triangle.
+
+Instead, we use a 2D **Affine Transform Matrix** to map the texture space to the screen space.
+For a given triangle, we solve for a matrix that transforms the texture coordinates $(u, v)$ to the screen coordinates $(x, y)$.
+
+**The Challenge: Perspective Distortion**
+Affine mapping preserves parallel lines, but in 3D perspective, lines converge. This means using a single affine transform for a large face creates "warping" artifacts ("affine texture swimming") where the texture looks skewed incorrectly.
+
+**The Solution: Subdivision**
+To minimize this, we use `addTexturedQuadSubdiv` in `builder.ts`.
+This breaks a large quad into a grid of many small triangles (e.g., 12x12).
+Each small triangle is still affinely mapped, but because they are so small, the perspective error is barely noticeable.
+
 ---
 
 ## Deployment
