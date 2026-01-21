@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
+      "@textures": path.resolve(__dirname, "src/textures"),
     },
   },
   build: {

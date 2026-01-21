@@ -3,7 +3,8 @@
     "baseUrl": ".",
     "paths": {
       "@primitives/*": ["src/primitives/*"],
-      "@data/*": ["src/data/*"]
+      "@data/*": ["src/data/*"],
+      "@textures/*": ["src/textures/*"],
     },
     "moduleResolution": "node",
     "resolveJsonModule": true,

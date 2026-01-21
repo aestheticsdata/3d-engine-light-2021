@@ -1,10 +1,13 @@
-import data, { Data3D, Object3D } from "@data/data";
+import data, { Data3D } from "@data/data";
 import Point3D from "@primitives/Point3D";
 import Triangle from "@primitives/Triangle";
 import Surface3D from "@primitives/Surface3D";
 import Matrix3D from "@primitives/Matrix3D";
 import Mesh from "@primitives/Mesh";
 import Controls from "./controls";
+import { loadTextures } from "@textures/textures";
+import dogUrl from "@textures/images/border-collie.jpeg";
+import galaxyUrl from "@textures/images/galaxy.jpeg";
 
 class Main {
   private readonly times: number[];
@@ -66,14 +69,17 @@ class Main {
         pointsTmp.push(new Point3D(point[0], point[1], point[2]));
       });
 
-      trianglesJSON.forEach((triangle) => {
+      trianglesJSON.forEach((t) => {
         trianglesTmp.push(
           new Triangle(
-            pointsTmp[triangle[0]],
-            pointsTmp[triangle[1]],
-            pointsTmp[triangle[2]],
-            triangle[3]
-          )
+            pointsTmp[t[0]],
+            pointsTmp[t[1]],
+            pointsTmp[t[2]],
+            t[3],
+            t.length > 4 ? (t[4] as any) : undefined,
+            t.length > 5 ? (t[5] as any) : undefined,
+            t.length > 6 ? (t[6] as any) : undefined,
+          ),
         );
       });
 
@@ -142,7 +148,11 @@ class Main {
     this.controls.attachListener("#rollSlider", this.changeRoll);
   };
 
-  public init(primitive: string) {
+  public async init(primitive: string) {
+    await loadTextures({
+      dog: dogUrl,
+      galaxy: galaxyUrl,
+    });
     this.controls.createSelectButton(
       this.primitivesName,
       this.putObjectToScene
