@@ -43,9 +43,22 @@ By adding a 4th dimension `w` (usually set to 1):
 ### 1. **Perspective Projection (`Point3D.ts`)**
 
 The engine converts 3D world coordinates `(x, y, z)` into 2D screen coordinates `(x, y)`.
-It relies on the concept of **focal length** (`fl`) to create the illusion of depth.
+This is the fundamental operation that creates the illusion of depth on a flat screen.
 
-**The Formula:**
+#### **The Principle: Similar Triangles**
+
+Imagine you're looking through a window at a distant object. The window is your **projection plane** (the screen), and your eye is the **camera**. The farther an object is, the smaller it appears—this is perspective.
+
+Mathematically, this follows from **similar triangles**. If the focal length (distance from camera to screen) is $fl$, and an object is at depth $z$, then its projected size is proportional to:
+
+$$\text{scale} = \frac{fl}{fl + z}$$
+
+This ratio ensures that:
+- Objects at $z = 0$ (on the screen plane) have `scale = 1` (no change)
+- Objects farther away ($z > 0$) have `scale < 1` (appear smaller)
+- Objects closer ($z < 0$) have `scale > 1` (appear larger)
+
+#### **The Formula:**
 
 ```
 scale = fl / (fl + z + zOffset)
@@ -53,8 +66,29 @@ x2d = vpX + (x3d * scale)
 y2d = vpY + (y3d * scale)
 ```
 
-- `scale`: Perspective factor (diminishes as `z` increases).
-- `vpX`, `vpY`: Vanishing point (center of the screen).
+#### **Parameters Explained:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `fl` (focal length) | Controls the "field of view". A small `fl` creates a wide-angle, fish-eye effect. A large `fl` flattens the perspective (telephoto look). Default: `300` |
+| `zOffset` | Pushes the entire scene forward or backward. Useful for zooming without changing `fl`. |
+| `vpX`, `vpY` | The **vanishing point**—where parallel lines converge. Set to the center of the canvas (`width/2`, `height/2`). |
+
+#### **Visual Intuition:**
+
+```
+        Camera (Eye)
+             |
+             | fl (focal length)
+             |
+    ---------+--------- Projection Plane (Screen)
+             |
+             | z (depth)
+             |
+           Object
+```
+
+The `scale` factor shrinks X and Y coordinates proportionally based on Z depth, creating the classic "railroad tracks converging in the distance" effect.
 
 ### 2. **3D Transformations (`Matrix3D.ts`)**
 
