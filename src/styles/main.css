@@ -44,9 +44,12 @@ body {
   margin-bottom: 16px;
 }
 
-#selectButton,
-#selectButton select,
 button {
+  width: 100%;
+}
+
+#selectButton,
+#selectButton select {
   width: 100%;
 }
 
@@ -64,6 +67,24 @@ button {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggleLabel {
+  color: #ffef93;
+  font: 10px Futura, "Century Gothic", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#toggleWireframe {
+  width: 72px;
+  flex: 0 0 auto;
 }
 
 .sliderGroup {

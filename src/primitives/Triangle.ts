@@ -58,6 +58,10 @@ import { textures } from "@textures/textures";
 
 type UV = [number, number];
 
+export interface TriangleRenderOptions {
+  wireframe?: boolean;
+}
+
 class Triangle {
   private a: Point3D;
   private b: Point3D;
@@ -101,6 +105,7 @@ class Triangle {
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
     offsetY: number = 0,
+    options: TriangleRenderOptions = {},
   ): void {
     const aproj = this.a.convert3D2D();
     const bproj = this.b.convert3D2D();
@@ -116,6 +121,18 @@ class Triangle {
     const v2x = this.cproj.x - this.aproj.x;
     const v2y = this.cproj.y - this.aproj.y;
     if (v1x * v2y - v1y * v2x <= 0) return;
+
+    if (options.wireframe) {
+      context.strokeStyle = "rgba(10, 20, 60, 0.95)";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(this.aproj.x, this.aproj.y);
+      context.lineTo(this.bproj.x, this.bproj.y);
+      context.lineTo(this.cproj.x, this.cproj.y);
+      context.closePath();
+      context.stroke();
+      return;
+    }
 
     const img = textures[this.material];
 

@@ -1,4 +1,4 @@
-import Triangle from "@primitives/Triangle";
+import Triangle, { TriangleRenderOptions } from "@primitives/Triangle";
 import Point3D from "@primitives/Point3D";
 
 class Mesh {
@@ -14,11 +14,12 @@ class Mesh {
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
     offsetY: number = 0,
+    options: TriangleRenderOptions = {},
   ) {
     this.triangles.sort((t1, t2) => t2.depth - t1.depth);
 
     for (const i in this.triangles) {
-      this.triangles[i].render(context, offsetX, offsetY);
+      this.triangles[i].render(context, offsetX, offsetY, options);
     }
   }
 

@@ -51,6 +51,7 @@ class Main {
   private fps: number;
   private readonly fpsNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
+  private readonly wireframeBtn: HTMLElement;
   private readonly resetBtn: HTMLElement;
   private requestAnimationID: number;
   private isPlaying: boolean;
@@ -69,6 +70,7 @@ class Main {
   private yaw: number;
   private roll: number;
   private rotationSpeed: number;
+  private wireframeEnabled: boolean;
   private smoothedFps: number;
   private lastFpsDisplayUpdateAt: number;
   private currentPrimitiveName: string | null;
@@ -88,8 +90,9 @@ class Main {
 
     const fpsNode = document.getElementById("fpsCounterNb");
     const pauseBtn = document.getElementById("playPause");
+    const wireframeBtn = document.getElementById("toggleWireframe");
     const resetBtn = document.getElementById("resetControls");
-    if (!fpsNode || !pauseBtn || !resetBtn) {
+    if (!fpsNode || !pauseBtn || !wireframeBtn || !resetBtn) {
       throw new Error("UI controls are missing.");
     }
 
@@ -110,6 +113,7 @@ class Main {
     this.yaw = DEFAULT_YAW;
     this.roll = DEFAULT_ROLL;
     this.rotationSpeed = DEFAULT_ROTATION_SPEED;
+    this.wireframeEnabled = false;
     this.focal = 300;
     this.zOffset = DEFAULT_Z_OFFSET;
     this.times = [];
@@ -118,6 +122,7 @@ class Main {
     this.lastFpsDisplayUpdateAt = 0;
     this.fpsNode = fpsNode;
     this.pauseBtn = pauseBtn;
+    this.wireframeBtn = wireframeBtn;
     this.resetBtn = resetBtn;
     this.requestAnimationID = 0;
     this.isPlaying = true;
@@ -126,6 +131,7 @@ class Main {
     this.queuedPrimitiveName = null;
 
     this.pauseBtn.addEventListener("click", this.togglePause);
+    this.wireframeBtn.addEventListener("click", this.toggleWireframe);
     this.resetBtn.addEventListener("click", this.resetControls);
   }
 
@@ -283,9 +289,11 @@ class Main {
     this.transitionMachine.update(timestamp);
     this.syncTransitionQueue(timestamp);
 
-    const renderables = this.transitionMachine.getRenderables();
+    const renderables = this.getCurrentRenderables();
     renderables.forEach((renderable) => this.rotateMesh(renderable.mesh));
-    this.surface3D.render(renderables);
+    this.surface3D.render(renderables, {
+      wireframe: this.wireframeEnabled,
+    });
   }
 
   private renderPausedFrame() {
@@ -293,13 +301,21 @@ class Main {
       return;
     }
 
-    this.surface3D.render(this.transitionMachine.getRenderables());
+    this.surface3D.render(this.getCurrentRenderables(), {
+      wireframe: this.wireframeEnabled,
+    });
   }
 
   private togglePause = () => {
     this.isPlaying ? this.stop() : this.start();
     this.isPlaying = !this.isPlaying;
     this.pauseBtn.textContent = this.isPlaying ? "pause" : "play";
+  };
+
+  private toggleWireframe = () => {
+    this.wireframeEnabled = !this.wireframeEnabled;
+    this.wireframeBtn.textContent = this.wireframeEnabled ? "on" : "off";
+    this.renderPausedFrame();
   };
 
   private step = (timestamp: number) => {
@@ -319,6 +335,10 @@ class Main {
     this.smoothedFps = 0;
     this.fpsNode.textContent = String(0);
   };
+
+  private getCurrentRenderables() {
+    return this.transitionMachine.getRenderables();
+  }
 
   private attachControlListeners() {
     this.controls.attachListener("#focalSlider", this.changeFocal);

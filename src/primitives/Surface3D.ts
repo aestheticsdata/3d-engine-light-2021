@@ -1,4 +1,5 @@
 import Mesh from "@primitives/Mesh";
+import { TriangleRenderOptions } from "@primitives/Triangle";
 
 export interface MeshRenderRequest {
   mesh: Mesh;
@@ -13,7 +14,10 @@ class Surface3D {
     this.surface3DContainer = container;
   }
 
-  public render(renderables: MeshRenderRequest[]) {
+  public render(
+    renderables: MeshRenderRequest[],
+    options: TriangleRenderOptions = {},
+  ) {
     this.surface3DContainer.clearRect(
       0,
       0,
@@ -26,6 +30,7 @@ class Surface3D {
         this.surface3DContainer,
         renderable.offsetX ?? 0,
         renderable.offsetY ?? 0,
+        options,
       );
     }
   }
