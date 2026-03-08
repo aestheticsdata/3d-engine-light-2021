@@ -27,16 +27,83 @@ canvas {
   display: block;
 }
 
-#controls {
+.sidePanel {
   position: absolute;
   top: 0;
-  left: calc(100% + 28px);
   width: 250px;
   padding: 14px 14px 16px;
   background: oklch(0.29 0.11 260 / 0.9);
   -moz-box-shadow: 0 0 14px #aaa;
   -webkit-box-shadow: 0 0 14px #aaa;
   box-shadow: 0 0 14px #aaa;
+}
+
+.panelHeader {
+  margin-bottom: 14px;
+}
+
+.panelTitle,
+.panelSubTitle {
+  display: block;
+  color: #ffef93;
+  font: 10px Futura, "Century Gothic", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panelSubTitle {
+  margin-bottom: 8px;
+}
+
+#shapeInfoPanel {
+  right: calc(100% + 28px);
+}
+
+#controls {
+  left: calc(100% + 28px);
+}
+
+.panelSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.infoLabel {
+  color: #ffef93;
+  font: 10px Futura, "Century Gothic", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.infoValue {
+  color: #fff;
+  font: 10px Futura, "Century Gothic", sans-serif;
+  text-align: right;
+}
+
+.storyTitle {
+  color: #fff;
+  font: 18px Futura, "Century Gothic", sans-serif;
+  margin: 0;
+}
+
+.storyText {
+  color: rgba(232, 239, 255, 0.92);
+  font: 11px/1.45 Futura, "Century Gothic", sans-serif;
+  margin: 0;
+}
+
+.storyBadgeRow {
+  display: flex;
 }
 
 .controlsHeader {
@@ -215,7 +282,7 @@ button:hover {
     padding-right: 16px;
   }
 
-  #controls {
+  .sidePanel {
     position: static;
     width: 1024px;
     margin-top: 16px;

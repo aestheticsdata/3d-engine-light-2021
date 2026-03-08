@@ -1,5 +1,6 @@
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import data, { Data3D } from "@data/data";
+import shapeInfo from "@data/shapeInfo";
 import Matrix3D from "@primitives/Matrix3D";
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
@@ -66,6 +67,15 @@ class Main {
   private readonly fpsNode: HTMLElement;
   private readonly trianglesRenderedNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
+  private readonly shapeInfoNameNode: HTMLElement;
+  private readonly shapeInfoPointsNode: HTMLElement;
+  private readonly shapeInfoTrianglesNode: HTMLElement;
+  private readonly shapeInfoTexturesNode: HTMLElement;
+  private readonly shapeInfoOpacityNode: HTMLElement;
+  private readonly shapeStoryTitleNode: HTMLElement;
+  private readonly shapeStoryDescriptionNode: HTMLElement;
+  private readonly shapeStoryFeatureNode: HTMLElement;
+  private readonly shapeStoryDensityNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly wireframeRow: HTMLElement;
   private readonly wireframeLabel: HTMLElement;
@@ -116,6 +126,15 @@ class Main {
     const fpsNode = document.getElementById("fpsCounterNb");
     const trianglesRenderedNode = document.getElementById("trianglesRenderedNb");
     const pauseBtn = document.getElementById("playPause");
+    const shapeInfoNameNode = document.getElementById("shapeInfoName");
+    const shapeInfoPointsNode = document.getElementById("shapeInfoPoints");
+    const shapeInfoTrianglesNode = document.getElementById("shapeInfoTriangles");
+    const shapeInfoTexturesNode = document.getElementById("shapeInfoTextures");
+    const shapeInfoOpacityNode = document.getElementById("shapeInfoOpacity");
+    const shapeStoryTitleNode = document.getElementById("shapeStoryTitle");
+    const shapeStoryDescriptionNode = document.getElementById("shapeStoryDescription");
+    const shapeStoryFeatureNode = document.getElementById("shapeStoryFeature");
+    const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const wireframeRow = document.getElementById("wireframeRow");
     const wireframeLabel = document.getElementById("wireframeLabel");
@@ -128,6 +147,15 @@ class Main {
       !fpsNode ||
       !trianglesRenderedNode ||
       !pauseBtn ||
+      !shapeInfoNameNode ||
+      !shapeInfoPointsNode ||
+      !shapeInfoTrianglesNode ||
+      !shapeInfoTexturesNode ||
+      !shapeInfoOpacityNode ||
+      !shapeStoryTitleNode ||
+      !shapeStoryDescriptionNode ||
+      !shapeStoryFeatureNode ||
+      !shapeStoryDensityNode ||
       !wireframeBtn ||
       !wireframeRow ||
       !wireframeLabel ||
@@ -170,6 +198,15 @@ class Main {
     this.fpsNode = fpsNode;
     this.trianglesRenderedNode = trianglesRenderedNode;
     this.pauseBtn = pauseBtn;
+    this.shapeInfoNameNode = shapeInfoNameNode;
+    this.shapeInfoPointsNode = shapeInfoPointsNode;
+    this.shapeInfoTrianglesNode = shapeInfoTrianglesNode;
+    this.shapeInfoTexturesNode = shapeInfoTexturesNode;
+    this.shapeInfoOpacityNode = shapeInfoOpacityNode;
+    this.shapeStoryTitleNode = shapeStoryTitleNode;
+    this.shapeStoryDescriptionNode = shapeStoryDescriptionNode;
+    this.shapeStoryFeatureNode = shapeStoryFeatureNode;
+    this.shapeStoryDensityNode = shapeStoryDensityNode;
     this.wireframeBtn = wireframeBtn;
     this.wireframeRow = wireframeRow;
     this.wireframeLabel = wireframeLabel;
@@ -217,8 +254,49 @@ class Main {
       1,
     );
     this.opacity = progress;
+    this.syncShapeInfoOpacity();
     this.renderPausedFrame();
   };
+
+  private formatPrimitiveName(name: string): string {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  private syncShapeInfoOpacity() {
+    this.shapeInfoOpacityNode.textContent = `${Math.round(this.opacity * 100)}%`;
+  }
+
+  private syncShapeInfoPanel(primitive: string) {
+    const object3D = this.objects3D[primitive];
+    const info = shapeInfo[primitive];
+    const texturedMaterials = Array.from(
+      new Set(
+        object3D.triangles
+          .map((triangle) => triangle[3])
+          .filter((material) => typeof material === "string" && !material.startsWith("rgba")),
+      ),
+    );
+
+    this.shapeInfoNameNode.textContent = this.formatPrimitiveName(primitive);
+    this.shapeInfoPointsNode.textContent = String(object3D.points.length);
+    this.shapeInfoTrianglesNode.textContent = String(object3D.triangles.length);
+    this.shapeInfoTexturesNode.textContent =
+      texturedMaterials.length > 0 ? texturedMaterials.join(", ") : "none";
+    this.syncShapeInfoOpacity();
+
+    if (!info) {
+      this.shapeStoryTitleNode.textContent = this.formatPrimitiveName(primitive);
+      this.shapeStoryDescriptionNode.textContent = "";
+      this.shapeStoryFeatureNode.textContent = "";
+      this.shapeStoryDensityNode.textContent = "";
+      return;
+    }
+
+    this.shapeStoryTitleNode.textContent = info.title;
+    this.shapeStoryDescriptionNode.textContent = info.description;
+    this.shapeStoryFeatureNode.textContent = info.geometricFeature;
+    this.shapeStoryDensityNode.textContent = info.densityLabel;
+  }
 
   private fpsCounter() {
     const now = performance.now();
@@ -304,6 +382,7 @@ class Main {
 
   private startTransitionToPrimitive(primitive: string, now: number) {
     const mesh = this.buildMesh(primitive);
+    this.syncShapeInfoPanel(primitive);
 
     if (!this.currentPrimitiveName && !this.transitionMachine.getActiveMeshes().length) {
       this.transitionMachine.playInitialEntrance(mesh, now);
@@ -522,6 +601,7 @@ class Main {
     this.applyDefaultControlValues();
     this.attachControlListeners();
     this.syncSettingsFromControls();
+    this.syncShapeInfoPanel(primitive);
     this.syncOpacitySliderAvailability();
     this.startTransitionToPrimitive(primitive, performance.now());
     this.start();
