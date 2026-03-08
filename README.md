@@ -147,6 +147,108 @@ To minimize this, we use `addTexturedQuadSubdiv` in `builder.ts`.
 This breaks a large quad into a grid of many small triangles (e.g., 12x12).
 Each small triangle is still affinely mapped, but because they are so small, the perspective error is barely noticeable.
 
+### 6. **Animation State Machine (`StateMachine.ts` & `shapeTransitionMachine.ts`)**
+
+Shape transitions are handled separately from the continuous 3D rotation.
+Rotation still happens every frame on the active mesh geometry, but entrance / exit motion is driven by a small generic state machine.
+
+This split is intentional:
+
+- the 3D engine keeps doing what it already does well: project, cull, sort, and draw triangles
+- the animation system only decides **which mesh is visible**, **which state it is in**, and **which screen-space offset should be applied**
+- new transitions can be added without mixing animation timing logic into the renderer
+
+#### **The generic machine**
+
+`src/animations/StateMachine.ts` is a reusable finite state machine with timed updates.
+Each state can define:
+
+- `onEnter(context, controller, payload)`
+- `onUpdate(context, update)`
+- `onExit(context, controller, nextState)`
+
+At runtime, the machine stores:
+
+- the current state
+- a mutable context object shared by all states
+- the moment the current state started
+- the last update timestamp
+
+The `update(now)` call computes elapsed time and exposes helpers such as:
+
+- `progress(duration)` to normalize time from `0` to `1`
+- `transition(nextState, payload)` to move to another state
+
+This makes it suitable for many UI or canvas animations where motion is time-based and state-driven.
+
+#### **The shape transition machine**
+
+`src/animations/shapeTransitionMachine.ts` is a concrete implementation built on top of the generic machine.
+It manages three states:
+
+- `idle`: one mesh is centered on screen
+- `entering`: a mesh comes from above and stops in the middle
+- `switching`: the current mesh exits left while the next mesh enters from above
+
+Its context stores:
+
+- `currentMesh`
+- `incomingMesh`
+- `outgoingMesh`
+- `renderables`
+- transition timing and travel distances
+
+Each frame, the machine outputs a list of render instructions:
+
+```ts
+type MeshRenderRequest = {
+  mesh: Mesh;
+  offsetX?: number;
+  offsetY?: number;
+};
+```
+
+Those offsets are applied at draw time in `Triangle.render(...)`, which means the animation moves the rendered result on screen without changing the existing rotation pipeline.
+
+#### **How it is used in this project**
+
+In `src/index.ts`:
+
+1. `Main` creates one `ShapeTransitionMachine`
+2. the default primitive is started with `playInitialEntrance(...)`
+3. when the `<select>` changes, `switchTo(...)` is called with the new mesh
+4. on every animation frame, `transitionMachine.update(timestamp)` refreshes the current state
+5. the renderer consumes `transitionMachine.getRenderables()` and draws every mesh with its current offset
+
+This means the rendering loop stays simple:
+
+```ts
+this.transitionMachine.update(timestamp);
+const renderables = this.transitionMachine.getRenderables();
+renderables.forEach((renderable) => this.rotateMesh(renderable.mesh));
+this.surface3D.render(renderables);
+```
+
+#### **How to create another animation**
+
+To add another state-driven animation:
+
+1. Create a new file in `src/animations/`
+2. Define a state union such as `"idle" | "fadeIn" | "fadeOut"`
+3. Create a context object with the data the states need
+4. Declare state handlers with `onEnter`, `onUpdate`, and optional `onExit`
+5. Use `progress(duration)` plus easing / interpolation helpers to compute motion
+6. Expose a small public API such as `play()`, `hide()`, `update(now)`, and `getRenderables()`
+7. Call it from `src/index.ts` inside the main animation loop
+
+The important design rule is:
+
+- keep the generic timing / transition logic inside the state machine
+- keep rendering decisions in the specialized animation wrapper
+- keep mesh projection / triangle drawing inside the renderer
+
+With that separation, you can add new canvas animations without coupling them to the math and rendering internals.
+
 ---
 
 ## Deployment
