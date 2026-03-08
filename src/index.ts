@@ -54,6 +54,7 @@ class Main {
   private readonly times: number[];
   private fps: number;
   private readonly fpsNode: HTMLElement;
+  private readonly trianglesRenderedNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly backfaceCullingBtn: HTMLElement;
@@ -80,6 +81,7 @@ class Main {
   private opacity: number;
   private wireframeEnabled: boolean;
   private backfaceCullingEnabled: boolean;
+  private renderedTriangles: number;
   private smoothedFps: number;
   private lastFpsDisplayUpdateAt: number;
   private currentPrimitiveName: string | null;
@@ -98,6 +100,7 @@ class Main {
     }
 
     const fpsNode = document.getElementById("fpsCounterNb");
+    const trianglesRenderedNode = document.getElementById("trianglesRenderedNb");
     const pauseBtn = document.getElementById("playPause");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
@@ -105,6 +108,7 @@ class Main {
     const opacitySlider = document.getElementById("opacitySlider");
     if (
       !fpsNode ||
+      !trianglesRenderedNode ||
       !pauseBtn ||
       !wireframeBtn ||
       !backfaceCullingBtn ||
@@ -134,6 +138,7 @@ class Main {
     this.opacity = 1;
     this.wireframeEnabled = false;
     this.backfaceCullingEnabled = true;
+    this.renderedTriangles = 0;
     this.focal = DEFAULT_FOCAL_LENGTH;
     this.zOffset = sliderToZoomOffset(DEFAULT_ZOOM_SLIDER_VALUE);
     this.times = [];
@@ -141,6 +146,7 @@ class Main {
     this.smoothedFps = 0;
     this.lastFpsDisplayUpdateAt = 0;
     this.fpsNode = fpsNode;
+    this.trianglesRenderedNode = trianglesRenderedNode;
     this.pauseBtn = pauseBtn;
     this.wireframeBtn = wireframeBtn;
     this.backfaceCullingBtn = backfaceCullingBtn;
@@ -207,6 +213,7 @@ class Main {
 
     this.lastFpsDisplayUpdateAt = now;
     this.fpsNode.textContent = String(Math.round(this.smoothedFps));
+    this.trianglesRenderedNode.textContent = String(this.renderedTriangles);
   }
 
   private applyCameraSettings(mesh: Mesh) {
@@ -325,7 +332,7 @@ class Main {
 
     const renderables = this.getCurrentRenderables();
     renderables.forEach((renderable) => this.rotateMesh(renderable.mesh));
-    this.surface3D.render(renderables, {
+    this.renderedTriangles = this.surface3D.render(renderables, {
       wireframe: this.wireframeEnabled,
       cullBackfaces: this.backfaceCullingEnabled,
       opacity: this.opacity,
@@ -337,11 +344,12 @@ class Main {
       return;
     }
 
-    this.surface3D.render(this.getCurrentRenderables(), {
+    this.renderedTriangles = this.surface3D.render(this.getCurrentRenderables(), {
       wireframe: this.wireframeEnabled,
       cullBackfaces: this.backfaceCullingEnabled,
       opacity: this.opacity,
     });
+    this.trianglesRenderedNode.textContent = String(this.renderedTriangles);
   }
 
   private togglePause = () => {
@@ -387,7 +395,9 @@ class Main {
     cancelAnimationFrame(this.requestAnimationID);
     this.lastFpsDisplayUpdateAt = 0;
     this.smoothedFps = 0;
+    this.renderedTriangles = 0;
     this.fpsNode.textContent = String(0);
+    this.trianglesRenderedNode.textContent = String(0);
   };
 
   private getCurrentRenderables() {

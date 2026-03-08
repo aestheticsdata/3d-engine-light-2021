@@ -108,7 +108,7 @@ class Triangle {
     offsetX: number = 0,
     offsetY: number = 0,
     options: TriangleRenderOptions = {},
-  ): void {
+  ): boolean {
     const aproj = this.a.convert3D2D();
     const bproj = this.b.convert3D2D();
     const cproj = this.c.convert3D2D();
@@ -123,7 +123,7 @@ class Triangle {
     const v2x = this.cproj.x - this.aproj.x;
     const v2y = this.cproj.y - this.aproj.y;
     if ((options.cullBackfaces ?? true) && v1x * v2y - v1y * v2x <= 0) {
-      return;
+      return false;
     }
 
     const opacity = Math.min(1, Math.max(0, options.opacity ?? 1));
@@ -140,7 +140,7 @@ class Triangle {
       context.closePath();
       context.stroke();
       context.restore();
-      return;
+      return true;
     }
 
     const img = textures[this.material];
@@ -155,7 +155,7 @@ class Triangle {
       context.closePath();
       context.fill();
       context.restore();
-      return;
+      return true;
     }
 
     // textured triangle (affine)
@@ -185,7 +185,7 @@ class Triangle {
     const uvDet = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
     if (uvDet === 0) {
       context.restore();
-      return;
+      return false;
     }
 
     const m11 = (ax * (y2 - y3) + bx * (y3 - y1) + cx * (y1 - y2)) / uvDet;
@@ -222,6 +222,7 @@ class Triangle {
 
     context.restore();
     context.restore();
+    return true;
   }
 
   public changeFocal(value: number) {

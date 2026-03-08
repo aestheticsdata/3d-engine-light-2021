@@ -15,12 +15,17 @@ class Mesh {
     offsetX: number = 0,
     offsetY: number = 0,
     options: TriangleRenderOptions = {},
-  ) {
+  ): number {
     this.triangles.sort((t1, t2) => t2.depth - t1.depth);
+    let renderedTriangles = 0;
 
     for (const i in this.triangles) {
-      this.triangles[i].render(context, offsetX, offsetY, options);
+      if (this.triangles[i].render(context, offsetX, offsetY, options)) {
+        renderedTriangles++;
+      }
     }
+
+    return renderedTriangles;
   }
 
   public changeFocal(value: number) {

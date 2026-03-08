@@ -67,7 +67,29 @@ button {
 .fpsRow {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.statsBadge {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+  padding: 2px 6px;
+  background-color: rgba(173, 220, 255, 0.95);
+  border-radius: 5px;
+}
+
+.statsBadgeRight {
+  margin-left: auto;
+}
+
+.statsLabel,
+.statsValue {
+  color: rgba(12, 12, 127, 1);
+}
+
+.statsValue {
+  font-weight: 700;
 }
 
 .toggleRow {
@@ -158,11 +180,6 @@ button:hover {
 
 #resetControls:hover {
   background-color: rgba(152, 232, 161, 1);
-}
-
-.fpsCounter {
-  background-color: rgba(12, 12, 127, 1);
-  padding: 1px 3px;
 }
 
 .hoverTooltip {

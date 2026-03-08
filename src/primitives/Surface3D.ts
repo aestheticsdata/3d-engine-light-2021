@@ -17,22 +17,25 @@ class Surface3D {
   public render(
     renderables: MeshRenderRequest[],
     options: TriangleRenderOptions = {},
-  ) {
+  ): number {
     this.surface3DContainer.clearRect(
       0,
       0,
       this.surface3DContainer.canvas.width,
       this.surface3DContainer.canvas.height,
     );
+    let renderedTriangles = 0;
 
     for (const renderable of renderables) {
-      renderable.mesh.renderMesh(
+      renderedTriangles += renderable.mesh.renderMesh(
         this.surface3DContainer,
         renderable.offsetX ?? 0,
         renderable.offsetY ?? 0,
         options,
       );
     }
+
+    return renderedTriangles;
   }
 }
 
