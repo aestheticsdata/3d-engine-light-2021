@@ -5,9 +5,28 @@ class Controls {
       return;
     }
 
-    element.addEventListener("change", (e) => {
+    const eventName = element.type === "range" ? "input" : "change";
+    element.addEventListener(eventName, (e) => {
       callback(parseInt((e.currentTarget as HTMLInputElement).value, 10));
     });
+  }
+
+  public getNumericValue(domID: string): number | null {
+    const element = document.querySelector<HTMLInputElement>(domID);
+    if (!element) {
+      return null;
+    }
+
+    return parseInt(element.value, 10);
+  }
+
+  public setNumericValue(domID: string, value: number) {
+    const element = document.querySelector<HTMLInputElement>(domID);
+    if (!element) {
+      return;
+    }
+
+    element.value = String(value);
   }
 
   public createSelectButton(
