@@ -7,9 +7,11 @@ import Surface3D from "@primitives/Surface3D";
 import Triangle from "@primitives/Triangle";
 import { loadTextures } from "@textures/textures";
 import Controls from "./controls";
+import BackgroundRenderer from "./rendering/BackgroundRenderer";
 import FollowCursorTooltip from "./ui/tooltip";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
+import skyUrl from "./img/sky.avif";
 
 const TRANSITION_DURATION_MS = 1250;
 const PITCH_YAW_ROTATION_DIVISOR = 110;
@@ -50,6 +52,14 @@ const sliderToZoomOffset = (sliderValue: number): number => {
   return lerp(ZOOM_ZOFFSET_FAR, ZOOM_ZOFFSET_NEAR, progress);
 };
 
+const loadImageAsset = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
+    image.src = src;
+  });
+
 class Main {
   private readonly times: number[];
   private fps: number;
@@ -88,7 +98,7 @@ class Main {
   private targetPrimitiveName: string | null;
   private queuedPrimitiveName: string | null;
 
-  constructor() {
+  constructor(backgroundRenderer: BackgroundRenderer | null) {
     const canvas = document.querySelector("canvas");
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error("Canvas element not found.");
@@ -122,7 +132,7 @@ class Main {
     this.stage = stage;
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
-    this.surface3D = new Surface3D(this.stage);
+    this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.matrix3D = new Matrix3D();
     this.transitionMachine = new ShapeTransitionMachine({
       width: this.stage.canvas.width,
@@ -484,4 +494,20 @@ class Main {
   }
 }
 
-new Main().init(Object.keys(data)[0]);
+const boot = async () => {
+  const skyImage = await loadImageAsset(skyUrl);
+  const canvas = document.querySelector("canvas");
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    throw new Error("Canvas element not found.");
+  }
+
+  const backgroundRenderer = new BackgroundRenderer({
+    width: canvas.width,
+    height: canvas.height,
+    skyImage,
+  });
+
+  await new Main(backgroundRenderer).init(Object.keys(data)[0]);
+};
+
+boot();

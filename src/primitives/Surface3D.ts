@@ -1,3 +1,4 @@
+import BackgroundRenderer from "../rendering/BackgroundRenderer";
 import Mesh from "@primitives/Mesh";
 import { TriangleRenderOptions } from "@primitives/Triangle";
 
@@ -9,21 +10,29 @@ export interface MeshRenderRequest {
 
 class Surface3D {
   private readonly surface3DContainer: CanvasRenderingContext2D;
+  private readonly backgroundRenderer: BackgroundRenderer | null;
 
-  constructor(container: CanvasRenderingContext2D) {
+  constructor(
+    container: CanvasRenderingContext2D,
+    backgroundRenderer: BackgroundRenderer | null = null,
+  ) {
     this.surface3DContainer = container;
+    this.backgroundRenderer = backgroundRenderer;
   }
 
   public render(
     renderables: MeshRenderRequest[],
     options: TriangleRenderOptions = {},
   ): number {
-    this.surface3DContainer.clearRect(
-      0,
-      0,
-      this.surface3DContainer.canvas.width,
-      this.surface3DContainer.canvas.height,
-    );
+    this.backgroundRenderer?.render(this.surface3DContainer);
+    if (!this.backgroundRenderer) {
+      this.surface3DContainer.clearRect(
+        0,
+        0,
+        this.surface3DContainer.canvas.width,
+        this.surface3DContainer.canvas.height,
+      );
+    }
     let renderedTriangles = 0;
 
     for (const renderable of renderables) {

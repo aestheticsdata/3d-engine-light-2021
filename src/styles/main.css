@@ -17,12 +17,14 @@ body {
 
 #canvasWrapper {
   color: #ccc;
-  background-size: 1024px 650px;
-  background-image: url("../img/codeBG.png");
-  background-repeat: no-repeat;
+  background: #a7d2ff;
   -moz-box-shadow: 0 0 14px #aaa;
   -webkit-box-shadow: 0 0 14px #aaa;
   box-shadow: 0 0 14px #aaa;
+}
+
+canvas {
+  display: block;
 }
 
 #controls {
@@ -31,7 +33,7 @@ body {
   left: calc(100% + 28px);
   width: 250px;
   padding: 14px 14px 16px;
-  background: rgba(12, 12, 127, 0.9);
+  background: oklch(0.29 0.11 260 / 0.9);
   -moz-box-shadow: 0 0 14px #aaa;
   -webkit-box-shadow: 0 0 14px #aaa;
   box-shadow: 0 0 14px #aaa;
