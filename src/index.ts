@@ -33,6 +33,7 @@ const OPACITY_SLIDER_MAX = 100;
 const DEFAULT_OPACITY_SLIDER_VALUE = 100;
 const FPS_DISPLAY_UPDATE_INTERVAL_MS = 90;
 const FPS_SMOOTHING_FACTOR = 0.2;
+const SHAPE_INFO_PANEL_FADE_DURATION_MS = 180;
 
 const sliderProgress = (value: number, min: number, max: number): number =>
   (value - min) / (max - min);
@@ -67,6 +68,7 @@ class Main {
   private readonly fpsNode: HTMLElement;
   private readonly trianglesRenderedNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
+  private readonly shapeInfoPanelContent: HTMLElement;
   private readonly shapeInfoNameNode: HTMLElement;
   private readonly shapeInfoPointsNode: HTMLElement;
   private readonly shapeInfoTrianglesNode: HTMLElement;
@@ -85,6 +87,7 @@ class Main {
   private readonly resetBtn: HTMLElement;
   private readonly opacitySlider: HTMLInputElement;
   private readonly opacityDisabledTooltip: FollowCursorTooltip;
+  private shapeInfoPanelFadeTimeoutId: number | null;
   private requestAnimationID: number;
   private isPlaying: boolean;
   private readonly objects3D: Data3D;
@@ -126,6 +129,7 @@ class Main {
     const fpsNode = document.getElementById("fpsCounterNb");
     const trianglesRenderedNode = document.getElementById("trianglesRenderedNb");
     const pauseBtn = document.getElementById("playPause");
+    const shapeInfoPanelContent = document.getElementById("shapeInfoPanelContent");
     const shapeInfoNameNode = document.getElementById("shapeInfoName");
     const shapeInfoPointsNode = document.getElementById("shapeInfoPoints");
     const shapeInfoTrianglesNode = document.getElementById("shapeInfoTriangles");
@@ -147,6 +151,7 @@ class Main {
       !fpsNode ||
       !trianglesRenderedNode ||
       !pauseBtn ||
+      !shapeInfoPanelContent ||
       !shapeInfoNameNode ||
       !shapeInfoPointsNode ||
       !shapeInfoTrianglesNode ||
@@ -198,6 +203,7 @@ class Main {
     this.fpsNode = fpsNode;
     this.trianglesRenderedNode = trianglesRenderedNode;
     this.pauseBtn = pauseBtn;
+    this.shapeInfoPanelContent = shapeInfoPanelContent;
     this.shapeInfoNameNode = shapeInfoNameNode;
     this.shapeInfoPointsNode = shapeInfoPointsNode;
     this.shapeInfoTrianglesNode = shapeInfoTrianglesNode;
@@ -220,6 +226,7 @@ class Main {
       message: "Turn backface culling off to adjust opacity.",
       shouldShow: () => this.opacitySlider.disabled,
     });
+    this.shapeInfoPanelFadeTimeoutId = null;
     this.requestAnimationID = 0;
     this.isPlaying = true;
     this.currentPrimitiveName = null;
@@ -296,6 +303,32 @@ class Main {
     this.shapeStoryDescriptionNode.textContent = info.description;
     this.shapeStoryFeatureNode.textContent = info.geometricFeature;
     this.shapeStoryDensityNode.textContent = info.densityLabel;
+  }
+
+  private animateShapeInfoPanel(primitive: string) {
+    if (this.shapeInfoPanelFadeTimeoutId !== null) {
+      window.clearTimeout(this.shapeInfoPanelFadeTimeoutId);
+      this.shapeInfoPanelFadeTimeoutId = null;
+    }
+
+    if (!this.currentPrimitiveName) {
+      this.shapeInfoPanelContent.classList.remove("panelFadeOut", "panelFadeIn");
+      this.syncShapeInfoPanel(primitive);
+      return;
+    }
+
+    this.shapeInfoPanelContent.classList.remove("panelFadeIn");
+    // Restart the fade-out animation if changes happen quickly.
+    void this.shapeInfoPanelContent.offsetWidth;
+    this.shapeInfoPanelContent.classList.add("panelFadeOut");
+
+    this.shapeInfoPanelFadeTimeoutId = window.setTimeout(() => {
+      this.syncShapeInfoPanel(primitive);
+      this.shapeInfoPanelContent.classList.remove("panelFadeOut");
+      void this.shapeInfoPanelContent.offsetWidth;
+      this.shapeInfoPanelContent.classList.add("panelFadeIn");
+      this.shapeInfoPanelFadeTimeoutId = null;
+    }, SHAPE_INFO_PANEL_FADE_DURATION_MS);
   }
 
   private fpsCounter() {
@@ -382,7 +415,7 @@ class Main {
 
   private startTransitionToPrimitive(primitive: string, now: number) {
     const mesh = this.buildMesh(primitive);
-    this.syncShapeInfoPanel(primitive);
+    this.animateShapeInfoPanel(primitive);
 
     if (!this.currentPrimitiveName && !this.transitionMachine.getActiveMeshes().length) {
       this.transitionMachine.playInitialEntrance(mesh, now);
