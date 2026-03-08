@@ -18,6 +18,10 @@
             <span class="toggleLabel">wireframe</span>
             <button id="toggleWireframe" type="button">off</button>
           </div>
+          <div class="toggleRow">
+            <span class="toggleLabel">backface culling</span>
+            <button id="toggleBackfaceCulling" type="button">on</button>
+          </div>
           <div id="selectButton">
             <select id="primitives">
             </select>
@@ -27,13 +31,13 @@
           </div>
         </div>
         <div class="sliderGroup">
-          <label class="sliderRow" for="focalSlider">
-            <span class="sliderText">focal</span>
-            <input id="focalSlider" type="range" min="0" max="100" value="18" />
+          <label class="sliderRow" for="zoomSlider">
+            <span class="sliderText">zoom</span>
+            <input id="zoomSlider" type="range" min="0" max="100" value="50" />
           </label>
-          <label class="sliderRow" for="zOffsetSlider">
-            <span class="sliderText">z offset</span>
-            <input id="zOffsetSlider" type="range" min="-50" max="500" value="0" />
+          <label class="sliderRow" for="opacitySlider">
+            <span class="sliderText">opacity</span>
+            <input id="opacitySlider" type="range" min="0" max="100" value="100" />
           </label>
           <label class="sliderRow" for="pitchSlider">
             <span class="sliderText">pitch</span>

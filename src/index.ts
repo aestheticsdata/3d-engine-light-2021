@@ -7,23 +7,27 @@ import Surface3D from "@primitives/Surface3D";
 import Triangle from "@primitives/Triangle";
 import { loadTextures } from "@textures/textures";
 import Controls from "./controls";
+import FollowCursorTooltip from "./ui/tooltip";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 
 const TRANSITION_DURATION_MS = 1250;
 const PITCH_YAW_ROTATION_DIVISOR = 110;
 const ROLL_ROTATION_DIVISOR = 500;
-const FOCAL_SLIDER_MIN = 0;
-const FOCAL_SLIDER_MAX = 100;
-const FOCAL_LENGTH_MIN = 180;
-const FOCAL_LENGTH_MAX = 3200;
-const DEFAULT_FOCAL_SLIDER_VALUE = 18;
-const DEFAULT_Z_OFFSET = 0;
+const DEFAULT_FOCAL_LENGTH = 300;
+const ZOOM_SLIDER_MIN = 0;
+const ZOOM_SLIDER_MAX = 100;
+const DEFAULT_ZOOM_SLIDER_VALUE = 50;
+const ZOOM_ZOFFSET_FAR = 260;
+const ZOOM_ZOFFSET_NEAR = -220;
 const DEFAULT_PITCH = 400;
 const DEFAULT_YAW = 400;
 const DEFAULT_ROLL = 200;
 const DEFAULT_ROTATION_SPEED = 200;
 const ROTATION_SPEED_SLIDER_MAX = 2000;
+const OPACITY_SLIDER_MIN = 0;
+const OPACITY_SLIDER_MAX = 100;
+const DEFAULT_OPACITY_SLIDER_VALUE = 100;
 const FPS_DISPLAY_UPDATE_INTERVAL_MS = 90;
 const FPS_SMOOTHING_FACTOR = 0.2;
 
@@ -33,17 +37,17 @@ const sliderProgress = (value: number, min: number, max: number): number =>
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
-const sliderToFocalLength = (sliderValue: number): number => {
+const lerp = (start: number, end: number, progress: number): number =>
+  start + (end - start) * progress;
+
+const sliderToZoomOffset = (sliderValue: number): number => {
   const progress = clamp(
-    sliderProgress(sliderValue, FOCAL_SLIDER_MIN, FOCAL_SLIDER_MAX),
+    sliderProgress(sliderValue, ZOOM_SLIDER_MIN, ZOOM_SLIDER_MAX),
     0,
     1,
   );
 
-  return (
-    FOCAL_LENGTH_MIN *
-    Math.pow(FOCAL_LENGTH_MAX / FOCAL_LENGTH_MIN, progress)
-  );
+  return lerp(ZOOM_ZOFFSET_FAR, ZOOM_ZOFFSET_NEAR, progress);
 };
 
 class Main {
@@ -52,7 +56,10 @@ class Main {
   private readonly fpsNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
+  private readonly backfaceCullingBtn: HTMLElement;
   private readonly resetBtn: HTMLElement;
+  private readonly opacitySlider: HTMLInputElement;
+  private readonly opacityDisabledTooltip: FollowCursorTooltip;
   private requestAnimationID: number;
   private isPlaying: boolean;
   private readonly objects3D: Data3D;
@@ -70,7 +77,9 @@ class Main {
   private yaw: number;
   private roll: number;
   private rotationSpeed: number;
+  private opacity: number;
   private wireframeEnabled: boolean;
+  private backfaceCullingEnabled: boolean;
   private smoothedFps: number;
   private lastFpsDisplayUpdateAt: number;
   private currentPrimitiveName: string | null;
@@ -91,8 +100,17 @@ class Main {
     const fpsNode = document.getElementById("fpsCounterNb");
     const pauseBtn = document.getElementById("playPause");
     const wireframeBtn = document.getElementById("toggleWireframe");
+    const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
     const resetBtn = document.getElementById("resetControls");
-    if (!fpsNode || !pauseBtn || !wireframeBtn || !resetBtn) {
+    const opacitySlider = document.getElementById("opacitySlider");
+    if (
+      !fpsNode ||
+      !pauseBtn ||
+      !wireframeBtn ||
+      !backfaceCullingBtn ||
+      !resetBtn ||
+      !(opacitySlider instanceof HTMLInputElement)
+    ) {
       throw new Error("UI controls are missing.");
     }
 
@@ -113,9 +131,11 @@ class Main {
     this.yaw = DEFAULT_YAW;
     this.roll = DEFAULT_ROLL;
     this.rotationSpeed = DEFAULT_ROTATION_SPEED;
+    this.opacity = 1;
     this.wireframeEnabled = false;
-    this.focal = 300;
-    this.zOffset = DEFAULT_Z_OFFSET;
+    this.backfaceCullingEnabled = true;
+    this.focal = DEFAULT_FOCAL_LENGTH;
+    this.zOffset = sliderToZoomOffset(DEFAULT_ZOOM_SLIDER_VALUE);
     this.times = [];
     this.fps = 0;
     this.smoothedFps = 0;
@@ -123,7 +143,14 @@ class Main {
     this.fpsNode = fpsNode;
     this.pauseBtn = pauseBtn;
     this.wireframeBtn = wireframeBtn;
+    this.backfaceCullingBtn = backfaceCullingBtn;
     this.resetBtn = resetBtn;
+    this.opacitySlider = opacitySlider;
+    this.opacityDisabledTooltip = new FollowCursorTooltip({
+      target: this.opacitySlider,
+      message: "Turn backface culling off to adjust opacity.",
+      shouldShow: () => this.opacitySlider.disabled,
+    });
     this.requestAnimationID = 0;
     this.isPlaying = true;
     this.currentPrimitiveName = null;
@@ -132,17 +159,15 @@ class Main {
 
     this.pauseBtn.addEventListener("click", this.togglePause);
     this.wireframeBtn.addEventListener("click", this.toggleWireframe);
+    this.backfaceCullingBtn.addEventListener(
+      "click",
+      this.toggleBackfaceCulling,
+    );
     this.resetBtn.addEventListener("click", this.resetControls);
   }
 
-  private changeFocal = (sliderValue: number) => {
-    this.focal = sliderToFocalLength(sliderValue);
-    this.applyCameraSettingsToActiveMeshes();
-    this.renderPausedFrame();
-  };
-
-  private changeOffsetZ = (zOffset: number) => {
-    this.zOffset = zOffset;
+  private changeZoom = (sliderValue: number) => {
+    this.zOffset = sliderToZoomOffset(sliderValue);
     this.applyCameraSettingsToActiveMeshes();
     this.renderPausedFrame();
   };
@@ -152,6 +177,15 @@ class Main {
   private changeRoll = (roll: number) => (this.roll = roll);
   private changeRotationSpeed = (rotationSpeed: number) =>
     (this.rotationSpeed = rotationSpeed);
+  private changeOpacity = (sliderValue: number) => {
+    const progress = clamp(
+      sliderProgress(sliderValue, OPACITY_SLIDER_MIN, OPACITY_SLIDER_MAX),
+      0,
+      1,
+    );
+    this.opacity = progress;
+    this.renderPausedFrame();
+  };
 
   private fpsCounter() {
     const now = performance.now();
@@ -293,6 +327,8 @@ class Main {
     renderables.forEach((renderable) => this.rotateMesh(renderable.mesh));
     this.surface3D.render(renderables, {
       wireframe: this.wireframeEnabled,
+      cullBackfaces: this.backfaceCullingEnabled,
+      opacity: this.opacity,
     });
   }
 
@@ -303,6 +339,8 @@ class Main {
 
     this.surface3D.render(this.getCurrentRenderables(), {
       wireframe: this.wireframeEnabled,
+      cullBackfaces: this.backfaceCullingEnabled,
+      opacity: this.opacity,
     });
   }
 
@@ -315,6 +353,22 @@ class Main {
   private toggleWireframe = () => {
     this.wireframeEnabled = !this.wireframeEnabled;
     this.wireframeBtn.textContent = this.wireframeEnabled ? "on" : "off";
+    this.renderPausedFrame();
+  };
+
+  private toggleBackfaceCulling = () => {
+    this.backfaceCullingEnabled = !this.backfaceCullingEnabled;
+    this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
+      ? "on"
+      : "off";
+    if (this.backfaceCullingEnabled) {
+      this.controls.setNumericValue(
+        "#opacitySlider",
+        DEFAULT_OPACITY_SLIDER_VALUE,
+      );
+      this.changeOpacity(DEFAULT_OPACITY_SLIDER_VALUE);
+    }
+    this.syncOpacitySliderAvailability();
     this.renderPausedFrame();
   };
 
@@ -341,11 +395,11 @@ class Main {
   }
 
   private attachControlListeners() {
-    this.controls.attachListener("#focalSlider", this.changeFocal);
-    this.controls.attachListener("#zOffsetSlider", this.changeOffsetZ);
+    this.controls.attachListener("#zoomSlider", this.changeZoom);
     this.controls.attachListener("#pitchSlider", this.changePitch);
     this.controls.attachListener("#yawSlider", this.changeYaw);
     this.controls.attachListener("#rollSlider", this.changeRoll);
+    this.controls.attachListener("#opacitySlider", this.changeOpacity);
     this.controls.attachListener(
       "#rotationSpeedSlider",
       this.changeRotationSpeed,
@@ -353,11 +407,14 @@ class Main {
   }
 
   private applyDefaultControlValues() {
-    this.controls.setNumericValue("#focalSlider", DEFAULT_FOCAL_SLIDER_VALUE);
-    this.controls.setNumericValue("#zOffsetSlider", DEFAULT_Z_OFFSET);
+    this.controls.setNumericValue("#zoomSlider", DEFAULT_ZOOM_SLIDER_VALUE);
     this.controls.setNumericValue("#pitchSlider", DEFAULT_PITCH);
     this.controls.setNumericValue("#yawSlider", DEFAULT_YAW);
     this.controls.setNumericValue("#rollSlider", DEFAULT_ROLL);
+    this.controls.setNumericValue(
+      "#opacitySlider",
+      DEFAULT_OPACITY_SLIDER_VALUE,
+    );
     this.controls.setNumericValue(
       "#rotationSpeedSlider",
       clamp(DEFAULT_ROTATION_SPEED, 0, ROTATION_SPEED_SLIDER_MAX),
@@ -365,13 +422,17 @@ class Main {
   }
 
   private syncSettingsFromControls() {
-    this.changeFocal(this.controls.getNumericValue("#focalSlider") ?? this.focal);
-    this.changeOffsetZ(
-      this.controls.getNumericValue("#zOffsetSlider") ?? this.zOffset,
+    this.changeZoom(
+      this.controls.getNumericValue("#zoomSlider") ??
+        DEFAULT_ZOOM_SLIDER_VALUE,
     );
     this.changePitch(this.controls.getNumericValue("#pitchSlider") ?? this.pitch);
     this.changeYaw(this.controls.getNumericValue("#yawSlider") ?? this.yaw);
     this.changeRoll(this.controls.getNumericValue("#rollSlider") ?? this.roll);
+    this.changeOpacity(
+      this.controls.getNumericValue("#opacitySlider") ??
+        DEFAULT_OPACITY_SLIDER_VALUE,
+    );
     this.changeRotationSpeed(
       this.controls.getNumericValue("#rotationSpeedSlider") ??
         this.rotationSpeed,
@@ -379,9 +440,20 @@ class Main {
   }
 
   private resetControls = () => {
+    this.wireframeEnabled = false;
+    this.backfaceCullingEnabled = true;
+    this.wireframeBtn.textContent = "off";
+    this.backfaceCullingBtn.textContent = "on";
     this.applyDefaultControlValues();
     this.syncSettingsFromControls();
+    this.syncOpacitySliderAvailability();
+    this.renderPausedFrame();
   };
+
+  private syncOpacitySliderAvailability() {
+    this.opacitySlider.disabled = this.backfaceCullingEnabled;
+    this.opacityDisabledTooltip.hide();
+  }
 
   public async init(primitive: string) {
     await loadTextures({
@@ -396,6 +468,7 @@ class Main {
     this.applyDefaultControlValues();
     this.attachControlListeners();
     this.syncSettingsFromControls();
+    this.syncOpacitySliderAvailability();
     this.startTransitionToPrimitive(primitive, performance.now());
     this.start();
   }

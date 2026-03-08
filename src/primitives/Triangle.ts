@@ -60,6 +60,8 @@ type UV = [number, number];
 
 export interface TriangleRenderOptions {
   wireframe?: boolean;
+  cullBackfaces?: boolean;
+  opacity?: number;
 }
 
 class Triangle {
@@ -115,12 +117,18 @@ class Triangle {
     this.bproj = new Point2D(bproj.x + offsetX, bproj.y + offsetY);
     this.cproj = new Point2D(cproj.x + offsetX, cproj.y + offsetY);
 
-    // 2D backface culling (keep your current behavior)
+    // 2D backface culling (optional)
     const v1x = this.bproj.x - this.aproj.x;
     const v1y = this.bproj.y - this.aproj.y;
     const v2x = this.cproj.x - this.aproj.x;
     const v2y = this.cproj.y - this.aproj.y;
-    if (v1x * v2y - v1y * v2x <= 0) return;
+    if ((options.cullBackfaces ?? true) && v1x * v2y - v1y * v2x <= 0) {
+      return;
+    }
+
+    const opacity = Math.min(1, Math.max(0, options.opacity ?? 1));
+    context.save();
+    context.globalAlpha = opacity;
 
     if (options.wireframe) {
       context.strokeStyle = "rgba(10, 20, 60, 0.95)";
@@ -131,6 +139,7 @@ class Triangle {
       context.lineTo(this.cproj.x, this.cproj.y);
       context.closePath();
       context.stroke();
+      context.restore();
       return;
     }
 
@@ -145,6 +154,7 @@ class Triangle {
       context.lineTo(this.cproj.x, this.cproj.y);
       context.closePath();
       context.fill();
+      context.restore();
       return;
     }
 
@@ -173,7 +183,10 @@ class Triangle {
 
     // Solve affine transform (UV->Screen)
     const uvDet = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
-    if (uvDet === 0) return;
+    if (uvDet === 0) {
+      context.restore();
+      return;
+    }
 
     const m11 = (ax * (y2 - y3) + bx * (y3 - y1) + cx * (y1 - y2)) / uvDet;
     const m12 = (ay * (y2 - y3) + by * (y3 - y1) + cy * (y1 - y2)) / uvDet;
@@ -207,6 +220,7 @@ class Triangle {
     context.setTransform(m11, m12, m21, m22, dx, dy);
     context.drawImage(img, 0, 0);
 
+    context.restore();
     context.restore();
   }
 
