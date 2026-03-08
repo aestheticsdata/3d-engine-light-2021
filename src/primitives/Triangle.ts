@@ -97,10 +97,18 @@ class Triangle {
     return (this.a.zValue + this.b.zValue + this.c.zValue) / 3;
   }
 
-  public render(context: CanvasRenderingContext2D): void {
-    this.aproj = this.a.convert3D2D();
-    this.bproj = this.b.convert3D2D();
-    this.cproj = this.c.convert3D2D();
+  public render(
+    context: CanvasRenderingContext2D,
+    offsetX: number = 0,
+    offsetY: number = 0,
+  ): void {
+    const aproj = this.a.convert3D2D();
+    const bproj = this.b.convert3D2D();
+    const cproj = this.c.convert3D2D();
+
+    this.aproj = new Point2D(aproj.x + offsetX, aproj.y + offsetY);
+    this.bproj = new Point2D(bproj.x + offsetX, bproj.y + offsetY);
+    this.cproj = new Point2D(cproj.x + offsetX, cproj.y + offsetY);
 
     // 2D backface culling (keep your current behavior)
     const v1x = this.bproj.x - this.aproj.x;

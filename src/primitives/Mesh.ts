@@ -10,11 +10,15 @@ class Mesh {
     this.triangles = [...triangles];
   }
 
-  public renderMesh(context: CanvasRenderingContext2D) {
+  public renderMesh(
+    context: CanvasRenderingContext2D,
+    offsetX: number = 0,
+    offsetY: number = 0,
+  ) {
     this.triangles.sort((t1, t2) => t2.depth - t1.depth);
 
     for (const i in this.triangles) {
-      this.triangles[i].render(context);
+      this.triangles[i].render(context, offsetX, offsetY);
     }
   }
 

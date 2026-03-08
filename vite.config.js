@@ -6,6 +6,7 @@ export default defineConfig({
   base: "/3dengine",
   resolve: {
     alias: {
+      "@animations": path.resolve(__dirname, "src/animations"),
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
       "@textures": path.resolve(__dirname, "src/textures"),

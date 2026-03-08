@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@animations/*": ["src/animations/*"],
       "@primitives/*": ["src/primitives/*"],
       "@data/*": ["src/data/*"],
       "@textures/*": ["src/textures/*"],
