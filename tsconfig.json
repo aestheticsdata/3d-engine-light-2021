@@ -6,6 +6,8 @@
       "@primitives/*": ["src/primitives/*"],
       "@data/*": ["src/data/*"],
       "@textures/*": ["src/textures/*"],
+      "@rendering/*": ["src/rendering/*"],
+      "@ui/*": ["src/ui/*"]
     },
     "moduleResolution": "node",
     "resolveJsonModule": true,

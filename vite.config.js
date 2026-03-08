@@ -10,6 +10,8 @@ export default defineConfig({
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
       "@textures": path.resolve(__dirname, "src/textures"),
+      "@rendering": path.resolve(__dirname, "src/rendering"),
+      "@ui": path.resolve(__dirname, "src/ui"),
     },
   },
   build: {
