@@ -107,6 +107,14 @@ button {
   text-transform: uppercase;
 }
 
+.toggleLabelMuted {
+  color: rgba(176, 180, 188, 0.72);
+}
+
+.toggleRowOff .toggleLabel {
+  color: rgba(176, 180, 188, 0.72);
+}
+
 #toggleWireframe {
   margin-left: auto;
   width: 72px;

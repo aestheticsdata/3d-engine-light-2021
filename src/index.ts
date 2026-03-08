@@ -67,7 +67,11 @@ class Main {
   private readonly trianglesRenderedNode: HTMLElement;
   private readonly pauseBtn: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
+  private readonly wireframeRow: HTMLElement;
+  private readonly wireframeLabel: HTMLElement;
   private readonly backfaceCullingBtn: HTMLElement;
+  private readonly backfaceCullingRow: HTMLElement;
+  private readonly backfaceCullingLabel: HTMLElement;
   private readonly resetBtn: HTMLElement;
   private readonly opacitySlider: HTMLInputElement;
   private readonly opacityDisabledTooltip: FollowCursorTooltip;
@@ -113,7 +117,11 @@ class Main {
     const trianglesRenderedNode = document.getElementById("trianglesRenderedNb");
     const pauseBtn = document.getElementById("playPause");
     const wireframeBtn = document.getElementById("toggleWireframe");
+    const wireframeRow = document.getElementById("wireframeRow");
+    const wireframeLabel = document.getElementById("wireframeLabel");
     const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
+    const backfaceCullingRow = document.getElementById("backfaceCullingRow");
+    const backfaceCullingLabel = document.getElementById("backfaceCullingLabel");
     const resetBtn = document.getElementById("resetControls");
     const opacitySlider = document.getElementById("opacitySlider");
     if (
@@ -121,7 +129,11 @@ class Main {
       !trianglesRenderedNode ||
       !pauseBtn ||
       !wireframeBtn ||
+      !wireframeRow ||
+      !wireframeLabel ||
       !backfaceCullingBtn ||
+      !backfaceCullingRow ||
+      !backfaceCullingLabel ||
       !resetBtn ||
       !(opacitySlider instanceof HTMLInputElement)
     ) {
@@ -159,7 +171,11 @@ class Main {
     this.trianglesRenderedNode = trianglesRenderedNode;
     this.pauseBtn = pauseBtn;
     this.wireframeBtn = wireframeBtn;
+    this.wireframeRow = wireframeRow;
+    this.wireframeLabel = wireframeLabel;
     this.backfaceCullingBtn = backfaceCullingBtn;
+    this.backfaceCullingRow = backfaceCullingRow;
+    this.backfaceCullingLabel = backfaceCullingLabel;
     this.resetBtn = resetBtn;
     this.opacitySlider = opacitySlider;
     this.opacityDisabledTooltip = new FollowCursorTooltip({
@@ -180,6 +196,7 @@ class Main {
       this.toggleBackfaceCulling,
     );
     this.resetBtn.addEventListener("click", this.resetControls);
+    this.syncToggleButtons();
   }
 
   private changeZoom = (sliderValue: number) => {
@@ -368,17 +385,35 @@ class Main {
     this.pauseBtn.textContent = this.isPlaying ? "pause" : "play";
   };
 
+  private syncToggleButtons() {
+    this.wireframeBtn.textContent = this.wireframeEnabled ? "off" : "on";
+    this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
+      ? "off"
+      : "on";
+    this.wireframeRow.classList.toggle("toggleRowOff", !this.wireframeEnabled);
+    this.backfaceCullingRow.classList.toggle(
+      "toggleRowOff",
+      !this.backfaceCullingEnabled,
+    );
+    this.wireframeLabel.classList.toggle(
+      "toggleLabelMuted",
+      !this.wireframeEnabled,
+    );
+    this.backfaceCullingLabel.classList.toggle(
+      "toggleLabelMuted",
+      !this.backfaceCullingEnabled,
+    );
+  }
+
   private toggleWireframe = () => {
     this.wireframeEnabled = !this.wireframeEnabled;
-    this.wireframeBtn.textContent = this.wireframeEnabled ? "on" : "off";
+    this.syncToggleButtons();
     this.renderPausedFrame();
   };
 
   private toggleBackfaceCulling = () => {
     this.backfaceCullingEnabled = !this.backfaceCullingEnabled;
-    this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
-      ? "on"
-      : "off";
+    this.syncToggleButtons();
     if (this.backfaceCullingEnabled) {
       this.controls.setNumericValue(
         "#opacitySlider",
@@ -462,8 +497,7 @@ class Main {
   private resetControls = () => {
     this.wireframeEnabled = false;
     this.backfaceCullingEnabled = true;
-    this.wireframeBtn.textContent = "off";
-    this.backfaceCullingBtn.textContent = "on";
+    this.syncToggleButtons();
     this.applyDefaultControlValues();
     this.syncSettingsFromControls();
     this.syncOpacitySliderAvailability();
