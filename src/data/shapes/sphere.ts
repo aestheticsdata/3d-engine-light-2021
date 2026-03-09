@@ -2,8 +2,8 @@ import { triangle } from "@data/builder";
 import { Object3D } from "@data/types";
 
 const SPHERE_RADIUS = 100;
-const LAT_SEGMENTS = 6;
-const LON_SEGMENTS = 8;
+const LAT_SEGMENTS = 10;
+const LON_SEGMENTS = LAT_SEGMENTS + 2;
 
 const points: number[][] = [];
 const triangles: triangle[] = [];
