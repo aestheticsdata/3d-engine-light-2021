@@ -11,6 +11,8 @@ const TUBE_RADIUS = 14;
 const PATH_SEGMENTS = 220;
 const TUBE_SEGMENTS = 18;
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const scale = (v: Vec3, factor: number): Vec3 => [
@@ -57,11 +59,21 @@ const knotCenter = (u: number): Vec3 => {
   ];
 };
 
-const sampleTangent = (u: number): Vec3 => {
-  const epsilon = 1e-3;
-  const prev = knotCenter(u - epsilon);
-  const next = knotCenter(u + epsilon);
-  return normalize(sub(next, prev));
+const knotTangent = (u: number): Vec3 => {
+  const pu = KNOT_P * u;
+  const qu = KNOT_Q * u;
+  const cosPu = Math.cos(pu);
+  const sinPu = Math.sin(pu);
+  const cosQu = Math.cos(qu);
+  const sinQu = Math.sin(qu);
+  const ringRadius = MAJOR_RADIUS + PATH_RADIUS * cosQu;
+  const ringRadiusDerivative = -PATH_RADIUS * KNOT_Q * sinQu;
+
+  const x = ringRadiusDerivative * cosPu - ringRadius * KNOT_P * sinPu;
+  const y = ringRadiusDerivative * sinPu + ringRadius * KNOT_P * cosPu;
+  const z = PATH_RADIUS * KNOT_Q * cosQu;
+
+  return normalize([x, y, z]);
 };
 
 const points: number[][] = [];
@@ -75,15 +87,26 @@ const binormals: Vec3[] = [];
 for (let i = 0; i < PATH_SEGMENTS; i += 1) {
   const u = (i * 2 * Math.PI) / PATH_SEGMENTS;
   centers.push(knotCenter(u));
-  tangents.push(sampleTangent(u));
+  tangents.push(knotTangent(u));
 }
 
 const firstTangent = tangents[0];
-const initialUp: Vec3 =
-  Math.abs(dot(firstTangent, [0, 1, 0])) > 0.92 ? [1, 0, 0] : [0, 1, 0];
-const firstNormal = normalize(
-  sub(initialUp, scale(firstTangent, dot(initialUp, firstTangent))),
-);
+let initialNormal: Vec3 = [1, 0, 0];
+if (
+  Math.abs(firstTangent[1]) <= Math.abs(firstTangent[0]) &&
+  Math.abs(firstTangent[1]) <= Math.abs(firstTangent[2])
+) {
+  initialNormal = [0, 1, 0];
+}
+if (
+  Math.abs(firstTangent[2]) <= Math.abs(firstTangent[0]) &&
+  Math.abs(firstTangent[2]) <= Math.abs(firstTangent[1])
+) {
+  initialNormal = [0, 0, 1];
+}
+
+const seed = normalize(cross(firstTangent, initialNormal));
+const firstNormal = normalize(cross(firstTangent, seed));
 
 normals.push(firstNormal);
 binormals.push(normalize(cross(firstTangent, firstNormal)));
@@ -108,6 +131,21 @@ for (let i = 1; i < PATH_SEGMENTS; i += 1) {
   binormals.push(normalize(cross(tangent, orthogonalNormal)));
 }
 
+let theta = Math.acos(clamp(dot(normals[0], normals[PATH_SEGMENTS - 1]), -1, 1));
+if (theta > 1e-7) {
+  if (dot(tangents[0], cross(normals[0], normals[PATH_SEGMENTS - 1])) > 0) {
+    theta = -theta;
+  }
+
+  const thetaStep = theta / (PATH_SEGMENTS - 1);
+  for (let i = 1; i < PATH_SEGMENTS; i += 1) {
+    normals[i] = normalize(
+      rotateAroundAxis(normals[i], tangents[i], thetaStep * i),
+    );
+    binormals[i] = normalize(cross(tangents[i], normals[i]));
+  }
+}
+
 const pointIndex = (path: number, tube: number) => path * TUBE_SEGMENTS + tube;
 
 for (let path = 0; path < PATH_SEGMENTS; path += 1) {
@@ -127,15 +165,26 @@ for (let path = 0; path < PATH_SEGMENTS; path += 1) {
   }
 }
 
-const orientationA = pointIndex(0, 0);
-const orientationB = pointIndex(1, 0);
-const orientationC = pointIndex(0, 1);
-const triNormal = cross(
-  sub(points[orientationB] as Vec3, points[orientationA] as Vec3),
-  sub(points[orientationC] as Vec3, points[orientationA] as Vec3),
-);
-const outward = sub(points[orientationA] as Vec3, centers[0]);
-const flipWinding = dot(triNormal, outward) < 0;
+const pointAsVec = (index: number): Vec3 => {
+  const point = points[index];
+  return [point[0], point[1], point[2]];
+};
+
+const pushOrientedTriangle = (
+  a: number,
+  b: number,
+  c: number,
+  outward: Vec3,
+  color: string,
+) => {
+  const triNormal = cross(sub(pointAsVec(b), pointAsVec(a)), sub(pointAsVec(c), pointAsVec(a)));
+  if (dot(triNormal, outward) <= 0) {
+    triangles.push([a, b, c, color]);
+    return;
+  }
+
+  triangles.push([a, c, b, color]);
+};
 
 for (let path = 0; path < PATH_SEGMENTS; path += 1) {
   const nextPath = (path + 1) % PATH_SEGMENTS;
@@ -147,18 +196,16 @@ for (let path = 0; path < PATH_SEGMENTS; path += 1) {
     const b = pointIndex(nextPath, tube);
     const c = pointIndex(path, nextTube);
     const d = pointIndex(nextPath, nextTube);
-    const color =
-      (path + tube) % 2 === 0
-        ? "rgba(107, 173, 255,1)"
-        : "rgba(66, 133, 244,1)";
+    const color = (path + tube) % 2 === 0 ? "rgba(144,213,255,1)" : "rgba(255, 0, 102,1)";
+    const quadOutward = normalize(
+      add(
+        add(sub(pointAsVec(a), centers[path]), sub(pointAsVec(b), centers[nextPath])),
+        add(sub(pointAsVec(c), centers[path]), sub(pointAsVec(d), centers[nextPath])),
+      ),
+    );
 
-    if (!flipWinding) {
-      triangles.push([a, b, c, color]);
-      triangles.push([c, b, d, color]);
-    } else {
-      triangles.push([a, c, b, color]);
-      triangles.push([c, d, b, color]);
-    }
+    pushOrientedTriangle(a, b, c, quadOutward, color);
+    pushOrientedTriangle(c, b, d, quadOutward, color);
   }
 }
 

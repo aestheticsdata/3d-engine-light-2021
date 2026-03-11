@@ -46,8 +46,8 @@ const addQuad = (
   const i2 = points.push(p2) - 1;
   const i3 = points.push(p3) - 1;
 
-  triangles.push([i0, i1, i2, color]);
-  triangles.push([i0, i2, i3, color]);
+  triangles.push([i0, i2, i1, color]);
+  triangles.push([i0, i3, i2, color]);
 };
 
 const solids = new Set<string>();
