@@ -266,7 +266,10 @@ class Main {
   };
 
   private formatPrimitiveName(name: string): string {
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    return name
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
   private syncShapeInfoOpacity() {

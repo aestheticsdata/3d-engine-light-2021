@@ -52,6 +52,24 @@ const shapeInfo: Record<string, ShapeInfo> = {
     densityLabel: "High density",
     textureSummary: "No textures",
   },
+  torusKnot: {
+    title: "Torus Knot",
+    description:
+      "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
+    geometricFeature:
+      "The tube follows a p/q knot centerline and uses transported frames to keep the cross-section stable.",
+    densityLabel: "High density",
+    textureSummary: "No textures",
+  },
+  menger: {
+    title: "Menger Sponge",
+    description:
+      "A level-2 cube fractal carved by recursively removing center volumes on each axis.",
+    geometricFeature:
+      "Only exposed voxel faces are emitted, revealing tunnels and cavities while preserving a clean outer silhouette.",
+    densityLabel: "Very high density",
+    textureSummary: "No textures",
+  },
 };
 
 export default shapeInfo;

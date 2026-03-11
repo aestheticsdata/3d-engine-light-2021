@@ -2,8 +2,10 @@ import { Data3D } from "@data/types";
 import cross from "@data/shapes/cross";
 import cube from "@data/shapes/cube";
 import donut from "@data/shapes/donut";
+import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
 import sphere from "@data/shapes/sphere";
+import torusKnot from "@data/shapes/torusKnot";
 
 export type { Data3D, Object3D } from "@data/types";
 
@@ -13,6 +15,8 @@ const data: Data3D = {
   pyramid,
   cross,
   donut,
+  torusKnot,
+  menger,
 };
 
 export default data;
