@@ -1,6 +1,6 @@
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import data, { Data3D } from "@data/data";
-import shapeInfo from "@data/shapeInfo";
+import shapeInfo, { ShapeReference } from "@data/shapeInfo";
 import Matrix3D from "@primitives/Matrix3D";
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
@@ -78,6 +78,7 @@ class Main {
   private readonly shapeStoryDescriptionNode: HTMLElement;
   private readonly shapeStoryFeatureNode: HTMLElement;
   private readonly shapeStoryDensityNode: HTMLElement;
+  private readonly shapeStoryReferencesNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly wireframeRow: HTMLElement;
   private readonly wireframeLabel: HTMLElement;
@@ -139,6 +140,7 @@ class Main {
     const shapeStoryDescriptionNode = document.getElementById("shapeStoryDescription");
     const shapeStoryFeatureNode = document.getElementById("shapeStoryFeature");
     const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
+    const shapeStoryReferencesNode = document.getElementById("shapeStoryReferences");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const wireframeRow = document.getElementById("wireframeRow");
     const wireframeLabel = document.getElementById("wireframeLabel");
@@ -161,6 +163,7 @@ class Main {
       !shapeStoryDescriptionNode ||
       !shapeStoryFeatureNode ||
       !shapeStoryDensityNode ||
+      !shapeStoryReferencesNode ||
       !wireframeBtn ||
       !wireframeRow ||
       !wireframeLabel ||
@@ -213,6 +216,7 @@ class Main {
     this.shapeStoryDescriptionNode = shapeStoryDescriptionNode;
     this.shapeStoryFeatureNode = shapeStoryFeatureNode;
     this.shapeStoryDensityNode = shapeStoryDensityNode;
+    this.shapeStoryReferencesNode = shapeStoryReferencesNode;
     this.wireframeBtn = wireframeBtn;
     this.wireframeRow = wireframeRow;
     this.wireframeLabel = wireframeLabel;
@@ -299,6 +303,7 @@ class Main {
       this.shapeStoryDescriptionNode.textContent = "";
       this.shapeStoryFeatureNode.textContent = "";
       this.shapeStoryDensityNode.textContent = "";
+      this.syncShapeReferences();
       return;
     }
 
@@ -306,6 +311,24 @@ class Main {
     this.shapeStoryDescriptionNode.textContent = info.description;
     this.shapeStoryFeatureNode.textContent = info.geometricFeature;
     this.shapeStoryDensityNode.textContent = info.densityLabel;
+    this.syncShapeReferences(info.references);
+  }
+
+  // Opened in a new tab so the running animation is never torn down; noopener
+  // keeps the opened page from reaching back through window.opener.
+  private syncShapeReferences(references: ShapeReference[] = []) {
+    this.shapeStoryReferencesNode.replaceChildren();
+
+    references.forEach((reference) => {
+      const link = document.createElement("a");
+      link.className = "storyLink";
+      link.href = reference.url;
+      link.textContent = reference.label;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      this.shapeStoryReferencesNode.appendChild(link);
+    });
   }
 
   private animateShapeInfoPanel(primitive: string) {
