@@ -173,6 +173,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  truncatedCuboctahedron: {
+    title: "Truncated cuboctahedron",
+    description:
+      "An Archimedean solid of 12 squares, 8 hexagons and 6 octagons, in three ambers keyed to the face types.",
+    geometricFeature:
+      "Its 26 faces sit on the 26 axes of the cube — an octagon per face axis, a hexagon per corner axis, a square per edge axis.",
+    densityLabel: "Medium density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Truncated_cuboctahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TruncatedCuboctahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;
