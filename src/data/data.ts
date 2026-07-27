@@ -1,6 +1,7 @@
 import { Data3D } from "@data/types";
 import cross from "@data/shapes/cross";
 import cube from "@data/shapes/cube";
+import cuboctahedron from "@data/shapes/cuboctahedron";
 import donut from "@data/shapes/donut";
 import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
@@ -17,6 +18,7 @@ const data: Data3D = {
   donut,
   torusKnot,
   menger,
+  cuboctahedron,
 };
 
 export default data;

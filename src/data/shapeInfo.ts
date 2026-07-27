@@ -70,6 +70,15 @@ const shapeInfo: Record<string, ShapeInfo> = {
     densityLabel: "Very high density",
     textureSummary: "No textures",
   },
+  cuboctahedron: {
+    title: "Cuboctahedron",
+    description:
+      "An Archimedean solid mixing 8 triangles and 6 squares, coloured by face type in the blues of Conway's plate.",
+    geometricFeature:
+      "Its 12 vertices are the midpoints of a cube's edges, so cube and octahedron faces alternate around every vertex.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+  },
 };
 
 export default shapeInfo;
