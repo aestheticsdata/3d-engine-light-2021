@@ -5,6 +5,7 @@ import cuboctahedron from "@data/shapes/cuboctahedron";
 import donut from "@data/shapes/donut";
 import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
+import rhombicDodecahedron from "@data/shapes/rhombicDodecahedron";
 import sphere from "@data/shapes/sphere";
 import torusKnot from "@data/shapes/torusKnot";
 
@@ -19,6 +20,7 @@ const data: Data3D = {
   torusKnot,
   menger,
   cuboctahedron,
+  rhombicDodecahedron,
 };
 
 export default data;

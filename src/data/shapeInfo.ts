@@ -135,6 +135,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  rhombicDodecahedron: {
+    title: "Rhombic dodecahedron",
+    description:
+      "A Catalan solid whose 12 identical rhombic faces are shaded in three tones, one per axis they share.",
+    geometricFeature:
+      "The convex hull of a cube and its dual octahedron, and the dual of the cuboctahedron: a face here for every vertex there.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Rhombic_dodecahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/RhombicDodecahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;
