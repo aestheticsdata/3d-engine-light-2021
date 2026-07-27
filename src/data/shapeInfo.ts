@@ -154,6 +154,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  kisRhombicDodecahedron: {
+    title: "Kisrhombic dodecahedron",
+    description:
+      "The disdyakis dodecahedron: 48 identical scalene triangles in two alternating greens, one light and one dark.",
+    geometricFeature:
+      "A pyramid raised on each of the rhombic dodecahedron's 12 faces, placed by reciprocating the truncated cuboctahedron rather than by eye.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Disdyakis_dodecahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/DisdyakisDodecahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;
