@@ -192,6 +192,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  icosidodecahedron: {
+    title: "Icosidodecahedron",
+    description:
+      "An Archimedean solid of 20 triangles and 12 pentagons in two roses, the icosahedral counterpart of the cuboctahedron.",
+    geometricFeature:
+      "Its 30 vertices are the midpoints of an icosahedron's edges, so triangles and pentagons alternate around every one of them.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Icosidodecahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/Icosidodecahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;
