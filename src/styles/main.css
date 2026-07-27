@@ -142,6 +142,33 @@ canvas {
   display: flex;
 }
 
+.storyLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Shapes without a canonical write-up leave the container empty; without this
+   the panel section's gap would still reserve a gap for it. */
+.storyLinks:empty {
+  display: none;
+}
+
+.storyLink {
+  border-bottom: 1px solid rgba(255, 239, 147, 0.4);
+  color: #ffef93;
+  font: 10px Futura, "Century Gothic", sans-serif;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.storyLink:hover,
+.storyLink:focus-visible {
+  border-bottom-color: #fff;
+  color: #fff;
+}
+
 .controlsHeader {
   display: flex;
   flex-direction: column;

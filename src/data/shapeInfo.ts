@@ -1,9 +1,16 @@
+export interface ShapeReference {
+  label: string;
+  url: string;
+}
+
 export interface ShapeInfo {
   title: string;
   description: string;
   geometricFeature: string;
   densityLabel: string;
   textureSummary: string;
+  // Optional: shapes with no canonical write-up (the cross) simply omit these.
+  references?: ShapeReference[];
 }
 
 const shapeInfo: Record<string, ShapeInfo> = {
@@ -15,6 +22,10 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
     densityLabel: "Medium density",
     textureSummary: "No textures",
+    references: [
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Sphere" },
+      { label: "MathWorld", url: "https://mathworld.wolfram.com/Sphere.html" },
+    ],
   },
   cube: {
     title: "Cube",
@@ -24,6 +35,10 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
     densityLabel: "High density",
     textureSummary: "Dog and galaxy textures",
+    references: [
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Cube" },
+      { label: "MathWorld", url: "https://mathworld.wolfram.com/Cube.html" },
+    ],
   },
   pyramid: {
     title: "Pyramid",
@@ -33,6 +48,16 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
     densityLabel: "Low density",
     textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Square_pyramid",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/SquarePyramid.html",
+      },
+    ],
   },
   cross: {
     title: "Cross",
@@ -51,6 +76,10 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "A circular tube is swept around a larger circle, producing a continuous loop with no sharp corners.",
     densityLabel: "High density",
     textureSummary: "No textures",
+    references: [
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Torus" },
+      { label: "MathWorld", url: "https://mathworld.wolfram.com/Torus.html" },
+    ],
   },
   torusKnot: {
     title: "Torus Knot",
@@ -60,6 +89,13 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "The tube follows a p/q knot centerline and uses transported frames to keep the cross-section stable.",
     densityLabel: "High density",
     textureSummary: "No textures",
+    references: [
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Torus_knot" },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TorusKnot.html",
+      },
+    ],
   },
   menger: {
     title: "Menger Sponge",
@@ -69,6 +105,35 @@ const shapeInfo: Record<string, ShapeInfo> = {
       "Only exposed voxel faces are emitted, revealing tunnels and cavities while preserving a clean outer silhouette.",
     densityLabel: "Very high density",
     textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Menger_sponge",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/MengerSponge.html",
+      },
+    ],
+  },
+  cuboctahedron: {
+    title: "Cuboctahedron",
+    description:
+      "An Archimedean solid mixing 8 triangles and 6 squares, coloured by face type in the blues of Conway's plate.",
+    geometricFeature:
+      "Its 12 vertices are the midpoints of a cube's edges, so cube and octahedron faces alternate around every vertex.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Cuboctahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/Cuboctahedron.html",
+      },
+    ],
   },
 };
 
