@@ -3,6 +3,7 @@ import cross from "@data/shapes/cross";
 import cube from "@data/shapes/cube";
 import cuboctahedron from "@data/shapes/cuboctahedron";
 import donut from "@data/shapes/donut";
+import icosidodecahedron from "@data/shapes/icosidodecahedron";
 import kisRhombicDodecahedron from "@data/shapes/kisRhombicDodecahedron";
 import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
@@ -25,6 +26,7 @@ const data: Data3D = {
   rhombicDodecahedron,
   kisRhombicDodecahedron,
   truncatedCuboctahedron,
+  icosidodecahedron,
 };
 
 export default data;
