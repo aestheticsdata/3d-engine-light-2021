@@ -211,6 +211,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  rhombicTriacontahedron: {
+    title: "Rhombic triacontahedron",
+    description:
+      "A Catalan solid of 30 identical golden rhombi, shaded in five tones — one per cube inscribed in the dodecahedron.",
+    geometricFeature:
+      "The convex hull of a dodecahedron and its dual icosahedron, and the dual of the icosidodecahedron: a face here for every vertex there.",
+    densityLabel: "Low density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Rhombic_triacontahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/RhombicTriacontahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;
