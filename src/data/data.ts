@@ -8,6 +8,7 @@ import kisRhombicDodecahedron from "@data/shapes/kisRhombicDodecahedron";
 import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
 import rhombicDodecahedron from "@data/shapes/rhombicDodecahedron";
+import rhombicTriacontahedron from "@data/shapes/rhombicTriacontahedron";
 import sphere from "@data/shapes/sphere";
 import torusKnot from "@data/shapes/torusKnot";
 import truncatedCuboctahedron from "@data/shapes/truncatedCuboctahedron";
@@ -27,6 +28,7 @@ const data: Data3D = {
   kisRhombicDodecahedron,
   truncatedCuboctahedron,
   icosidodecahedron,
+  rhombicTriacontahedron,
 };
 
 export default data;
