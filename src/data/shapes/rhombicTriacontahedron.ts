@@ -1,4 +1,4 @@
-import { addConvexPolyhedron, triangle } from "@data/builder";
+import { PHI, addConvexPolyhedron, icosahedron, triangle } from "@data/builder";
 import { Object3D } from "@data/types";
 
 // Rhombic triacontahedron (R30) — the son of the dodecahedron-icosahedron
@@ -27,69 +27,10 @@ const FACE_COLORS = [
   "rgba(28, 82, 92, 1)",
 ];
 
-const PHI = (1 + Math.sqrt(5)) / 2;
-
 const AXES = [0, 1, 2];
-const SIGNS = [1, -1];
-
-// The 12 icosahedron vertices: the cyclic permutations of (0, ±1, ±φ), same
-// scaffolding the icosidodecahedron is built on.
-const icosahedron: number[][] = [];
-AXES.forEach((shift) => {
-  SIGNS.forEach((shortSign) => {
-    SIGNS.forEach((longSign) => {
-      const vertex = [0, 0, 0];
-      vertex[(shift + 1) % 3] = shortSign;
-      vertex[(shift + 2) % 3] = longSign * PHI;
-      icosahedron.push(vertex);
-    });
-  });
-});
-
-const distanceSquared = (a: number[], b: number[]) =>
-  (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 
 const dot = (a: number[], b: number[]) =>
   a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-
-// Edge length 2 with these coordinates; the next-closest pair is 4φ² ≈ 10.5
-// away, so this separates edges from non-edges with a wide margin.
-const EDGE_LENGTH_SQUARED = 4;
-const EDGE_TOLERANCE = 1e-6;
-
-const pairKey = (first: number, second: number) =>
-  first < second ? `${first},${second}` : `${second},${first}`;
-
-const edges: number[][] = [];
-const isEdge = (first: number, second: number) =>
-  Math.abs(
-    distanceSquared(icosahedron[first], icosahedron[second]) -
-      EDGE_LENGTH_SQUARED,
-  ) < EDGE_TOLERANCE;
-
-icosahedron.forEach((_, first) => {
-  icosahedron.forEach((__, second) => {
-    if (second > first && isEdge(first, second)) {
-      edges.push([first, second]);
-    }
-  });
-});
-
-// The icosahedron's 20 faces, as triples of mutually adjacent vertices.
-const icosahedronFaces: number[][] = [];
-icosahedron.forEach((_, first) => {
-  icosahedron.forEach((__, second) => {
-    if (second <= first || !isEdge(first, second)) {
-      return;
-    }
-
-    icosahedron.forEach((___, third) => {
-      if (third > second && isEdge(second, third) && isEdge(first, third)) {
-        icosahedronFaces.push([first, second, third]);
-      }
-    });
-  });
-});
 
 // The dual dodecahedron, one vertex per icosahedron face — and this is the
 // ratio the whole solid turns on.
@@ -108,31 +49,37 @@ icosahedron.forEach((_, first) => {
 // right is not this argument but the numbers it produces: the resulting
 // dodecahedron lands at circumradius √3, its standard value, and every face
 // comes out a planar golden rhombus.
-const dodecahedron = icosahedronFaces.map((face) =>
+const dodecahedron = icosahedron.faces.map((face) =>
   AXES.map(
     (axis) =>
-      face.reduce((sum, vertex) => sum + icosahedron[vertex][axis], 0) /
+      face.reduce(
+        (sum, vertex) => sum + icosahedron.vertices[vertex][axis],
+        0,
+      ) /
       PHI ** 2,
   ),
 );
 
 // The two orbits, in one list: the 12 icosahedral corners keep their indices,
 // the 20 dodecahedral ones follow.
-const vertices = [...icosahedron, ...dodecahedron];
-const DODECAHEDRON_OFFSET = icosahedron.length;
+const vertices = [...icosahedron.vertices, ...dodecahedron];
+const DODECAHEDRON_OFFSET = icosahedron.vertices.length;
 
 // One rhombus per icosahedron edge: the edge's two endpoints supply the
 // icosahedral corners, and the two faces meeting along it supply the
-// dodecahedral ones. Opposite corners of the rhombus, as the ticket describes,
-// though the builder sorts them cyclically anyway.
-const faces = edges.map(([first, second]) => {
-  const adjacent = icosahedronFaces.reduce<number[]>((indices, face, index) => {
-    if (face.includes(first) && face.includes(second)) {
-      indices.push(DODECAHEDRON_OFFSET + index);
-    }
+// dodecahedral ones. Opposite corners of the rhombus, as it happens, though the
+// builder sorts them cyclically anyway.
+const faces = icosahedron.edges.map(([first, second]) => {
+  const adjacent = icosahedron.faces.reduce<number[]>(
+    (indices, face, index) => {
+      if (face.includes(first) && face.includes(second)) {
+        indices.push(DODECAHEDRON_OFFSET + index);
+      }
 
-    return indices;
-  }, []);
+      return indices;
+    },
+    [],
+  );
 
   return [first, second, ...adjacent];
 });
@@ -142,9 +89,10 @@ const faces = edges.map(([first, second]) => {
 // orthogonal triples — the five cubes inscribed in a dodecahedron, the classic
 // picture of why the icosahedral group contains A₅. Every axis is perpendicular
 // to exactly two others, so collecting the triples is a simple sweep.
-const faceAxes = edges.map(([first, second]) => {
+const faceAxes = icosahedron.edges.map(([first, second]) => {
   const direction = AXES.map(
-    (axis) => icosahedron[first][axis] + icosahedron[second][axis],
+    (axis) =>
+      icosahedron.vertices[first][axis] + icosahedron.vertices[second][axis],
   );
   const length = Math.hypot(...direction);
 

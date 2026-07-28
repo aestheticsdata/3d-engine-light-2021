@@ -230,6 +230,25 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
+  kisRhombicTriacontahedron: {
+    title: "Kisrhombic triacontahedron",
+    description:
+      "The disdyakis triacontahedron: 120 identical scalene triangles in two alternating tones, the densest solid of the family.",
+    geometricFeature:
+      "A pyramid raised on each of the rhombic triacontahedron's 30 faces, placed by reciprocating the truncated icosidodecahedron.",
+    densityLabel: "High density",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Disdyakis_triacontahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/DisdyakisTriacontahedron.html",
+      },
+    ],
+  },
 };
 
 export default shapeInfo;

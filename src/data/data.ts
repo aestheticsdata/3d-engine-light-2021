@@ -5,6 +5,7 @@ import cuboctahedron from "@data/shapes/cuboctahedron";
 import donut from "@data/shapes/donut";
 import icosidodecahedron from "@data/shapes/icosidodecahedron";
 import kisRhombicDodecahedron from "@data/shapes/kisRhombicDodecahedron";
+import kisRhombicTriacontahedron from "@data/shapes/kisRhombicTriacontahedron";
 import menger from "@data/shapes/menger";
 import pyramid from "@data/shapes/pyramid";
 import rhombicDodecahedron from "@data/shapes/rhombicDodecahedron";
@@ -29,6 +30,7 @@ const data: Data3D = {
   truncatedCuboctahedron,
   icosidodecahedron,
   rhombicTriacontahedron,
+  kisRhombicTriacontahedron,
 };
 
 export default data;
