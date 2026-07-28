@@ -261,3 +261,96 @@ export const addConvexPolyhedron = (args: {
     }
   });
 };
+
+// -----------------------------------------------------------------------------
+// The icosahedron, as shared scaffolding
+// -----------------------------------------------------------------------------
+// Several solids in this folder are defined not by coordinates of their own but
+// by an icosahedron's: ID takes its edge midpoints, R30 pairs its vertices with
+// its face centres, kR30 raises pyramids on that. They all need the same 12
+// points with the same adjacency, so it is derived here once.
+//
+// Adjacency is recovered rather than tabulated, which is what makes those
+// solids self-checking: 12 vertices have to yield 30 edges and 20 faces, and a
+// mistake anywhere shows up as a wrong count rather than as a subtly wrong
+// picture.
+// -----------------------------------------------------------------------------
+
+export const PHI = (1 + Math.sqrt(5)) / 2;
+
+// Edge length is 2 with these coordinates, and the next-closest pair of
+// vertices is 4φ² ≈ 10.5 away, so this separates edges from non-edges with an
+// enormous margin.
+const ICOSAHEDRON_EDGE_LENGTH_SQUARED = 4;
+const ICOSAHEDRON_EDGE_TOLERANCE = 1e-6;
+
+// The 12 vertices: the *cyclic* permutations of (0, ±1, ±φ). Only the cyclic
+// ones — taking all six would give 24 points and a different solid entirely.
+const icosahedronVertices: number[][] = [];
+[0, 1, 2].forEach((shift) => {
+  [1, -1].forEach((shortSign) => {
+    [1, -1].forEach((longSign) => {
+      const vertex = [0, 0, 0];
+      vertex[(shift + 1) % 3] = shortSign;
+      vertex[(shift + 2) % 3] = longSign * PHI;
+      icosahedronVertices.push(vertex);
+    });
+  });
+});
+
+const icosahedronAdjacent = (first: number, second: number) => {
+  const a = icosahedronVertices[first];
+  const b = icosahedronVertices[second];
+  const squared = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+
+  return (
+    Math.abs(squared - ICOSAHEDRON_EDGE_LENGTH_SQUARED) <
+    ICOSAHEDRON_EDGE_TOLERANCE
+  );
+};
+
+const icosahedronEdges: number[][] = [];
+const icosahedronEdgeIndices = new Map<string, number>();
+
+icosahedronVertices.forEach((_, first) => {
+  icosahedronVertices.forEach((__, second) => {
+    if (second > first && icosahedronAdjacent(first, second)) {
+      icosahedronEdgeIndices.set(`${first},${second}`, icosahedronEdges.length);
+      icosahedronEdges.push([first, second]);
+    }
+  });
+});
+
+// A face is a triple of mutually adjacent vertices. On the icosahedron every
+// such triple is a face, so no further filtering is needed; requiring
+// first < second < third counts each one exactly once.
+const icosahedronFaces: number[][] = [];
+icosahedronVertices.forEach((_, first) => {
+  icosahedronVertices.forEach((__, second) => {
+    if (second <= first || !icosahedronAdjacent(first, second)) {
+      return;
+    }
+
+    icosahedronVertices.forEach((___, third) => {
+      if (
+        third > second &&
+        icosahedronAdjacent(second, third) &&
+        icosahedronAdjacent(first, third)
+      ) {
+        icosahedronFaces.push([first, second, third]);
+      }
+    });
+  });
+});
+
+export const icosahedron = {
+  vertices: icosahedronVertices,
+  edges: icosahedronEdges,
+  faces: icosahedronFaces,
+  // Index of the edge joining two vertices, for turning a face's vertices into
+  // the edges around it.
+  edgeIndex: (first: number, second: number) =>
+    icosahedronEdgeIndices.get(
+      first < second ? `${first},${second}` : `${second},${first}`,
+    ) as number,
+};
