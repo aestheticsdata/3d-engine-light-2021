@@ -13,6 +13,9 @@ import { setField } from "@ui/fields";
 import { createTabGroup } from "@ui/tabs";
 import { resetAll } from "@ui/uiState";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
+import { createStatusBar } from "@ui/statusBar";
+import { createViewportHud, ViewportHud } from "@ui/viewportHud";
+import { textureKeys } from "@ui/texLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
@@ -72,6 +75,10 @@ class Main {
   // FPS and the drawn-triangle count no longer resolve a node here: both appear
   // in more than one place in the DOM (toolbar, mobile header, telemetry card),
   // so they go through setField, which writes every [data-field] node at once.
+  // Writers only — the bar holds no state of its own.
+  private readonly statusBar = createStatusBar();
+  // Needs the canvas, so it is built in the constructor rather than here.
+  private readonly viewportHud: ViewportHud;
   private readonly pauseBtn: HTMLElement;
   private readonly shapeInfoPanelContent: HTMLElement;
   private readonly shapeInfoNameNode: HTMLElement;
@@ -178,6 +185,7 @@ class Main {
     }
 
     this.controls = new Controls();
+    this.viewportHud = createViewportHud(canvas);
     this.stage = stage;
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
@@ -254,8 +262,12 @@ class Main {
     this.syncToggleButtons();
   }
 
+  // The HUD's `dist` is the camera distance, not the raw offset: the offset
+  // alone runs 260 -> -220 across the slider and would print a negative
+  // distance. Focal plus offset stays positive throughout (560 -> 80).
   private changeZoom = (sliderValue: number) => {
     this.zOffset = sliderToZoomOffset(sliderValue);
+    this.viewportHud.setZoom(sliderValue, this.focal + this.zOffset);
     this.applyCameraSettingsToActiveMeshes();
     this.renderPausedFrame();
   };
@@ -290,13 +302,12 @@ class Main {
   private syncShapeInfoPanel(primitive: string) {
     const object3D = this.objects3D[primitive];
     const info = shapeInfo[primitive];
-    const texturedMaterials = Array.from(
-      new Set(
-        object3D.triangles
-          .map((triangle) => triangle[3])
-          .filter((material) => typeof material === "string" && !material.startsWith("rgba")),
-      ),
-    );
+    // Derived once, in @ui/texLabel — the panel needs the key list and the
+    // status bar needs the two-value label, and they must not disagree.
+    const texturedMaterials = textureKeys(object3D);
+
+    this.statusBar.setSelected(primitive);
+    this.statusBar.setTexture(object3D);
 
     this.shapeInfoNameNode.textContent = this.formatPrimitiveName(primitive);
     this.shapeInfoPointsNode.textContent = String(object3D.points.length);
@@ -531,6 +542,7 @@ class Main {
   };
 
   private syncTransportMounts() {
+    this.statusBar.setRunState(this.isPlaying);
     const label = this.isPlaying ? "PAUSE" : "RESUME";
     document
       .querySelectorAll<HTMLElement>("[data-transport='toggle']")
@@ -546,6 +558,10 @@ class Main {
   }
 
   private syncToggleButtons() {
+    this.statusBar.setMode(this.wireframeEnabled);
+    // Same modeLabel() behind both: the bar writes the word, the HUD writes the
+    // attribute that keys the canvas filter.
+    this.viewportHud.setMode(this.wireframeEnabled);
     this.wireframeBtn.textContent = this.wireframeEnabled ? "off" : "on";
     this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
       ? "off"
@@ -689,10 +705,16 @@ class Main {
       this.primitivesName,
       this.requestPrimitiveChange,
     );
+    // Resolution and the four camera placeholders are written once: none of
+    // them changes while the console is open.
+    this.viewportHud.seed();
     this.applyDefaultControlValues();
     this.attachControlListeners();
     this.syncSettingsFromControls();
     this.syncShapeInfoPanel(primitive);
+    // Pushed explicitly rather than relying on the markup's seed, so the bar has
+    // one source of truth from the first paint.
+    this.statusBar.setRunState(this.isPlaying);
     this.syncOpacitySliderAvailability();
     this.startTransitionToPrimitive(primitive, performance.now());
     this.start();

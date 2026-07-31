@@ -9,7 +9,11 @@
 // caller having to know which branch is showing.
 //
 // Known field names, owned by the tickets that introduce them:
-//   camPos, frameMs, fov, zoom, selectedId, drawnLabel, fps, trisDrawn, uptime
+//   shell        buildDesktop, buildMobile, fps, trisDrawn
+//   status bar   statusLabel, selectedId, shadingMode, texLabel
+//   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
+//   frame time   frameMs
+//   system       uptime
 
 export const setField = (name: string, value: string | number) => {
   const text = String(value);

@@ -98,20 +98,11 @@
   overflow: hidden;
 }
 
-/* The canvas keeps its 1024x640 intrinsic buffer: the renderer captures those
-   numbers at construction and never recomputes them, so the buffer cannot
-   follow the box until COS-250 (E9b) ships a resize path.
-
-   max-*: 100% on a replaced element with an intrinsic ratio shrinks it
-   proportionally to fit and never past its intrinsic size. So the scene scales
-   down cleanly on a narrow window, hits 1:1 at exactly 1024, and simply stops
-   growing beyond that instead of upscaling into a soft, resampled picture. The
-   sunken card around it reads as the viewport matte. */
-.viewport canvas {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-}
+/* The canvas fit that used to live here was the shell's interim measure, kept
+   only so the branch booted before the viewport ticket landed. The picture now
+   has its own box — .viewportStage in components/viewport.css — because the
+   HUD has to anchor to the image rather than to the card. The 1024x640 cap and
+   the sunken matte around it moved there with it. */
 
 .telemetry {
   display: flex;
