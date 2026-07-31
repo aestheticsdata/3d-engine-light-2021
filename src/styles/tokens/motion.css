@@ -6,8 +6,15 @@
   --opacity-blink-min: .15;
 
   /* NEW — not extracted from the design, which declares no transitions or easings.
-     Use only if a later ticket adds hover/tab animation. */
+     Use only if a later ticket adds hover/tab animation.
+
+     --duration-fast is for state that should feel instant (hover, a tab
+     underline). It is deliberately too short to read as motion, which makes it
+     the wrong choice for something appearing from nothing: at 120ms a panel
+     fading in is indistinguishable from one that simply popped. Anything
+     entering or leaving takes --duration-base. */
   --duration-fast: 120ms;
+  --duration-base: 240ms;
   --ease-standard: cubic-bezier(.2,0,0,1);
 }
 
