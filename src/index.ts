@@ -11,6 +11,8 @@ import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
 import { setField } from "@ui/fields";
 import { createTabGroup } from "@ui/tabs";
+import { resetAll } from "@ui/uiState";
+import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
@@ -234,13 +236,21 @@ class Main {
     this.targetPrimitiveName = null;
     this.queuedPrimitiveName = null;
 
-    this.pauseBtn.addEventListener("click", this.togglePause);
+    // Transport and RESET each have two mounts — the desktop strip and the
+    // mobile header / RESET SCENE bar — because there is one DOM tree and
+    // neither control can be in two parents at once. Binding by attribute keeps
+    // it one handler and no second code path.
+    document
+      .querySelectorAll<HTMLElement>("[data-transport='toggle']")
+      .forEach((node) => node.addEventListener("click", this.togglePause));
+    document
+      .querySelectorAll<HTMLElement>("[data-action='reset']")
+      .forEach((node) => node.addEventListener("click", this.resetControls));
     this.wireframeBtn.addEventListener("click", this.toggleWireframe);
     this.backfaceCullingBtn.addEventListener(
       "click",
       this.toggleBackfaceCulling,
     );
-    this.resetBtn.addEventListener("click", this.resetControls);
     this.syncToggleButtons();
   }
 
@@ -517,8 +527,23 @@ class Main {
   private togglePause = () => {
     this.isPlaying ? this.stop() : this.start();
     this.isPlaying = !this.isPlaying;
-    this.pauseBtn.textContent = this.isPlaying ? "pause" : "play";
+    this.syncTransportMounts();
   };
+
+  private syncTransportMounts() {
+    const label = this.isPlaying ? "PAUSE" : "RESUME";
+    document
+      .querySelectorAll<HTMLElement>("[data-transport='toggle']")
+      .forEach((node) => {
+        node.textContent = label;
+      });
+
+    // The REC dot claims a running render loop; freeze and dim it when there
+    // isn't one.
+    document
+      .querySelectorAll<HTMLElement>(".readout__dot")
+      .forEach((node) => node.classList.toggle("is-paused", !this.isPlaying));
+  }
 
   private syncToggleButtons() {
     this.wireframeBtn.textContent = this.wireframeEnabled ? "off" : "on";
@@ -629,6 +654,15 @@ class Main {
     );
   }
 
+  // One handler behind both RESET mounts.
+  //
+  // Deliberate departure from the design, whose reset() also sets paused:false
+  // (L1306): the transport is a session control, not a scene control, and RESET
+  // must not restart a loop the user stopped on purpose.
+  //
+  // resetAll() restores every slice registered in uiState. That is what makes
+  // RESET coverage automatic — a later ticket registers its slice with its
+  // defaults and is restored here without this function being edited.
   private resetControls = () => {
     this.wireframeEnabled = false;
     this.backfaceCullingEnabled = true;
@@ -636,6 +670,7 @@ class Main {
     this.applyDefaultControlValues();
     this.syncSettingsFromControls();
     this.syncOpacitySliderAvailability();
+    resetAll();
     this.renderPausedFrame();
   };
 
@@ -696,6 +731,9 @@ const setupTabGroups = () => {
 
 const boot = async () => {
   setupTabGroups();
+  // Written from one source rather than typed into both branches' markup.
+  setField("buildDesktop", BUILD_LABEL_DESKTOP);
+  setField("buildMobile", BUILD_LABEL_MOBILE);
 
   const skyImage = await loadImageAsset(skyUrl);
   const canvas = document.querySelector("canvas");

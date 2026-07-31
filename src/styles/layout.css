@@ -13,9 +13,17 @@
 
 /* ---- toolbar row ---------------------------------------------------------- */
 
+/* Every element below that carries .panel must restate flex-direction: row.
+   The panel recipe is flex-direction: column, which is right for a card — a
+   header strip above a body — but wrong for the shell's horizontal bars, and a
+   panel that silently stacks its children grows past its own flex-basis and
+   pushes the page beyond 100vh. Any later widget that makes a .panel a
+   horizontal container has to do the same. */
+
 .toolbar {
   display: flex;
   flex: 0 0 var(--size-toolbar-h);
+  flex-direction: row;
   align-items: stretch;
   gap: var(--size-stack-gap);
 }
@@ -25,6 +33,7 @@
 .toolbar__brand {
   display: flex;
   flex: 0 1 var(--size-sidebar-w);
+  flex-direction: row;
   align-items: center;
   gap: var(--space-4-5);
   min-width: var(--size-sidebar-min);
@@ -34,8 +43,10 @@
 .toolbar__actions {
   display: flex;
   flex: 1;
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2-5);
+  min-width: 0;
   padding: 0 var(--space-4);
 }
 
@@ -78,6 +89,7 @@
 .viewport {
   display: flex;
   flex: 3 1 var(--size-viewport-h);
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   position: relative;
@@ -159,8 +171,12 @@
   border-top: var(--size-hairline) solid var(--color-border-panel);
 }
 
+/* Row now, so the status-bar ticket does not rediscover the column trap. */
 .statusBar {
+  display: flex;
   flex: 0 0 var(--size-statusbar-h);
+  flex-direction: row;
+  align-items: center;
 }
 
 /* ---- desktop tab gating --------------------------------------------------- */
@@ -210,6 +226,7 @@
     position: sticky;
     top: 0;
     z-index: var(--layer-sticky);
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
     height: var(--size-appbar-h);

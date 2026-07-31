@@ -1,0 +1,173 @@
+/* Owns: brand-block, readout and action-cluster geometry, and the REC dot including its paused state.
+   Must not own: any button colour, height or :hover — all four button recipes come from components/button.css. */
+
+/* ---- brand block ---------------------------------------------------------- */
+
+.brand__mark {
+  flex: none;
+  width: var(--size-brand-mark);
+  height: var(--size-brand-mark);
+  background: var(--color-accent);
+  border-radius: var(--radius-xs);
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+.brand__name {
+  font: var(--font-weight-bold) var(--text-md) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-2xl);
+  color: var(--color-text-primary);
+}
+
+/* pre keeps the double space the design draws between the product id and the
+   build number; the string itself is written by buildInfo.ts, once. */
+.brand__build {
+  font: var(--font-weight-regular) var(--text-xs) / var(--leading-none) var(--font-mono);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-dim);
+  white-space: pre;
+}
+
+/* ---- readouts ------------------------------------------------------------- */
+
+.readout {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: var(--size-button);
+  padding: 0 var(--space-5);
+  gap: var(--space-3);
+  background: var(--color-surface-sunken);
+  border: var(--size-hairline) solid var(--color-border-muted);
+  border-radius: var(--radius-md);
+}
+
+.readout__dot {
+  width: var(--size-rec-dot);
+  height: var(--size-rec-dot);
+  background: var(--color-state-ok);
+  border-radius: var(--radius-full);
+  animation: recblink var(--duration-blink) infinite;
+}
+
+/* NEW — the design has no paused variant. Freezing the blink and draining the
+   colour is what stops the console from claiming a render loop that is stopped. */
+.readout__dot.is-paused {
+  background: var(--color-text-dim);
+  animation-play-state: paused;
+}
+
+.readout__label {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-tertiary);
+}
+
+.readout__value {
+  font: var(--font-weight-bold) var(--text-md) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.readout__unit {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+/* The mobile header's fps pill. Its container is mobile-only, so this needs no
+   media query of its own. */
+.readout--pill {
+  height: var(--size-appbar-fps-chip);
+  padding: 0 var(--space-4-5);
+  gap: var(--space-2);
+}
+
+.readout--pill .readout__value {
+  font: var(--font-weight-bold) var(--text-xl) / var(--leading-none) var(--font-mono);
+}
+
+/* ---- strip ---------------------------------------------------------------- */
+
+.toolbar__spacer,
+.appBar__spacer {
+  flex: 1;
+}
+
+/* Rebuild decision: the design authors this row inside a fixed 1440 frame, so
+   it never has to cope with running out of width. The rebuild is fluid, so the
+   spacer collapses first and then the action cluster scrolls inside itself —
+   which keeps the brand block, the transport cluster and both readouts at full
+   size at any window width instead of compressing everything equally. */
+.toolbar__cluster {
+  display: flex;
+  gap: var(--space-2-5);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.toolbar__cluster > * {
+  flex: 0 0 auto;
+}
+
+/* ---- mobile --------------------------------------------------------------- */
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  /* The sticky header carries the brand, so the toolbar's own copy is hidden by
+     the shell; these values style the header's copy. */
+  .brand__text {
+    gap: var(--space-1);
+  }
+
+  .brand__name {
+    font: var(--font-weight-bold) var(--text-xl) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-xl);
+  }
+
+  .brand__build {
+    letter-spacing: var(--tracking-xs);
+  }
+
+  /* The strip becomes the action scroller. What the sticky header already shows
+     — transport and fps — drops out of it, and RESET drops out because the
+     RESET SCENE bar is its only mobile mount. */
+  .toolbar__desktopOnly,
+  .toolbar__spacer,
+  #playPause,
+  #resetControls {
+    display: none;
+  }
+
+  /* Dissolved so its buttons scroll individually rather than as one block. */
+  .toolbar__cluster {
+    display: contents;
+  }
+
+  /* Parity addition: the mobile branch has no standalone FRAME chip, so the
+     desktop readout becomes one. Pinned at the head of the scroller so the
+     measurement stays visible while the buttons scroll under it. Stays well
+     below --layer-sticky, which the header owns. */
+  .readout--frame {
+    order: -1;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    height: var(--size-actionrow-h);
+    padding: 0 var(--space-7);
+    gap: var(--space-2);
+    cursor: default;
+  }
+
+  .readout--frame .readout__label {
+    font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+  }
+
+  .readout--frame .readout__value {
+    font: var(--font-weight-bold) var(--text-xl) / var(--leading-none) var(--font-mono);
+  }
+}

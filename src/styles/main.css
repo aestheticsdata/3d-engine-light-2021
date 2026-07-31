@@ -21,6 +21,7 @@
 @import url(components/scrollbar.css);
 @import url(components/tooltip.css);
 @import url(components/placeholder.css);
+@import url(components/toolbar.css);
 @import url(layout.css);
 
 /* Base rules. These replace the old grey-page body wholesale — the console is
