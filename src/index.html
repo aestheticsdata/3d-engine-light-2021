@@ -506,7 +506,15 @@
 
             <section id="panelShape" class="inspectorPanel" role="tabpanel" data-panel="shape" data-mpanel="shape">
               <div class="section-title">PRIMITIVE</div>
-              <select id="primitives"></select>
+              <!-- The wrapper carries the chevron and nothing else: a <select>
+                   paints no pseudo-elements of its own. Still a native select
+                   underneath, so keyboard, typeahead and the mobile picker are
+                   unchanged. COS-229 replaces the whole control with a chip
+                   grid. -->
+              <span class="select">
+                <select id="primitives" class="select__input" aria-label="Primitive"></select>
+                <span class="select__chevron" aria-hidden="true"></span>
+              </span>
 
               <div class="section-title">TRANSFORM</div>
               <label class="slider-row" for="zoomSlider">

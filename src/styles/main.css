@@ -14,6 +14,7 @@
 @import url(components/chip.css);
 @import url(components/toggle.css);
 @import url(components/slider.css);
+@import url(components/select.css);
 @import url(components/tile.css);
 @import url(components/badge.css);
 @import url(components/hud.css);
@@ -28,6 +29,15 @@
 
 /* Base rules. These replace the old grey-page body wholesale — the console is
    a near-black navy surface, and every widget draws on top of it. */
+
+/* Declares the console dark to the platform, not just to itself. Everything the
+   stylesheet cannot reach — the <select> popup, native scrollbars, form-control
+   chrome, the canvas backdrop before first paint — otherwise follows the OS
+   theme, which is how a white system popup ends up opening out of a near-black
+   page for anyone not already in dark mode. */
+html {
+  color-scheme: dark;
+}
 
 html,
 body {
