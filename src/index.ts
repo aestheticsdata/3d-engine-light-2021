@@ -11,10 +11,16 @@ import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
 import { setField } from "@ui/fields";
 import { createTabGroup } from "@ui/tabs";
-import { resetAll } from "@ui/uiState";
+import { resetAll, setState, subscribe } from "@ui/uiState";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import { createStatusBar } from "@ui/statusBar";
 import { createViewportHud, ViewportHud } from "@ui/viewportHud";
+import {
+  createSceneGraph,
+  isMeshHidden,
+  MESH_ROW_ID,
+  SceneGraph,
+} from "@ui/sceneGraph";
 import { textureKeys } from "@ui/texLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
@@ -79,6 +85,11 @@ class Main {
   private readonly statusBar = createStatusBar();
   // Needs the canvas, so it is built in the constructor rather than here.
   private readonly viewportHud: ViewportHud;
+  private readonly sceneGraph: SceneGraph;
+  // A change detector, not a second copy of the state: sceneGraph publishes
+  // the drawn count through the same store, so an unguarded subscriber would
+  // re-enter renderPausedFrame on its own notification.
+  private meshHidden: boolean;
   private readonly pauseBtn: HTMLElement;
   private readonly shapeInfoPanelContent: HTMLElement;
   private readonly shapeInfoNameNode: HTMLElement;
@@ -186,6 +197,8 @@ class Main {
 
     this.controls = new Controls();
     this.viewportHud = createViewportHud(canvas);
+    this.sceneGraph = createSceneGraph();
+    this.meshHidden = isMeshHidden();
     this.stage = stage;
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
@@ -260,6 +273,17 @@ class Main {
       this.toggleBackfaceCulling,
     );
     this.syncToggleButtons();
+
+    // Hiding the mesh has to repaint immediately when the loop is not
+    // running; while it is, the next frame already picks it up.
+    subscribe(() => {
+      const hidden = isMeshHidden();
+      if (hidden === this.meshHidden) {
+        return;
+      }
+      this.meshHidden = hidden;
+      this.renderPausedFrame();
+    });
   }
 
   // The HUD's `dist` is the camera distance, not the raw offset: the offset
@@ -306,6 +330,7 @@ class Main {
     // status bar needs the two-value label, and they must not disagree.
     const texturedMaterials = textureKeys(object3D);
 
+    this.sceneGraph.setMeshId(primitive);
     this.statusBar.setSelected(primitive);
     this.statusBar.setTexture(object3D);
 
@@ -395,7 +420,14 @@ class Main {
 
     this.lastFpsDisplayUpdateAt = now;
     setField("fps", Math.round(this.smoothedFps));
-    setField("trisDrawn", this.renderedTriangles);
+    this.publishDrawnTriangles(this.renderedTriangles);
+  }
+
+  // The drawn count reaches the readouts, the telemetry card and the scene
+  // graph row through here and nowhere else, so the three cannot disagree.
+  private publishDrawnTriangles(count: number) {
+    setField("trisDrawn", count);
+    setState({ drawnTriangles: count });
   }
 
   private applyCameraSettings(mesh: Mesh) {
@@ -458,6 +490,10 @@ class Main {
   }
 
   private startTransitionToPrimitive(primitive: string, now: number) {
+    // Selection returns to the mesh row on every shape change (D11):
+    // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
+    // the object the row describes changes underneath it.
+    setState({ sceneSelection: MESH_ROW_ID });
     const mesh = this.buildMesh(primitive);
     this.animateShapeInfoPanel(primitive);
 
@@ -514,12 +550,20 @@ class Main {
     this.syncTransitionQueue(timestamp);
 
     const renderables = this.getCurrentRenderables();
+    // Rotated even while hidden, so showing the mesh again resumes the spin
+    // where it would have been rather than where it was hidden.
     renderables.forEach((renderable) => this.rotateMesh(renderable.mesh));
-    this.renderedTriangles = this.surface3D.render(renderables, {
-      wireframe: this.wireframeEnabled,
-      cullBackfaces: this.backfaceCullingEnabled,
-      opacity: this.opacity,
-    });
+    // Surface3D draws the background before it walks the renderables, so an
+    // empty array keeps the sky, floor and vignette and drops only the mesh —
+    // and the returned count correctly falls to zero.
+    this.renderedTriangles = this.surface3D.render(
+      this.visibleRenderables(renderables),
+      {
+        wireframe: this.wireframeEnabled,
+        cullBackfaces: this.backfaceCullingEnabled,
+        opacity: this.opacity,
+      },
+    );
   }
 
   private renderPausedFrame() {
@@ -527,12 +571,15 @@ class Main {
       return;
     }
 
-    this.renderedTriangles = this.surface3D.render(this.getCurrentRenderables(), {
-      wireframe: this.wireframeEnabled,
-      cullBackfaces: this.backfaceCullingEnabled,
-      opacity: this.opacity,
-    });
-    setField("trisDrawn", this.renderedTriangles);
+    this.renderedTriangles = this.surface3D.render(
+      this.visibleRenderables(this.getCurrentRenderables()),
+      {
+        wireframe: this.wireframeEnabled,
+        cullBackfaces: this.backfaceCullingEnabled,
+        opacity: this.opacity,
+      },
+    );
+    this.publishDrawnTriangles(this.renderedTriangles);
   }
 
   private togglePause = () => {
@@ -618,8 +665,12 @@ class Main {
     this.smoothedFps = 0;
     this.renderedTriangles = 0;
     setField("fps", 0);
-    setField("trisDrawn", 0);
+    this.publishDrawnTriangles(0);
   };
+
+  private visibleRenderables(renderables: ReturnType<Main["getCurrentRenderables"]>) {
+    return isMeshHidden() ? [] : renderables;
+  }
 
   private getCurrentRenderables() {
     return this.transitionMachine.getRenderables();

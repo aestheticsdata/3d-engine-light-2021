@@ -10,6 +10,16 @@
   opacity: var(--elevation-opacity-pending);
 }
 
+/* Opacity multiplies down the tree, so a placeholder control inside a
+   placeholder container would paint at .55 x .55 and read as disabled rather
+   than pending. The inner node keeps the attribute — it carries its own title
+   and description, and E5 / E7 remove them one control at a time — and takes
+   its dimming from the ancestor. First needed by the scene graph, whose
+   placeholder rows each contain a placeholder visibility button. */
+[data-placeholder="true"] [data-placeholder="true"] {
+  opacity: 1;
+}
+
 /* Visually hidden, still read aloud. The 1px box plus the inset clip is the
    standard idiom; a display:none or a zero size would drop it from the
    accessibility tree, which defeats the point. */

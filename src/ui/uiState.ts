@@ -16,7 +16,24 @@
 
 export interface UiState {
   // Slices are added here by the ticket that owns each value.
+
+  // --- scene graph ---------------------------------------------------------
+  // Keyed by the stable row id, never by the displayed name: the mesh row's
+  // label changes with every primitive, so selecting by what it says would
+  // drop the selection on each shape change.
+  sceneSelection?: string;
+  sceneHidden?: readonly string[];
+  // The drawn count (D6) — what Surface3D.render returns, not the registry
+  // count. Published by Main on the existing 90ms display throttle; the scene
+  // graph subscribes rather than reading the renderer itself, so there is one
+  // number behind the row, the toolbar and the telemetry card.
+  drawnTriangles?: number;
 }
+
+// Optional above, and guaranteed below: every field is filled by the owning
+// widget's registerSlice() call at import time. They are declared optional
+// because the store starts empty and slices arrive as their modules load —
+// consumers still read through a fallback rather than assuming load order.
 
 type Listener = (state: Readonly<UiState>) => void;
 

@@ -1,0 +1,171 @@
+/* Owns: the scene graph's body padding, its row, the row's four columns and the selected / hidden states.
+   Must not own: the card, its header, title or note (panel.css), the hit-area helper (placeholder.css) or the placeholder opacity — this file declares no .panel selector. */
+
+.scene-graph__body {
+  padding: var(--space-1-5);
+}
+
+/* No scroll and no max-height: there are four rows and there will be four rows
+   until the de-mock epic introduces real scene objects. */
+
+.scene-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--size-row-scene);
+  padding: 0 var(--space-2-5);
+  /* Always drawn, transparent when unselected, so selecting a row cannot shift
+     its contents sideways by the width of a mark that only exists sometimes. */
+  border-left: var(--size-mark) solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+/* The row is two sibling buttons, not one button wrapping another: the select
+   target carries the three text columns and the visibility toggle sits beside
+   it. That is what makes "toggling visibility never selects the row" a fact of
+   the layout rather than a stopPropagation call someone can delete. */
+.scene-row__select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.scene-row__kind {
+  flex: 0 0 var(--size-scene-kind-col);
+  font: var(--font-weight-medium) var(--text-xs) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+  text-align: left;
+}
+
+.scene-row__id {
+  flex: 1;
+  min-width: 0;
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scene-row__tris {
+  flex: 0 0 auto;
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+.scene-row__vis {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-vis-button);
+  height: var(--size-vis-button);
+  background: var(--color-surface-sunken);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: var(--font-weight-bold) var(--text-xs) / var(--leading-none) var(--font-mono);
+  color: var(--color-state-ok);
+  cursor: pointer;
+}
+
+/* ---- states ---------------------------------------------------------------
+   Selection and visibility are independent: a row can be selected and hidden at
+   once, so the hidden rules only touch the two things that dim and never the
+   background or the mark. */
+
+.scene-row.is-selected {
+  background: var(--color-row-selected-bg);
+  border-left-color: var(--color-accent);
+}
+
+.scene-row.is-selected .scene-row__id {
+  color: var(--color-text-max);
+}
+
+.scene-row.is-hidden .scene-row__id,
+.scene-row.is-hidden .scene-row__vis {
+  color: var(--color-text-disabled);
+}
+
+/* NEW — the design ships no focus styling. Both buttons need one, and the ring
+   goes on the row so the select target does not paint an outline inside its own
+   background.
+
+   :has(:focus-visible), not :focus-within: a click focuses the button it hits,
+   so :focus-within would leave an accent ring around the row after every tap of
+   the visibility dot and keep it there until focus moved elsewhere. Delegating
+   to the child's :focus-visible is what keeps the ring keyboard-only while
+   still painting it on the parent. */
+.scene-row:has(:focus-visible) {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: var(--size-hairline);
+}
+
+.scene-row__select:focus-visible,
+.scene-row__vis:focus-visible {
+  outline: none;
+}
+
+/* Desktop only, so the highlight cannot stick after a tap. */
+@media (hover: hover) {
+  .scene-row:hover {
+    background: var(--color-row-hover-bg);
+  }
+
+  /* Selection outranks hover: without this the selected row loses its
+     background the moment the pointer crosses it. */
+  .scene-row.is-selected:hover {
+    background: var(--color-row-selected-bg);
+  }
+}
+
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  .scene-graph__body {
+    padding: var(--space-2);
+  }
+
+  /* Height comes from --size-row-scene's own mobile value (44px); only the
+     internal spacing is restated. */
+  .scene-row {
+    gap: var(--space-4-5);
+    padding: 0 var(--space-4);
+  }
+
+  .scene-row__select {
+    gap: var(--space-4-5);
+  }
+
+  .scene-row__kind {
+    font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
+  }
+
+  /* The mockup drops the ellipsis clamp on mobile. Kept deliberately:
+     KIS_RHOMBIC_TRIACONTAHEDRON_01 is 30 characters and would push the count
+     and the visibility button off a 320px card. */
+  .scene-row__id {
+    font: var(--font-weight-medium) var(--text-xl) / var(--leading-none) var(--font-mono);
+  }
+
+  .scene-row__tris {
+    font: var(--font-weight-regular) var(--text-base) / var(--leading-none) var(--font-mono);
+  }
+
+  /* Paints 30x30; .tap-pad takes the hit area to 30 + 2x7 = 44 without touching
+     the painted box. The helper itself is placeholder.css's — this only feeds
+     it the pad, as a property rather than an inline style so the value stays in
+     the stylesheet with the size it is derived from. */
+  .scene-row__vis {
+    --tap-pad: 7px;
+    font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-mono);
+  }
+}
