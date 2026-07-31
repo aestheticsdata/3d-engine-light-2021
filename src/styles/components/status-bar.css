@@ -1,0 +1,116 @@
+/* Owns: the status bar's layout, its wrapping behaviour and the one truncation it allows.
+   Must not own: the panel surface, border or radius (panel.css), or the divider recipe (divider.css) — the rule below only reuses those metrics. */
+
+.statusBar {
+  gap: var(--space-5);
+  padding: 0 var(--space-5);
+}
+
+.statusGroup {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* Replaces the design's flex:1 spacer element — the same result with nothing
+   extra in the DOM to strand when the bar wraps. */
+.statusGroup--right {
+  margin-left: auto;
+}
+
+.statusItem {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.statusItem--run {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-state-ok);
+}
+
+.statusItem--url,
+.statusGroup--right .statusItem {
+  color: var(--color-text-dim);
+}
+
+/* Drawn on the item rather than as its own element, so a divider cannot end up
+   alone at the start of a wrapped line. Geometry mirrors .divider-v--status. */
+.statusItem + .statusItem::before {
+  content: "";
+  flex: none;
+  width: var(--size-hairline);
+  height: var(--size-divider-status);
+  margin-right: var(--space-5);
+  background: var(--color-border-muted);
+}
+
+/* The design puts its spacer at this boundary, so it carries no rule. */
+.statusGroup--right::before {
+  content: none;
+}
+
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  /* The mockup drops four of the six segments on mobile. Parity is restored
+     instead: every segment survives and the bar wraps. --size-statusbar-h has
+     no mobile override, so the fixed desktop height has to be released here or
+     the wrapped rows clip. */
+  .statusBar {
+    flex-wrap: wrap;
+    height: auto;
+    gap: var(--space-4);
+    padding: var(--space-4-5) var(--space-5);
+  }
+
+  .statusGroup {
+    margin-left: 0;
+  }
+
+  .statusItem {
+    font: var(--font-weight-regular) var(--text-base) / var(--leading-none) var(--font-mono);
+  }
+
+  .statusItem--run {
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* The URL is the first thing allowed to lose characters. */
+  .statusItem--url {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The scene id is the second candidate, and it is now a real one: the ticket
+     sized this group for a 16-character id (CUBOCTAHEDRON_01), but COS-201 has
+     since landed nine polyhedra and the longest is 30 characters
+     (KIS_RHOMBIC_TRIACONTAHEDRON_01). Group A is nowrap, so at 320px that runs
+     to roughly 298 of the 300 available — inside the line by two pixels with
+     the mono face loaded, and over it with any fallback.
+     Ellipsizing the id span rather than the word "selected" keeps the label
+     readable and, more importantly, keeps the page from scrolling sideways. */
+  .statusItem--selected {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .statusItem--selected [data-field="selectedId"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Groups separate by gap alone once they wrap, so the inter-group rule goes
+     away and only intra-group dividers remain. */
+  .statusGroup + .statusGroup::before {
+    content: none;
+  }
+}

@@ -334,7 +334,47 @@
         <button class="tabs__tab" type="button" role="tab" data-tab-id="stats">STATS</button>
       </div>
 
-      <div class="statusBar panel"></div>
+      <!-- Six segments in three groups, so mobile wraps them as units rather
+           than breaking mid-group. Dividers are ::before on adjacent items, not
+           standalone spans, so a wrapped line can never open with a stray rule. -->
+      <div class="statusBar panel">
+        <span class="statusGroup">
+          <span class="statusItem statusItem--run" data-field="statusLabel">RUNNING</span>
+          <span class="statusItem statusItem--selected">
+            <span data-field="selectedId">&mdash;</span> selected
+          </span>
+        </span>
+
+        <span class="statusGroup">
+          <span class="statusItem">
+            <span data-field="shadingMode">&mdash;</span>
+            &middot;
+            <span data-field="texLabel">&mdash;</span>
+            &middot;
+            <span
+              data-placeholder="true"
+              title="Orthographic projection is not wired to the engine yet (de-mock E2)."
+              aria-describedby="ph-projection"
+            >PERSPECTIVE</span>
+          </span>
+          <span
+            class="statusItem"
+            data-placeholder="true"
+            title="The engine has no world-unit concept yet (de-mock E5)."
+            aria-describedby="ph-units"
+          >units: metres</span>
+        </span>
+
+        <span class="statusGroup statusGroup--right">
+          <span class="statusItem statusItem--url">1991computer.com/3dengine</span>
+          <span class="statusItem">
+            <span data-field="uptime">&mdash;</span> uptime
+          </span>
+        </span>
+
+        <span class="placeholder-hint" id="ph-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
+        <span class="placeholder-hint" id="ph-units">The engine has no world-unit concept yet (de-mock E5).</span>
+      </div>
 
       <!-- order 8 — RESET's only mobile mount. Same handler as #resetControls,
            bound through data-action; there is no second code path and no
