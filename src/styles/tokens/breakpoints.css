@@ -1,0 +1,10 @@
+/* Owns: the single layout breakpoint, as documentation for CSS and a value for JS.
+   Must not own: the media queries themselves — see the note below on why they repeat the literal. */
+
+:root {
+  /* Documentation + JS only. A media query condition cannot read a custom
+     property, so the literals are repeated in every @media block.
+     The breakpoint is exclusive at 900: desktop is min-width: 900px,
+     mobile is max-width: 899px. Never max-width: 900px. */
+  --breakpoint-md: 900px;
+}

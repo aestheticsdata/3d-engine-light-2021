@@ -1,0 +1,24 @@
+/* Owns: the gap and padding scale — a dense 1px-step ramp from 0 to 12, plus 14.
+   Must not own: composite paddings or fixed component sizes; those are assembled in the component layer and in sizing.css. */
+
+:root {
+  --space-0: 0;
+  --space-px: 1px;    /* desktop shape-info column gap */
+  --space-0-5: 2px;
+  --space-1: 3px;
+  --space-1-5: 4px;   /* desktop chip grids, scene-graph padding */
+  --space-2: 5px;
+  --space-2-5: 6px;   /* mobile grid gaps */
+  --space-3: 7px;
+  --space-4: 8px;     /* desktop page padding + every desktop grid gap */
+  --space-4-5: 9px;
+  --space-5: 10px;    /* mobile page padding + mobile stack gap */
+  --space-5-5: 11px;
+  --space-6: 12px;
+  --space-7: 14px;
+}
+
+/* No branch overrides: the scale is identical on desktop and mobile.
+   Composite paddings (7px 8px, 9px 11px 12px, 12px 12px 14px, …) are assembled
+   from the scale in the component layer, not tokenised. Negative margins used
+   for centring (-.5px, -6px on the range thumb, -10px, -12px) stay literal. */

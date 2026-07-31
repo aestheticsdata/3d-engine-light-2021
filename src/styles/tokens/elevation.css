@@ -1,0 +1,26 @@
+/* Owns: the HUD's translucent backgrounds and its single blur, the placeholder opacity, and the one stacking layer.
+   Must not own: shadows — the design declares none, and none may be added anywhere in this rebuild. */
+
+:root {
+  --blur-hud: blur(3px);                              /* the only blur in the design */
+  --elevation-hud-bg: var(--color-hud-bg);
+  --elevation-hud-bg-dense: var(--color-hud-bg-dense);
+  --elevation-hud-bg-gizmo: var(--color-hud-bg-gizmo);
+  --elevation-hud-border: var(--color-hud-border);
+  --elevation-opacity-pending: .55;                   /* NEW — placeholder affordance, not extracted */
+  --layer-sticky: 6;                                  /* mobile sticky header, design L676 */
+}
+
+/* Depth in this design is expressed only as background steps plus a hairline
+   border — --color-bg-app, then --color-surface-sunken, --color-panel-bg,
+   --color-panel-header-bg, --color-button-secondary-bg. The literals live in
+   colors.css and are deliberately not repeated here.
+
+   The blur applies to desktop HUD chips only. Mobile compensates with a denser
+   background (--color-hud-bg-dense, .85 vs .82 alpha) and no blur — preserve
+   that asymmetry, it is deliberate.
+
+   --elevation-opacity-pending is the one token for every inert control in the
+   epic. The primitives ticket defines the affordance that consumes it
+   (data-placeholder="true" + title + aria-describedby); consumers must not
+   invent --opacity-placeholder or --opacity-pending. */

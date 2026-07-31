@@ -1,0 +1,43 @@
+/* Owns: the two families, the three weights, and the size / leading / tracking ramps.
+   Must not own: font-smoothing or any element-level type rule — those are the shell ticket's base rules. */
+
+:root {
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  --text-2xs: 7px;    /* axis gizmo letters */
+  --text-xs: 8px;     /* captions, chip meta, toggle halves, build string */
+  --text-sm: 9px;     /* panel + section titles, field labels, HUD */
+  --text-base: 10px;  /* desktop values and buttons, mobile labels */
+  --text-md: 11px;    /* mobile values, toolbar fps, desktop brand */
+  --text-lg: 11.5px;  /* desktop story paragraph only */
+  --text-xl: 12px;    /* mobile brand, mobile header fps */
+  --text-2xl: 13px;   /* desktop fps tile value, mobile story paragraph */
+  --text-3xl: 14px;   /* mobile fps tile value */
+  --text-4xl: 22px;   /* desktop story title */
+  --text-5xl: 26px;   /* mobile story title */
+
+  --leading-none: 1;
+  --leading-tight: 1.05;   /* story titles */
+  --leading-snug: 1.2;     /* desktop slider labels, 2-line wrap in 66px */
+  --leading-hud: 1.3;      /* desktop camera readout */
+  --leading-relaxed: 1.55; /* story paragraphs */
+
+  --tracking-tight: -.01em;
+  --tracking-normal: .04em;
+  --tracking-chip: .06em;
+  --tracking-xs: .08em;
+  --tracking-sm: .09em;
+  --tracking-md: .1em;
+  --tracking-lg: .11em;
+  --tracking-xl: .12em;
+  --tracking-2xl: .14em;
+  --tracking-3xl: .16em;   /* panel header titles, the identity value */
+}
+
+/* The design tool also offers tracking steps at 0.05, 0.07, 0.13 and 0.15 —
+   none of them is used in the design, so none is tokenised. Do not add them. */

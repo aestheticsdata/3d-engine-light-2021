@@ -1,0 +1,137 @@
+/* Owns: every fixed component and shell dimension, and the one media block in the token layer.
+   Must not own: spacing steps (spacing.css), radii (radius.css), or the design tool's 1440x900 canvas — that is not a layout. */
+
+:root {
+  /* shells */
+  --size-page-pad: 8px;
+  --size-stack-gap: 8px;
+  --size-sidebar-w: 264px;
+  --size-inspector-w: 296px;
+  --size-viewport-h: 530px;
+  --size-toolbar-h: 40px;
+  --size-statusbar-h: 24px;
+
+  /* panels */
+  --size-panel-header: 24px;       /* sidebar panels */
+  --size-panel-header-card: 22px;  /* telemetry cards */
+
+  /* controls */
+  --size-button: 26px;
+  --size-button-primary: 26px;
+  --size-button-reset: 26px;
+  --size-tab: 26px;
+  --size-chip-shape: 44px;
+  --size-chip-mode: 26px;
+  --size-chip-tex: 24px;
+  --size-chip-view: 24px;
+  --size-chip-proj: 24px;
+  --size-chip-quick: 24px;
+  --size-hud-chip: 22px;
+  --size-hud-chip-sm: 22px;
+  --size-toggle-w: 62px;
+  --size-toggle-h: 19px;
+  --size-toggle-row: 26px;
+  --size-slider-input: 15px;
+  --size-slider-label-col: 66px;
+  --size-slider-value-col: 44px;
+  --size-row-info: 19px;
+  --size-row-scene: 26px;
+  --size-row-stat: auto;
+  --size-scene-kind-col: 26px;
+  --size-vis-button: 14px;
+  --size-swatch-w: 22px;
+  --size-swatch-h: 18px;
+
+  /* chrome + charts */
+  --size-brand-mark: 16px;
+  --size-rec-dot: 6px;
+  --size-legend-swatch: 7px;
+  --size-ft-bar: 12px;
+  --size-budget-bar: 6px;
+  --size-fps-canvas: auto;   /* flex:1 inside the card on desktop */
+  --size-zbuf-h: auto;       /* flex:1 inside the card on desktop */
+  --size-gizmo: 66px;
+  --size-gizmo-axis-xy: 34px;
+  --size-gizmo-axis-z: 24px;
+  --size-crosshair: 24px;
+  --size-selection-box: 190px;
+  --size-selection-corner: 14px;
+  --size-selection-label-h: 16px;
+  --size-camera-readout-minw: 148px;
+  --size-tooltip-max-w: 220px;   /* NEW — no design equivalent, carried over from main.css L330 */
+
+  /* dividers + primitives */
+  --size-divider-toolbar: 20px;
+  --size-divider-status: 11px;
+  --size-divider-hud: 10px;
+  --size-scrollbar: 8px;
+  --size-range-track: 3px;
+  --size-range-thumb-w: 9px;
+  --size-range-thumb-h: 15px;
+  --size-story-rule-w: 28px;
+  --size-story-rule-h: 2px;
+  --size-hairline: 1px;      /* every 1px border in the rebuild */
+  --size-mark: 2px;          /* tab underline, row mark, swatch border */
+
+  /* mobile-only shells: no desktop counterpart, so nothing overrides them */
+  --size-appbar-h: 52px;
+  --size-actionrow-h: 40px;
+  --size-appbar-fps-chip: 30px;
+  --size-pause-minw: 84px;
+}
+
+/* Exclusive at 900: desktop is min-width:900px, mobile is max-width:899px.
+   The literal is repeated because a media query cannot read --breakpoint-md. */
+@media (max-width: 899px) {
+  :root {
+    --size-page-pad: 10px;
+    --size-stack-gap: 10px;
+    --size-panel-header: 26px;
+    --size-panel-header-card: 26px;
+    --size-button: 40px;
+    --size-button-primary: 36px;
+    --size-button-reset: 48px;
+    --size-tab: 44px;
+    --size-chip-shape: 56px;
+    --size-chip-mode: 44px;
+    --size-chip-tex: 40px;
+    --size-chip-view: 40px;
+    --size-chip-proj: 40px;
+    --size-chip-quick: 46px;
+    --size-hud-chip-sm: 20px;
+    --size-toggle-w: 88px;
+    --size-toggle-h: 32px;
+    --size-toggle-row: 48px;
+    --size-slider-input: 26px;
+    --size-slider-label-col: 46px;
+    --size-row-info: 24px;
+    --size-row-scene: 44px;
+    --size-row-stat: 28px;
+    --size-scene-kind-col: 28px;
+    --size-vis-button: 30px;
+    --size-swatch-w: 38px;
+    --size-swatch-h: 32px;
+    --size-brand-mark: 18px;
+    --size-ft-bar: 14px;
+    --size-budget-bar: 8px;
+    --size-fps-canvas: 64px;
+    --size-zbuf-h: 76px;
+    --size-gizmo: 52px;
+    --size-gizmo-axis-xy: 26px;
+    --size-gizmo-axis-z: 18px;
+    --size-crosshair: 20px;
+    --size-divider-hud: 9px;
+  }
+}
+
+/* --size-slider-value-col has no mobile value: the mobile slider stacks its
+   label/value row above a full-width input, so the fixed value column
+   disappears rather than resizing. That layout change belongs to the
+   primitives ticket.
+
+   Several mobile controls fall under the 44px touch target — the 36px PAUSE
+   button, the 40px action-row buttons, the 40px material / view / projection
+   chips, the 88x32 toggle and the 30x30 visibility button. Their painted sizes
+   are correct as tokenised: the design is the reference, not the guideline.
+   Hit-area padding is a component concern, and the primitives ticket pads the
+   toggle and the visibility button. */
