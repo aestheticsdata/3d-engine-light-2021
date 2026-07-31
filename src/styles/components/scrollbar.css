@@ -1,0 +1,29 @@
+/* Owns: the custom scrollbar, in both the WebKit and the Firefox idiom.
+   Must not own: which containers scroll — that is .panel__body--scroll and the shell. */
+
+::-webkit-scrollbar {
+  width: var(--size-scrollbar);
+  height: var(--size-scrollbar);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-sunken);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-muted);
+  border-radius: var(--radius-lg);
+}
+
+/* NEW — the design ships only the WebKit pseudo-elements, which would leave
+   Firefox on the light platform default against a near-black page. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-muted) var(--color-surface-sunken);
+}
+
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-scrollbar-thumb-hover);
+  }
+}

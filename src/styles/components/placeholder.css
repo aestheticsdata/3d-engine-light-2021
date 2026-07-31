@@ -1,0 +1,37 @@
+/* Owns: the "not wired yet" affordance and the touch-target padding helper.
+   Must not own: disabling anything — a placeholder control stays focusable, clickable and keeps its hover and active states. */
+
+/* The one convention for every control the epic ships inert: this attribute,
+   a title carrying the sentence, and aria-describedby pointing at a hint node
+   with the same text. It signals "no renderer behind this yet", which is why it
+   does not disable: a disabled control would say the feature is unavailable
+   rather than unbuilt. */
+[data-placeholder="true"] {
+  opacity: var(--elevation-opacity-pending);
+}
+
+/* Visually hidden, still read aloud. The 1px box plus the inset clip is the
+   standard idiom; a display:none or a zero size would drop it from the
+   accessibility tree, which defeats the point. */
+.placeholder-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Extends a control's hit area without touching its painted size — several
+   mobile controls are drawn under the 44 touch target on purpose, because the
+   design is the reference. Consumers set the class and the custom property;
+   no other file may add a pseudo-element for this. */
+.tap-pad {
+  position: relative;
+}
+
+.tap-pad::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--tap-pad, 6px));
+}

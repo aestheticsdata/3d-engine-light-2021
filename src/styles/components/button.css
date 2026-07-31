@@ -1,0 +1,92 @@
+/* Owns: every button in the console — the primary transport, the secondary action cluster, the code button and the mobile full-width bar.
+   Must not own: the tab strip (tabs.css) or the chip (chip.css), which look similar but carry different state semantics. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--size-button);
+  border: var(--size-hairline) solid transparent;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn--primary {
+  height: var(--size-button-primary);
+  padding: 0 var(--space-6);
+  background: var(--color-accent);
+  border-color: transparent;
+  font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-xl);
+  color: var(--color-on-accent);
+}
+
+/* STEP, RESET, CAPTURE PNG, SAVE PRESET, LOAD.
+   Resolved inconsistency: the design draws STEP and RESET at --text-base but the
+   action cluster at one step smaller, all at the same tracking. Every secondary
+   button uses --text-base here — that is what STEP, RESET and the whole mobile
+   action row already use, and the smaller action cluster is deliberately not
+   preserved. The toolbar consumes this recipe rather than a class of its own. */
+.btn--secondary {
+  padding: 0 var(--space-5);
+  background: var(--color-button-secondary-bg);
+  border-color: var(--color-border-control);
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-button);
+}
+
+/* COPY CODE. */
+.btn--code {
+  padding: 0 var(--space-5);
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border-muted);
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
+  color: var(--color-state-ok);
+}
+
+/* RESET SCENE — mobile only; desktop RESET lives in the toolbar. */
+.btn--block {
+  width: 100%;
+  height: var(--size-button-reset);
+}
+
+/* NEW — the design ships no focus styling at all. Keyboard users need one. */
+.btn:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: var(--size-hairline);
+}
+
+/* Every hover in the design is desktop-only; gating them keeps the state from
+   sticking after a tap on touch devices. */
+@media (hover: hover) {
+  .btn--primary:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .btn--secondary:hover {
+    background: var(--color-button-secondary-bg-hover);
+  }
+
+  .btn--code:hover {
+    border-color: var(--color-state-ok);
+  }
+}
+
+@media (max-width: 899px) {
+  .btn--primary {
+    min-width: var(--size-pause-minw);
+    font: var(--font-weight-bold) var(--text-md) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-md);
+  }
+
+  .btn--secondary {
+    padding: 0 var(--space-7);
+  }
+
+  .btn--block {
+    font: var(--font-weight-bold) var(--text-md) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-xl);
+  }
+}

@@ -1,0 +1,55 @@
+/* Owns: both tab strips — the desktop inspector strip and the mobile tab bar — and their active state.
+   Must not own: which panel a tab reveals; that is a CSS attribute selector on the shell root, driven by tabs.ts. */
+
+.tabs {
+  display: flex;
+  flex: 0 0 auto;
+  height: var(--size-tab);
+  background: var(--color-panel-header-bg);
+  border-bottom: var(--size-hairline) solid var(--color-border-panel);
+}
+
+.tabs__tab {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-bottom: var(--size-mark) solid transparent;
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-xl);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.tabs__tab.is-active {
+  background: var(--color-panel-bg);
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* NEW — no focus styling in the design. */
+.tabs__tab:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: calc(-1 * var(--size-mark));
+}
+
+@media (max-width: 899px) {
+  /* Mobile promotes the strip to a standalone card rather than a bottom border
+     on the panel above it. */
+  .tabs {
+    border: var(--size-hairline) solid var(--color-border-panel);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .tabs__tab {
+    font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-md);
+  }
+
+  /* The active cell gets its own surface on mobile, not the panel background. */
+  .tabs__tab.is-active {
+    background: var(--color-tab-active-bg);
+  }
+}

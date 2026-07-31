@@ -1,0 +1,101 @@
+/* Owns: the panel card, both header variants, the panel title and note, the body paddings, and the in-panel section title.
+   Must not own: layout — where panels sit is the shell's job. No other file may declare a second .panel recipe. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-panel-bg);
+  border: var(--size-hairline) solid var(--color-border-panel);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* For cards that must clip a scroll area or a flexing canvas. The design relies
+   on min-height:0 in eleven places; without it the nested flex scrollers do not
+   clip and the card grows instead of scrolling. */
+.panel--fill {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel__header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--size-panel-header);
+  padding: 0 var(--space-4);
+  background: var(--color-panel-header-bg);
+  border-bottom: var(--size-hairline) solid var(--color-border-panel);
+}
+
+/* The telemetry row's shorter header. On mobile both variants resolve to the
+   same token value, so the distinction is desktop-only. */
+.panel__header--card {
+  height: var(--size-panel-header-card);
+}
+
+.panel__title {
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-3xl);
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+/* Right-hand meta. A header with no note simply omits the element — with a
+   single child, space-between is harmless. */
+.panel__note {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+.panel__body {
+  padding: var(--space-3) var(--space-4);
+}
+
+.panel__body--pad-4 {
+  padding: var(--space-4);
+}
+
+.panel__body--scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.section-title {
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-2xl);
+  color: var(--color-accent);
+  margin-bottom: var(--space-2-5);
+}
+
+/* Exclusive at 900: desktop is min-width 900, mobile is max-width 899.
+   The literal is repeated because a media query cannot read --breakpoint-md. */
+@media (max-width: 899px) {
+  .panel__header {
+    padding: 0 var(--space-4-5);
+  }
+
+  .panel__body {
+    padding: var(--space-4-5);
+  }
+
+  /* The asymmetric paddings the mobile branch uses, assembled from the spacing
+     scale rather than tokenised as composites. */
+  .panel__body--pad-form {
+    padding: var(--space-4-5) var(--space-5-5) var(--space-6);
+  }
+
+  .panel__body--pad-list {
+    padding: var(--space-2) var(--space-5-5) var(--space-4-5);
+  }
+
+  .panel__body--pad-stats {
+    padding: var(--space-4) var(--space-5-5) var(--space-5);
+  }
+
+  .panel__body--pad-chart {
+    padding: var(--space-5);
+  }
+}
