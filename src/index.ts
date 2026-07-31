@@ -9,6 +9,8 @@ import Triangle from "@primitives/Triangle";
 import { loadTextures } from "@textures/textures";
 import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
+import { setField } from "@ui/fields";
+import { createTabGroup } from "@ui/tabs";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
@@ -65,8 +67,9 @@ const loadImageAsset = (src: string): Promise<HTMLImageElement> =>
 class Main {
   private readonly times: number[];
   private fps: number;
-  private readonly fpsNode: HTMLElement;
-  private readonly trianglesRenderedNode: HTMLElement;
+  // FPS and the drawn-triangle count no longer resolve a node here: both appear
+  // in more than one place in the DOM (toolbar, mobile header, telemetry card),
+  // so they go through setField, which writes every [data-field] node at once.
   private readonly pauseBtn: HTMLElement;
   private readonly shapeInfoPanelContent: HTMLElement;
   private readonly shapeInfoNameNode: HTMLElement;
@@ -127,8 +130,6 @@ class Main {
       throw new Error("2D canvas context is not available.");
     }
 
-    const fpsNode = document.getElementById("fpsCounterNb");
-    const trianglesRenderedNode = document.getElementById("trianglesRenderedNb");
     const pauseBtn = document.getElementById("playPause");
     const shapeInfoPanelContent = document.getElementById("shapeInfoPanelContent");
     const shapeInfoNameNode = document.getElementById("shapeInfoName");
@@ -150,8 +151,6 @@ class Main {
     const resetBtn = document.getElementById("resetControls");
     const opacitySlider = document.getElementById("opacitySlider");
     if (
-      !fpsNode ||
-      !trianglesRenderedNode ||
       !pauseBtn ||
       !shapeInfoPanelContent ||
       !shapeInfoNameNode ||
@@ -203,8 +202,6 @@ class Main {
     this.fps = 0;
     this.smoothedFps = 0;
     this.lastFpsDisplayUpdateAt = 0;
-    this.fpsNode = fpsNode;
-    this.trianglesRenderedNode = trianglesRenderedNode;
     this.pauseBtn = pauseBtn;
     this.shapeInfoPanelContent = shapeInfoPanelContent;
     this.shapeInfoNameNode = shapeInfoNameNode;
@@ -376,8 +373,8 @@ class Main {
     }
 
     this.lastFpsDisplayUpdateAt = now;
-    this.fpsNode.textContent = String(Math.round(this.smoothedFps));
-    this.trianglesRenderedNode.textContent = String(this.renderedTriangles);
+    setField("fps", Math.round(this.smoothedFps));
+    setField("trisDrawn", this.renderedTriangles);
   }
 
   private applyCameraSettings(mesh: Mesh) {
@@ -514,7 +511,7 @@ class Main {
       cullBackfaces: this.backfaceCullingEnabled,
       opacity: this.opacity,
     });
-    this.trianglesRenderedNode.textContent = String(this.renderedTriangles);
+    setField("trisDrawn", this.renderedTriangles);
   }
 
   private togglePause = () => {
@@ -579,8 +576,8 @@ class Main {
     this.lastFpsDisplayUpdateAt = 0;
     this.smoothedFps = 0;
     this.renderedTriangles = 0;
-    this.fpsNode.textContent = String(0);
-    this.trianglesRenderedNode.textContent = String(0);
+    setField("fps", 0);
+    setField("trisDrawn", 0);
   };
 
   private getCurrentRenderables() {
@@ -667,7 +664,39 @@ class Main {
   }
 }
 
+// The desktop inspector and the mobile tab bar are two independent groups over
+// one DOM tree: each writes its own attribute on #app and CSS does the rest, so
+// crossing the breakpoint never re-renders or re-binds anything.
+const setupTabGroups = () => {
+  const app = document.getElementById("app");
+  if (!app) {
+    return;
+  }
+
+  const inspectorTabs = document.getElementById("inspectorTabs");
+  if (inspectorTabs) {
+    createTabGroup({
+      tablist: inspectorTabs,
+      root: app,
+      attribute: "data-tab",
+      initial: "shape",
+    });
+  }
+
+  const mobileTabs = document.getElementById("mobileTabs");
+  if (mobileTabs) {
+    createTabGroup({
+      tablist: mobileTabs,
+      root: app,
+      attribute: "data-mtab",
+      initial: "shape",
+    });
+  }
+};
+
 const boot = async () => {
+  setupTabGroups();
+
   const skyImage = await loadImageAsset(skyUrl);
   const canvas = document.querySelector("canvas");
   if (!(canvas instanceof HTMLCanvasElement)) {

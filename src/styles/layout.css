@@ -1,0 +1,316 @@
+/* Owns: the shell's flex boxes, the display:contents + order map that produces the mobile stack, and the canvas fit.
+   Must not own: any surface, border, radius, header, title or note — every card here is styled by components/panel.css. */
+
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-stack-gap);
+  width: 100%;
+  min-height: 100vh;
+  padding: var(--size-page-pad);
+  background: var(--color-bg-app);
+}
+
+/* ---- toolbar row ---------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  flex: 0 0 var(--size-toolbar-h);
+  align-items: stretch;
+  gap: var(--size-stack-gap);
+}
+
+/* Tracks the left column so the brand block and the sidebar under it stay
+   aligned at every width. */
+.toolbar__brand {
+  display: flex;
+  flex: 0 1 var(--size-sidebar-w);
+  align-items: center;
+  gap: var(--space-4-5);
+  min-width: var(--size-sidebar-min);
+  padding: 0 var(--space-5);
+}
+
+.toolbar__actions {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: 0 var(--space-4);
+}
+
+/* ---- main row ------------------------------------------------------------- */
+
+.appMain {
+  display: flex;
+  flex: 1;
+  gap: var(--size-stack-gap);
+  min-height: 0;
+}
+
+/* Preferred width from the token, allowed to shrink, floored by --size-sidebar-min
+   so the column narrows with the window instead of forcing a horizontal scroll. */
+.colLeft {
+  display: flex;
+  flex: 0 1 var(--size-sidebar-w);
+  flex-direction: column;
+  gap: var(--size-stack-gap);
+  min-width: var(--size-sidebar-min);
+  min-height: 0;
+}
+
+.sceneGraph,
+.shapeInfo {
+  flex: 0 0 auto;
+}
+
+.colCenter {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--size-stack-gap);
+  min-width: 0;
+}
+
+/* Grows and shrinks with the column, floored so the scene never collapses. The
+   flex-grow of 3 against the telemetry area's 2 is what gives the viewport the
+   larger share of the spare height. */
+.viewport {
+  display: flex;
+  flex: 3 1 var(--size-viewport-h);
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: var(--size-viewport-min-h);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+/* The canvas keeps its 1024x640 intrinsic buffer: the renderer captures those
+   numbers at construction and never recomputes them, so the buffer cannot
+   follow the box until COS-250 (E9b) ships a resize path.
+
+   max-*: 100% on a replaced element with an intrinsic ratio shrinks it
+   proportionally to fit and never past its intrinsic size. So the scene scales
+   down cleanly on a narrow window, hits 1:1 at exactly 1024, and simply stops
+   growing beyond that instead of upscaling into a soft, resampled picture. The
+   sunken card around it reads as the viewport matte. */
+.viewport canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.telemetry {
+  display: flex;
+  flex: 2 1 auto;
+  flex-direction: column;
+  gap: var(--size-stack-gap);
+  min-height: var(--size-telemetry-min-h);
+}
+
+/* Wraps rather than crushing: below roughly three card minimums the row breaks
+   instead of squeezing every card past legibility. */
+.telemetryRow {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--size-stack-gap);
+  min-height: 0;
+}
+
+.telemetryRow > * {
+  flex: 1 1 var(--size-card-min-w);
+  min-width: var(--size-card-min-w);
+}
+
+/* The design gives the first card of each telemetry row a little more room. */
+.telemetryRow > :first-child {
+  flex-grow: 1.15;
+}
+
+.colRight {
+  flex: 0 1 var(--size-inspector-w);
+  min-width: var(--size-inspector-min);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.inspector__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4-5);
+  overflow: auto;
+}
+
+.inspectorPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-4-5);
+  border-top: var(--size-hairline) solid var(--color-border-panel);
+}
+
+.statusBar {
+  flex: 0 0 var(--size-statusbar-h);
+}
+
+/* ---- desktop tab gating --------------------------------------------------- */
+/* Only the three inspector bodies carry data-panel, so this hides nothing else. */
+
+[data-panel] {
+  display: none;
+}
+
+#app[data-tab="shape"] [data-panel="shape"],
+#app[data-tab="render"] [data-panel="render"],
+#app[data-tab="world"] [data-panel="world"] {
+  display: flex;
+}
+
+/* Mobile-only chrome, absent above the breakpoint. */
+.appBar,
+.mtabs,
+.quickToggles,
+.mobileResetSlot {
+  display: none;
+}
+
+/* ---- mobile --------------------------------------------------------------- */
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  /* Dissolving these wrappers promotes every card to a direct flex item of
+     #app, so the mobile stack is produced by `order` alone — no second DOM
+     tree, no JS at the breakpoint, no listener re-attached. Items sharing an
+     order value keep DOM order. */
+  .toolbar,
+  .appMain,
+  .colLeft,
+  .colCenter,
+  .colRight,
+  .telemetry,
+  .telemetryRow,
+  .inspector__body {
+    display: contents;
+  }
+
+  .appBar {
+    display: flex;
+    order: 0;
+    position: sticky;
+    top: 0;
+    z-index: var(--layer-sticky);
+    align-items: center;
+    justify-content: space-between;
+    height: var(--size-appbar-h);
+    padding: 0 var(--space-5);
+    gap: var(--space-4-5);
+  }
+
+  /* The sticky header carries the brand on mobile. */
+  .toolbar__brand {
+    display: none;
+  }
+
+  /* The action strip becomes the scroller rather than hiding — it holds the
+     only live pause and reset controls. */
+  .toolbar__actions {
+    order: 1;
+    gap: var(--space-2-5);
+    padding: 0 0 var(--space-0-5);
+    overflow-x: auto;
+  }
+
+  .toolbar__actions > * {
+    flex: 0 0 auto;
+  }
+
+  .toolbar__readout {
+    display: none;
+  }
+
+  /* The ratio governs here, so the desktop height floor is released — on a
+     narrow phone it would otherwise force a box taller than 16/10. */
+  .viewport {
+    order: 2;
+    flex: none;
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+
+  .telemetry {
+    min-height: 0;
+  }
+
+  .quickToggles {
+    display: grid;
+    order: 3;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-2-5);
+  }
+
+  .framerate {
+    order: 4;
+    flex: none;
+  }
+
+  #inspectorTabs {
+    display: none;
+  }
+
+  .mtabs {
+    display: flex;
+    order: 5;
+  }
+
+  /* Every tab panel shares one order value: only one is displayed at a time. */
+  [data-mpanel] {
+    order: 6;
+    flex: none;
+  }
+
+  /* Undo the desktop data-panel gate before re-gating by data-mtab — the three
+     inspector bodies carry both attributes. */
+  [data-panel] {
+    display: flex;
+  }
+
+  [data-mpanel] {
+    display: none;
+  }
+
+  #app[data-mtab="scene"] [data-mpanel="scene"],
+  #app[data-mtab="shape"] [data-mpanel="shape"],
+  #app[data-mtab="render"] [data-mpanel="render"],
+  #app[data-mtab="world"] [data-mpanel="world"],
+  #app[data-mtab="stats"] [data-mpanel="stats"] {
+    display: flex;
+  }
+
+  .statusBar {
+    order: 7;
+    flex: none;
+  }
+
+  .mobileResetSlot {
+    display: block;
+    order: 8;
+  }
+
+  /* Desktop-only: the keyboard shortcuts it lists are not reachable on touch.
+     The mobile equivalent is the GESTURES card, owned by the shortcuts ticket. */
+  .shortcuts {
+    display: none;
+  }
+}
