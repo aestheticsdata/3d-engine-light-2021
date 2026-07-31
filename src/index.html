@@ -20,12 +20,28 @@
          touched when the viewport crosses the breakpoint. -->
     <div id="app" data-tab="shape" data-mtab="shape">
 
-      <!-- order 0 — mobile only -->
+      <!-- order 0 — mobile only. Carries its own PAUSE and fps mounts: there is
+           one DOM tree, and neither can be moved out of the desktop strip into
+           this header, so both are two mounts driven by one handler. setField
+           writes every [data-field] node, which keeps the pair in sync. -->
       <header class="appBar panel">
-        <span class="appBar__brand">3D ENGINE</span>
-        <span class="hud-chip hud-chip--accent appBar__fps">
-          <span data-field="fps">0</span>
+        <span class="brand__mark"></span>
+        <span class="brand__text">
+          <span class="brand__name">1991COMPUTER</span>
+          <span class="brand__build" data-field="buildMobile"></span>
         </span>
+        <span class="appBar__spacer"></span>
+        <span class="readout readout--pill" aria-live="off">
+          <span class="readout__dot"></span>
+          <span class="readout__value" data-field="fps">0</span>
+          <span class="readout__unit">fps</span>
+        </span>
+        <button
+          class="btn btn--primary tap-pad"
+          style="--tap-pad: 4px"
+          type="button"
+          data-transport="toggle"
+        >PAUSE</button>
       </header>
 
       <!-- The brand block is desktop-only, but the action strip is NOT: it holds
@@ -35,21 +51,82 @@
            (order 1) instead of disappearing. -->
       <div class="toolbar">
         <div class="panel toolbar__brand">
-          <span class="toolbar__mark"></span>
-          <span class="toolbar__name">3D ENGINE</span>
+          <span class="brand__mark"></span>
+          <span class="brand__text">
+            <span class="brand__name">1991COMPUTER</span>
+            <span class="brand__build" data-field="buildDesktop"></span>
+          </span>
         </div>
+
         <div class="panel toolbar__actions">
-          <button id="playPause" class="btn btn--primary" type="button">pause</button>
-          <button id="resetControls" class="btn btn--secondary" type="button">reset</button>
-          <span class="divider-v divider-v--toolbar"></span>
-          <span class="toolbar__readout">
-            <span class="toolbar__readoutLabel">FPS</span>
-            <span class="toolbar__readoutValue" data-field="fps">0</span>
+          <button id="playPause" class="btn btn--primary" type="button" data-transport="toggle">PAUSE</button>
+          <button
+            class="btn btn--secondary"
+            type="button"
+            data-placeholder="true"
+            title="Not wired to the engine yet."
+            aria-describedby="ph-step"
+          >STEP</button>
+          <button id="resetControls" class="btn btn--secondary" type="button" data-action="reset">RESET</button>
+
+          <span class="divider-v divider-v--toolbar toolbar__desktopOnly"></span>
+
+          <span class="readout toolbar__desktopOnly" aria-live="off">
+            <span class="readout__dot"></span>
+            <span class="readout__label">RENDER LOOP</span>
+            <span class="readout__value" data-field="fps">0</span>
+            <span class="readout__unit">fps</span>
           </span>
-          <span class="toolbar__readout">
-            <span class="toolbar__readoutLabel">TRIS</span>
-            <span class="toolbar__readoutValue" data-field="trisDrawn">0</span>
+
+          <!-- One element, two presentations: an inline readout on desktop, and
+               the pinned FRAME chip at the head of the mobile scroller. Same
+               content, so it does not need a second mount. Seeded with an em
+               dash — the frame-time ticket owns the measurement and publishes
+               it as `frameMs`; until then this reads "—", which is expected. -->
+          <span class="readout readout--frame" aria-live="off">
+            <span class="readout__label">FRAME</span>
+            <span class="readout__value" data-field="frameMs">&mdash;</span>
+            <span class="readout__unit">ms</span>
           </span>
+
+          <span class="toolbar__spacer"></span>
+
+          <span class="toolbar__cluster">
+            <button
+              class="btn btn--secondary"
+              type="button"
+              data-placeholder="true"
+              title="Not wired to the engine yet."
+              aria-describedby="ph-capture"
+            >CAPTURE PNG</button>
+            <button
+              class="btn btn--secondary"
+              type="button"
+              data-placeholder="true"
+              title="Not wired to the engine yet."
+              aria-describedby="ph-save"
+            >SAVE PRESET</button>
+            <button
+              class="btn btn--secondary"
+              type="button"
+              data-placeholder="true"
+              title="Not wired to the engine yet."
+              aria-describedby="ph-load"
+            >LOAD</button>
+            <button
+              class="btn btn--code"
+              type="button"
+              data-placeholder="true"
+              title="Not wired to the engine yet."
+              aria-describedby="ph-copy"
+            >&lt;/&gt; COPY CODE</button>
+          </span>
+
+          <span class="placeholder-hint" id="ph-step">Not wired to the engine yet.</span>
+          <span class="placeholder-hint" id="ph-capture">Not wired to the engine yet.</span>
+          <span class="placeholder-hint" id="ph-save">Not wired to the engine yet.</span>
+          <span class="placeholder-hint" id="ph-load">Not wired to the engine yet.</span>
+          <span class="placeholder-hint" id="ph-copy">Not wired to the engine yet.</span>
         </div>
       </div>
 
@@ -259,12 +336,12 @@
 
       <div class="statusBar panel"></div>
 
-      <!-- order 8 — the RESET SCENE bar's container. Left empty on purpose: the
-           toolbar ticket owns that bar and the single reset path behind it, and
-           shipping a second reset button here would either duplicate the
-           listener or render a control that does nothing. #resetControls in the
-           action strip above stays reachable on mobile in the meantime. -->
-      <div class="mobileResetSlot"></div>
+      <!-- order 8 — RESET's only mobile mount. Same handler as #resetControls,
+           bound through data-action; there is no second code path and no
+           mobile-only subset of what RESET restores. -->
+      <div class="mobileResetSlot">
+        <button class="btn btn--secondary btn--block" type="button" data-action="reset">RESET SCENE</button>
+      </div>
 
     </div>
   </body>

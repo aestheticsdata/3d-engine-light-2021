@@ -22,12 +22,34 @@ type Listener = (state: Readonly<UiState>) => void;
 
 const state: UiState = {};
 const listeners = new Set<Listener>();
+const defaults: Partial<UiState> = {};
 
 export const getState = (): Readonly<UiState> => state;
 
+const notify = () => {
+  listeners.forEach((listener) => listener(state));
+};
+
 export const setState = (patch: Partial<UiState>) => {
   Object.assign(state, patch);
-  listeners.forEach((listener) => listener(state));
+  notify();
+};
+
+// Declares a slice together with the values RESET must restore it to. Calling
+// this at the declaration site is what makes RESET coverage automatic: a ticket
+// that adds a slice gets it restored without anyone editing the reset handler,
+// which is the failure mode this registry exists to prevent.
+export const registerSlice = (slice: Partial<UiState>) => {
+  Object.assign(defaults, slice);
+  Object.assign(state, slice);
+  notify();
+};
+
+// Restores every registered default and notifies once, so the whole console
+// repaints in a single pass rather than once per slice.
+export const resetAll = () => {
+  Object.assign(state, defaults);
+  notify();
 };
 
 // Returns the unsubscribe function.
