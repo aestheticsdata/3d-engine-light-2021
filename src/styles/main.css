@@ -21,49 +21,50 @@
 @import url(components/scrollbar.css);
 @import url(components/tooltip.css);
 @import url(components/placeholder.css);
+@import url(layout.css);
 
-/* LEGACY — superseded by the UI rebuild; the shell ticket owns the teardown */
+/* Base rules. These replace the old grey-page body wholesale — the console is
+   a near-black navy surface, and every widget draws on top of it. */
+
+html,
 body {
-  background: #ccc;
-  font-family: Arial, serif;
-  font-size: 12px;
-  color: #10afff;
-  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg-app);
 }
 
-#wrapper {
-  position: relative;
-  width: 1024px;
-  margin: 0 auto;
-  padding: 0 0 32px;
+* {
+  box-sizing: border-box;
 }
 
-#canvasWrapper {
-  color: #ccc;
-  background: #a7d2ff;
-  -moz-box-shadow: 0 0 14px #aaa;
-  -webkit-box-shadow: 0 0 14px #aaa;
-  box-shadow: 0 0 14px #aaa;
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
-canvas {
-  display: block;
+a {
+  color: var(--color-accent);
+  text-decoration: none;
 }
 
-.sidePanel {
-  position: absolute;
-  top: 0;
-  width: 250px;
-  padding: 14px 14px 16px;
-  background: oklch(0.29 0.11 260 / 0.9);
-  -moz-box-shadow: 0 0 14px #aaa;
-  -webkit-box-shadow: 0 0 14px #aaa;
-  box-shadow: 0 0 14px #aaa;
+a:hover {
+  color: var(--color-accent-hover);
 }
 
-.panelHeader {
-  margin-bottom: 14px;
-}
+/* ---------------------------------------------------------------------------
+   LEGACY — still live, each owned by the widget ticket that will replace it.
+   The shell teardown deliberately stopped here: these rules style markup that
+   is still on the page, so deleting them now would strip the shape info and
+   story panels before their own tickets rebuild them.
+
+   .panelTitle / .panelSubTitle / .panelSection  -> shape info ticket
+   .infoRow / .infoLabel / .infoValue            -> shape info ticket
+   .panelFadeOut / .panelFadeIn / @keyframes     -> shape info ticket (the fade
+                                                    must survive the rebuild)
+   .storyTitle / .storyText / .storyBadgeRow
+   .storyLinks / .storyLink                      -> shape story ticket
+   --------------------------------------------------------------------------- */
 
 .panelTitle,
 .panelSubTitle {
@@ -76,14 +77,6 @@ canvas {
 
 .panelSubTitle {
   margin-bottom: 8px;
-}
-
-#shapeInfoPanel {
-  right: calc(100% + 28px);
-}
-
-.panelContent {
-  will-change: opacity, transform;
 }
 
 .panelFadeOut {
@@ -116,10 +109,6 @@ canvas {
     opacity: 1;
     transform: translateX(0);
   }
-}
-
-#controls {
-  left: calc(100% + 28px);
 }
 
 .panelSection {
@@ -190,178 +179,4 @@ canvas {
 .storyLink:focus-visible {
   border-bottom-color: #fff;
   color: #fff;
-}
-
-.controlsHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-button {
-  width: 100%;
-}
-
-#selectButton,
-#selectButton select {
-  width: 100%;
-}
-
-#selectButton {
-  display: block;
-}
-
-#selectButton select {
-  font: 10px Futura, "Century Gothic", sans-serif;
-  padding: 4px 6px;
-  color: #10144d;
-  cursor: pointer;
-}
-
-.fpsRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.statsBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  background-color: rgba(173, 220, 255, 0.95);
-  border-radius: 5px;
-}
-
-.statsBadgeRight {
-  margin-left: auto;
-}
-
-.statsLabel,
-.statsValue {
-  color: rgba(12, 12, 127, 1);
-}
-
-.statsValue {
-  font-weight: 700;
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.toggleLabel {
-  color: #ffef93;
-  font: 10px Futura, "Century Gothic", sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.toggleLabelMuted {
-  color: rgba(176, 180, 188, 0.72);
-}
-
-.toggleRowOff .toggleLabel {
-  color: rgba(176, 180, 188, 0.72);
-}
-
-#toggleWireframe {
-  margin-left: auto;
-  width: 72px;
-  flex: 0 0 auto;
-}
-
-#toggleBackfaceCulling {
-  margin-left: auto;
-  width: 72px;
-  flex: 0 0 auto;
-}
-
-.sliderGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.sliderRow {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-input[type="range"] {
-  width: 100%;
-  margin: 0;
-  cursor: pointer;
-}
-
-input[type="range"]:active {
-  cursor: grabbing;
-}
-
-/* The disabled range state now lives in components/slider.css. This rule had to
-   go rather than stay: its selector is identical to the component layer's, and
-   @import rules are hoisted, so source order here would have kept the opacity
-   fade winning. The rebuild deliberately drops that fade — the design has no
-   alpha-dimming idiom on any control, and the state reads through the slate
-   thumb and the not-allowed cursor instead. */
-
-.sliderText {
-  display: block;
-  color: #ffef93;
-  font: 10px Futura, "Century Gothic", sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-button {
-  font: 10px Futura, "Century Gothic", sans-serif;
-  padding: 4px 8px;
-  background-color: rgba(255, 204, 0, 1);
-  border: 1px solid #ffcc00;
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
-  border-radius: 5px;
-  border-bottom: 1px solid #9f9f9f;
-  -moz-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: rgba(255, 184, 0, 1);
-}
-
-#resetControls {
-  background-color: rgba(176, 244, 183, 1);
-  border-color: rgba(118, 202, 127, 1);
-  color: #0d5a19;
-}
-
-#resetControls:hover {
-  background-color: rgba(152, 232, 161, 1);
-}
-
-/* .hoverTooltip moved to components/tooltip.css. It had to be deleted rather
-   than left alongside: @import rules are hoisted to the top of the file, so a
-   same-specificity rule further down here would have kept overriding the
-   component layer and the tooltip would have stayed white-on-black. */
-
-@media (max-width: 1360px) {
-  #wrapper {
-    width: max-content;
-    margin: 0 16px;
-    padding-right: 16px;
-  }
-
-  .sidePanel {
-    position: static;
-    width: 1024px;
-    margin-top: 16px;
-  }
 }

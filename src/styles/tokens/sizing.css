@@ -2,14 +2,28 @@
    Must not own: spacing steps (spacing.css), radii (radius.css), or the design tool's 1440x900 canvas — that is not a layout. */
 
 :root {
-  /* shells */
+  /* shells
+
+     The two sidebars and the viewport are fluid rather than fixed: the design's
+     264 / 296 / 530 are the values at its own 1440 frame, not a layout. Each is
+     expressed as a preferred size with a floor, so the console fills whatever
+     width it is given and stops collapsing rather than stopping growing. The
+     matching --size-*-min tokens below are the floors, and nothing in the shell
+     may restate them. */
   --size-page-pad: 8px;
   --size-stack-gap: 8px;
-  --size-sidebar-w: 264px;
-  --size-inspector-w: 296px;
-  --size-viewport-h: 530px;
+  --size-sidebar-w: clamp(216px, 18vw, 320px);
+  --size-inspector-w: clamp(248px, 20vw, 360px);
+  --size-viewport-h: 530px; /* preferred flex basis, not a fixed height */
   --size-toolbar-h: 40px;
   --size-statusbar-h: 24px;
+
+  /* floors — the "minimum size for the scene and every widget" */
+  --size-sidebar-min: 200px;
+  --size-inspector-min: 232px;
+  --size-viewport-min-h: 320px;
+  --size-telemetry-min-h: 176px;
+  --size-card-min-w: 160px;
 
   /* panels */
   --size-panel-header: 24px;       /* sidebar panels */

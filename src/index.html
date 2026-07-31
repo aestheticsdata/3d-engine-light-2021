@@ -1,7 +1,12 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- Without this a phone lays out against a virtual viewport of roughly
+         980px and scales down, so @media (max-width: 899px) never matches on a
+         real device. Narrowing a desktop window does match, which is why the
+         absence of this tag hides itself in QA. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -10,109 +15,257 @@
   </head>
 
   <body>
-    <div id="wrapper">
-      <aside id="shapeInfoPanel" class="sidePanel">
-        <div id="shapeInfoPanelContent" class="panelContent">
-          <div class="panelHeader">
-            <span class="panelTitle">shape info</span>
-          </div>
+    <!-- One DOM tree for both branches. data-tab drives the desktop inspector,
+         data-mtab the mobile tab bar; the two are independent and neither is
+         touched when the viewport crosses the breakpoint. -->
+    <div id="app" data-tab="shape" data-mtab="shape">
 
-          <div class="panelSection">
-            <div class="infoRow">
-              <span class="infoLabel">name</span>
-              <span id="shapeInfoName" class="infoValue"></span>
-            </div>
-            <div class="infoRow">
-              <span class="infoLabel">points</span>
-              <span id="shapeInfoPoints" class="infoValue"></span>
-            </div>
-            <div class="infoRow">
-              <span class="infoLabel">triangles</span>
-              <span id="shapeInfoTriangles" class="infoValue"></span>
-            </div>
-            <div class="infoRow">
-              <span class="infoLabel">textures</span>
-              <span id="shapeInfoTextures" class="infoValue"></span>
-            </div>
-            <div class="infoRow">
-              <span class="infoLabel">opacity</span>
-              <span id="shapeInfoOpacity" class="infoValue"></span>
-            </div>
-          </div>
+      <!-- order 0 — mobile only -->
+      <header class="appBar panel">
+        <span class="appBar__brand">3D ENGINE</span>
+        <span class="hud-chip hud-chip--accent appBar__fps">
+          <span data-field="fps">0</span>
+        </span>
+      </header>
 
-          <div class="panelSection">
-            <span class="panelSubTitle">shape story</span>
-            <h2 id="shapeStoryTitle" class="storyTitle"></h2>
-            <p id="shapeStoryDescription" class="storyText"></p>
-            <p id="shapeStoryFeature" class="storyText"></p>
-            <div class="storyBadgeRow">
-              <span class="statsBadge">
-                <span class="statsLabel">DENSITY :</span>
-                <span id="shapeStoryDensity" class="statsValue"></span>
-              </span>
-            </div>
-            <div id="shapeStoryReferences" class="storyLinks"></div>
-          </div>
+      <!-- The brand block is desktop-only, but the action strip is NOT: it holds
+           the only live pause and reset controls, and there is one DOM tree, so
+           hiding it below 900 would leave a phone with no transport at all.
+           Below the breakpoint the strip becomes the mobile action scroller
+           (order 1) instead of disappearing. -->
+      <div class="toolbar">
+        <div class="panel toolbar__brand">
+          <span class="toolbar__mark"></span>
+          <span class="toolbar__name">3D ENGINE</span>
         </div>
-      </aside>
-
-      <div id="canvasWrapper">
-        <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
+        <div class="panel toolbar__actions">
+          <button id="playPause" class="btn btn--primary" type="button">pause</button>
+          <button id="resetControls" class="btn btn--secondary" type="button">reset</button>
+          <span class="divider-v divider-v--toolbar"></span>
+          <span class="toolbar__readout">
+            <span class="toolbar__readoutLabel">FPS</span>
+            <span class="toolbar__readoutValue" data-field="fps">0</span>
+          </span>
+          <span class="toolbar__readout">
+            <span class="toolbar__readoutLabel">TRIS</span>
+            <span class="toolbar__readoutValue" data-field="trisDrawn">0</span>
+          </span>
+        </div>
       </div>
-      <aside id="controls" class="sidePanel">
-        <div class="controlsHeader">
-          <button id="playPause">pause</button>
-          <div id="wireframeRow" class="toggleRow">
-            <span id="wireframeLabel" class="toggleLabel">wireframe</span>
-            <button id="toggleWireframe" type="button">on</button>
+
+      <div class="appMain">
+        <div class="colLeft">
+
+          <section class="panel sceneGraph" data-mpanel="scene">
+            <div class="panel__header">
+              <span class="panel__title">scene graph</span>
+            </div>
+            <div class="panel__body"></div>
+          </section>
+
+          <section class="panel shapeInfo" data-mpanel="scene">
+            <div class="panel__header">
+              <span class="panel__title">shape info</span>
+            </div>
+            <div id="shapeInfoPanelContent" class="panel__body">
+              <div class="info-list">
+                <div class="info-row">
+                  <span class="info-row__label">name</span>
+                  <span id="shapeInfoName" class="info-row__value"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row__label">points</span>
+                  <span id="shapeInfoPoints" class="info-row__value"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row__label">triangles</span>
+                  <span id="shapeInfoTriangles" class="info-row__value"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row__label">textures</span>
+                  <span id="shapeInfoTextures" class="info-row__value"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-row__label">opacity</span>
+                  <span id="shapeInfoOpacity" class="info-row__value"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel--fill shapeStory" data-mpanel="scene">
+            <div class="panel__header">
+              <span class="panel__title">shape story</span>
+            </div>
+            <!-- .panelSection carries the vertical rhythm between these blocks
+                 and is still styled in main.css; the shape story ticket replaces
+                 both when it rebuilds this panel. -->
+            <div class="panel__body panel__body--scroll">
+              <div class="panelSection">
+              <h2 id="shapeStoryTitle" class="storyTitle"></h2>
+              <p id="shapeStoryDescription" class="storyText"></p>
+              <p id="shapeStoryFeature" class="storyText"></p>
+              <span class="badge badge--info">
+                <span class="badge__label">DENSITY :</span>
+                <span id="shapeStoryDensity" class="badge__value"></span>
+              </span>
+              <div id="shapeStoryReferences" class="storyLinks"></div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <div class="colCenter">
+
+          <div class="viewport panel">
+            <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
           </div>
-          <div id="backfaceCullingRow" class="toggleRow">
-            <span id="backfaceCullingLabel" class="toggleLabel">backface culling</span>
-            <button id="toggleBackfaceCulling" type="button">off</button>
+
+          <!-- order 3 — mobile only -->
+          <div class="quickToggles"></div>
+
+          <div class="telemetry">
+            <div class="telemetryRow">
+              <!-- No data-mpanel: on mobile this card sits above the tab bar at
+                   order 4, outside the STATS tab. -->
+              <section class="panel panel--fill framerate">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">framerate</span>
+                </div>
+                <div class="panel__body panel__body--pad-4">
+                  <div class="stat-tile-row">
+                    <div class="stat-tile">
+                      <div class="stat-tile__caption">FPS</div>
+                      <div class="stat-tile__value" data-field="fps">0</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <section class="panel panel--fill" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">frame time</span>
+                </div>
+                <div class="panel__body panel__body--pad-4"></div>
+              </section>
+              <section class="panel panel--fill" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">geometry</span>
+                </div>
+                <div class="panel__body panel__body--pad-4">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">DRAWN</span>
+                      <span class="stat-row__value" data-field="trisDrawn">0</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="telemetryRow">
+              <section class="panel panel--fill" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">z-buffer</span>
+                </div>
+                <div class="panel__body panel__body--pad-4"></div>
+              </section>
+              <section class="panel panel--fill" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">camera</span>
+                </div>
+                <div class="panel__body panel__body--pad-4"></div>
+              </section>
+              <section class="panel panel--fill" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">system</span>
+                </div>
+                <div class="panel__body panel__body--pad-4"></div>
+              </section>
+            </div>
           </div>
-          <div id="selectButton">
-            <select id="primitives">
-            </select>
+
+        </div>
+
+        <div class="colRight panel">
+          <!-- desktop tab strip; the mobile bar below replaces it under 900 -->
+          <div id="inspectorTabs" class="tabs" role="tablist" aria-label="Inspector">
+            <button class="tabs__tab" type="button" role="tab" data-tab-id="shape" aria-controls="panelShape">SHAPE</button>
+            <button class="tabs__tab" type="button" role="tab" data-tab-id="render" aria-controls="panelRender">RENDER</button>
+            <button class="tabs__tab" type="button" role="tab" data-tab-id="world" aria-controls="panelWorld">WORLD</button>
           </div>
-          <div class="fpsRow">
-            <span class="statsBadge">
-              <span class="statsLabel fpsCounter">FPS :</span>
-              <span id="fpsCounterNb" class="statsValue fpsCounter"></span>
-            </span>
-            <span class="statsBadge statsBadgeRight">
-              <span class="statsLabel fpsCounter">TRIANGLES :</span>
-              <span id="trianglesRenderedNb" class="statsValue fpsCounter"></span>
-            </span>
+
+          <div class="inspector__body panel__body">
+
+            <section id="panelShape" class="inspectorPanel" role="tabpanel" data-panel="shape" data-mpanel="shape">
+              <div class="section-title">PRIMITIVE</div>
+              <select id="primitives"></select>
+
+              <div class="section-title">TRANSFORM</div>
+              <label class="slider-row" for="zoomSlider">
+                <span class="slider-row__label">zoom</span>
+                <input id="zoomSlider" type="range" min="0" max="100" value="50" />
+              </label>
+              <label class="slider-row" for="opacitySlider">
+                <span class="slider-row__label">opacity</span>
+                <input id="opacitySlider" type="range" min="0" max="100" value="100" />
+              </label>
+              <label class="slider-row" for="pitchSlider">
+                <span class="slider-row__label">pitch</span>
+                <input id="pitchSlider" type="range" min="0" max="800" value="400" />
+              </label>
+              <label class="slider-row" for="yawSlider">
+                <span class="slider-row__label">yaw</span>
+                <input id="yawSlider" type="range" min="0" max="800" value="400" />
+              </label>
+              <label class="slider-row" for="rollSlider">
+                <span class="slider-row__label">roll</span>
+                <input id="rollSlider" type="range" min="-1000" max="1200" value="200" />
+              </label>
+              <label class="slider-row" for="rotationSpeedSlider">
+                <span class="slider-row__label">rotation speed</span>
+                <input id="rotationSpeedSlider" type="range" min="0" max="2000" value="100" />
+              </label>
+            </section>
+
+            <section id="panelRender" class="inspectorPanel" role="tabpanel" data-panel="render" data-mpanel="render">
+              <div class="section-title">PIPELINE</div>
+              <div id="wireframeRow" class="toggle-row">
+                <span id="wireframeLabel" class="toggle-row__label">wireframe</span>
+                <button id="toggleWireframe" type="button">on</button>
+              </div>
+              <div id="backfaceCullingRow" class="toggle-row">
+                <span id="backfaceCullingLabel" class="toggle-row__label">backface culling</span>
+                <button id="toggleBackfaceCulling" type="button">off</button>
+              </div>
+            </section>
+
+            <section id="panelWorld" class="inspectorPanel" role="tabpanel" data-panel="world" data-mpanel="world"></section>
+
+            <!-- desktop only: the shortcuts it lists are not reachable on touch -->
+            <div class="shortcuts"></div>
+
           </div>
         </div>
-        <div class="sliderGroup">
-          <label class="sliderRow" for="zoomSlider">
-            <span class="sliderText">zoom</span>
-            <input id="zoomSlider" type="range" min="0" max="100" value="50" />
-          </label>
-          <label class="sliderRow" for="opacitySlider">
-            <span class="sliderText">opacity</span>
-            <input id="opacitySlider" type="range" min="0" max="100" value="100" />
-          </label>
-          <label class="sliderRow" for="pitchSlider">
-            <span class="sliderText">pitch</span>
-            <input id="pitchSlider" type="range" min="0" max="800" value="400" />
-          </label>
-          <label class="sliderRow" for="yawSlider">
-            <span class="sliderText">yaw</span>
-            <input id="yawSlider" type="range" min="0" max="800" value="400" />
-          </label>
-          <label class="sliderRow" for="rollSlider">
-            <span class="sliderText">roll</span>
-            <input id="rollSlider" type="range" min="-1000" max="1200" value="200" />
-          </label>
-          <label class="sliderRow" for="rotationSpeedSlider">
-            <span class="sliderText">rotation speed</span>
-            <input id="rotationSpeedSlider" type="range" min="0" max="2000" value="100" />
-          </label>
-        </div>
-        <button id="resetControls" type="button">reset</button>
-      </aside>
+      </div>
+
+      <!-- order 5 — mobile only -->
+      <div id="mobileTabs" class="tabs mtabs" role="tablist" aria-label="Sections">
+        <button class="tabs__tab" type="button" role="tab" data-tab-id="scene">SCENE</button>
+        <button class="tabs__tab" type="button" role="tab" data-tab-id="shape">SHAPE</button>
+        <button class="tabs__tab" type="button" role="tab" data-tab-id="render">RENDER</button>
+        <button class="tabs__tab" type="button" role="tab" data-tab-id="world">WORLD</button>
+        <button class="tabs__tab" type="button" role="tab" data-tab-id="stats">STATS</button>
+      </div>
+
+      <div class="statusBar panel"></div>
+
+      <!-- order 8 — the RESET SCENE bar's container. Left empty on purpose: the
+           toolbar ticket owns that bar and the single reset path behind it, and
+           shipping a second reset button here would either duplicate the
+           listener or render a control that does nothing. #resetControls in the
+           action strip above stays reachable on mobile in the meantime. -->
+      <div class="mobileResetSlot"></div>
+
     </div>
   </body>
 </html>
