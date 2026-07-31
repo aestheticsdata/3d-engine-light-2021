@@ -1,0 +1,105 @@
+/* Owns: every colour in the console — surfaces, borders, accent, the text ramp, state, charts and HUD.
+   Must not own: sizes, opacities that are not part of a colour, or any per-branch name — colours are identical on desktop and mobile. */
+
+:root {
+  /* app + surfaces */
+  --color-bg-app: #05091A;
+  --color-surface-sunken: #0A1330;
+  --color-panel-bg: #0B1637;
+  --color-on-accent: var(--color-panel-bg);   /* foreground on yellow */
+  --color-panel-header-bg: #0E1B40;
+  --color-tab-active-bg: #122152;
+  --color-button-secondary-bg: #152A5C;
+  --color-button-secondary-bg-hover: #1D3670;
+  --color-row-selected-bg: #172E62;
+  --color-row-hover-bg: #142654;
+  --color-chip-active-bg: #1E3B7A;
+  --color-badge-info-bg: #12285C;
+
+  /* borders */
+  --color-border-panel: #1E3364;
+  --color-border-subtle: #1B2E5C;
+  --color-border-muted: #23386B;
+  --color-border-control: #26406F;
+  --color-border-row: #142653;
+  --color-border-badge-info: #2A4A8F;
+  --color-slate-500: #3A4E7E;            /* separator / toggle dim / chart label */
+  --color-scrollbar-thumb-hover: #35538F;
+
+  /* accent */
+  --color-accent: #FFC81E;
+  --color-accent-hover: #FFE07A;
+  --color-accent-overlay: rgba(255,200,30,.92);
+  --color-accent-overlay-border: rgba(255,200,30,.5);
+  --color-accent-fade-top: rgba(255,200,30,.30);
+  --color-accent-fade-bottom: rgba(255,200,30,0);
+
+  /* text ramp, lightest to dimmest */
+  --color-text-max: #FFFFFF;
+  --color-text-primary: #EAF0FF;
+  --color-text-button: #BFD0F5;
+  --color-text-secondary: #B9C8EC;
+  --color-text-tertiary: #8FA3CE;
+  --color-text-hud-label: #7E93C4;
+  --color-text-muted: #6F86B8;
+  --color-text-dim: #5A6E9E;
+  --color-text-disabled: #4E608E;
+  --color-text-info: #7FA8FF;
+
+  /* state */
+  --color-state-ok: #6FE3A8;
+  --color-state-ok-border: rgba(111,227,168,.45);
+  --color-state-warn: #FF9E4E;
+  --color-state-danger: #FF5A4E;
+  --color-state-info: #5B9BFF;
+
+  /* axis gizmo */
+  --color-axis-x: var(--color-state-danger);
+  --color-axis-y: var(--color-state-ok);
+  --color-axis-z: var(--color-state-info);
+
+  /* z-buffer histogram */
+  --color-zbuf-near: var(--color-state-ok);
+  --color-zbuf-mid: var(--color-state-info);
+  --color-zbuf-far: #2C4A8A;
+
+  /* frame-time segments */
+  --color-ft-transform: var(--color-accent);
+  --color-ft-clip: var(--color-state-info);
+  --color-ft-raster: var(--color-state-ok);
+  --color-ft-present: var(--color-slate-500);        /* bar segment + legend swatch */
+  --color-ft-present-text: var(--color-text-tertiary); /* text label, see note */
+
+  /* base colour swatch palette, in design order */
+  --color-swatch-red: #E01B1B;
+  --color-swatch-yellow: var(--color-accent);
+  --color-swatch-green: var(--color-state-ok);
+  --color-swatch-blue: var(--color-state-info);
+  --color-swatch-white: var(--color-text-primary);
+
+  /* HUD overlays */
+  --color-hud-bg: rgba(5,9,26,.82);
+  --color-hud-bg-dense: rgba(5,9,26,.85);
+  --color-hud-bg-gizmo: rgba(5,9,26,.7);
+  --color-hud-border: rgba(255,255,255,.14);
+  --color-hud-border-strong: rgba(255,255,255,.16);
+  --color-crosshair: rgba(255,255,255,.55);
+  --color-crosshair-dim: rgba(255,255,255,.5);
+}
+
+/* Two literals carry several semantic roles, so the extra roles are aliases
+   rather than second copies: theming can split them later without a
+   find-and-replace. #0B1637 is --color-panel-bg + --color-on-accent; #3A4E7E is
+   --color-slate-500 + --color-ft-present.
+
+   Four literals appear only in the mobile branch — --color-tab-active-bg
+   (the mobile tab card's active cell; the desktop active tab is simply
+   --color-panel-bg), --color-border-row (the mobile toggle-row divider, which
+   desktop does not draw), --color-hud-bg-dense and --color-crosshair-dim. They
+   are named by role, not by branch: these are separate literals with separate
+   jobs, not per-branch copies of one value, so nothing overrides them.
+
+   Resolved inconsistency: the PRESENT segment paints #3A4E7E everywhere except
+   the mobile STATS stat-row text, which uses #8FA3CE. Both are kept —
+   --color-ft-present for the bar and legend swatch, --color-ft-present-text for
+   text, because #3A4E7E at 11px on #0B1637 is too dark to read. */

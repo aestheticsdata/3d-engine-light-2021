@@ -251,6 +251,86 @@ With that separation, you can add new canvas animations without coupling them to
 
 ---
 
+## Styles
+
+Styling is split into a **token layer** and everything that consumes it. Every colour,
+size, type step and spacing value in the console UI is a CSS custom property; nothing
+downstream hardcodes one.
+
+### One file per token type
+
+`src/styles/tokens/` holds one file per kind of token, each a single `:root` block that
+opens with a two-line comment stating what it owns and what it must not own:
+
+| File | Owns |
+| -- | -- |
+| `breakpoints.css` | the single layout breakpoint |
+| `colors.css` | every colour — surfaces, borders, accent, text ramp, state, charts, HUD |
+| `typography.css` | families, weights, and the size / leading / tracking ramps |
+| `spacing.css` | the gap and padding scale |
+| `radius.css` | corner radii |
+| `sizing.css` | fixed component and shell dimensions |
+| `elevation.css` | HUD backgrounds, the one blur, placeholder opacity, stacking layers |
+| `motion.css` | durations, easings, and the `recblink` keyframes |
+
+They are imported at the top of `src/styles/main.css`, in this order:
+
+```css
+@import url(reset.css);
+@import url(tokens/breakpoints.css);
+@import url(tokens/colors.css);
+@import url(tokens/typography.css);
+@import url(tokens/spacing.css);
+@import url(tokens/radius.css);
+@import url(tokens/sizing.css);
+@import url(tokens/elevation.css);
+@import url(tokens/motion.css);
+```
+
+**`reset.css` stays first.** Token files are not purely custom properties — `motion.css`
+carries `@keyframes`, and any of them may grow element-level rules later — while the reset
+uses very broad selectors. Ordering reset → tokens → components → layout means nothing a
+token file adds can be clobbered by the reset. All `@import` rules must remain above every
+other rule in `main.css`.
+
+### Naming prefixes
+
+`--color-*` · `--font-*` / `--text-*` / `--tracking-*` / `--leading-*` · `--space-*` ·
+`--radius-*` · `--size-*` · `--elevation-*` / `--blur-*` · `--layer-*` · `--opacity-*` ·
+`--breakpoint-*` · `--duration-*` / `--ease-*`
+
+A new value is **added to a token file**, never written inline. Raw hex and raw px are
+legal only inside `src/styles/tokens/*.css` and `src/ui/chartTokens.ts`, for the media-query
+literals, and for one-off geometry the design itself uses inline (percentage anchors,
+negative centring offsets, flex ratios).
+
+### One name, two values
+
+There are **no `*-mobile` token names.** A token keeps a single name and changes value inside
+`@media (max-width: 899px)`. Only `sizing.css` carries such a block; colours, type, spacing,
+radii, elevation and motion are identical on both branches.
+
+The breakpoint is **exclusive at 900**: desktop is `min-width: 900px`, mobile is
+`max-width: 899px`. Never `max-width: 900px` — at exactly 900px the app is desktop, in the
+layout and in every token value.
+
+Where a literal appears only in the mobile branch it is still named by *role*, not by branch
+(`--color-hud-bg-dense`, `--color-crosshair-dim`): those are separate values with separate
+jobs, not per-branch copies of one value.
+
+### Two known duplications
+
+Both are deliberate and documented where they occur:
+
+1. **The `899px` / `900px` media literals.** A media query condition cannot read a custom
+   property, so `--breakpoint-md` is documentation and a value for JS; the literal is repeated
+   in each `@media` block.
+2. **`src/ui/chartTokens.ts` mirrors five colours** from `colors.css`. Canvas 2D cannot read
+   custom properties, and reading `getComputedStyle` per frame would cost a layout read and
+   would not work before the stylesheet resolves. Change one, change the other.
+
+---
+
 ## Deployment
 
 This project is deployed using an **atomic release strategy** based on
