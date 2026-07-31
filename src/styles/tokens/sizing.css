@@ -18,6 +18,20 @@
   --size-toolbar-h: 40px;
   --size-statusbar-h: 24px;
 
+  /* The canvas backing store, and therefore the ceiling on the stage that
+     carries it. While the canvas was the direct child of the viewport card its
+     intrinsic size was the ceiling on its own; the stage the HUD anchors to has
+     no intrinsic size, so "scales down but never up" has to be stated. Keep
+     these equal to the width/height attributes on canvas#canvasID — the same
+     pair BackgroundRenderer and ShapeTransitionMachine capture at construction.
+     COS-250 (E9b) is what lifts the cap. */
+  --size-canvas-w: 1024px;
+  --size-canvas-h: 640px;
+  /* Unitless, and equal to the pair above by construction: 1024 / 640 = 1.6.
+     The stage needs the ratio as a number, not as a size, because it derives
+     one axis from the other. Change all three together or not at all. */
+  --size-canvas-ratio: 1.6;
+
   /* floors — the "minimum size for the scene and every widget" */
   --size-sidebar-min: 200px;
   --size-inspector-min: 232px;
@@ -134,6 +148,7 @@
     --size-gizmo-axis-xy: 26px;
     --size-gizmo-axis-z: 18px;
     --size-crosshair: 20px;
+    --size-selection-corner: 12px;
     --size-divider-hud: 9px;
   }
 }

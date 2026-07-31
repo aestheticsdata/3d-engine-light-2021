@@ -14,6 +14,7 @@ import { createTabGroup } from "@ui/tabs";
 import { resetAll } from "@ui/uiState";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import { createStatusBar } from "@ui/statusBar";
+import { createViewportHud, ViewportHud } from "@ui/viewportHud";
 import { textureKeys } from "@ui/texLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
@@ -76,6 +77,8 @@ class Main {
   // so they go through setField, which writes every [data-field] node at once.
   // Writers only — the bar holds no state of its own.
   private readonly statusBar = createStatusBar();
+  // Needs the canvas, so it is built in the constructor rather than here.
+  private readonly viewportHud: ViewportHud;
   private readonly pauseBtn: HTMLElement;
   private readonly shapeInfoPanelContent: HTMLElement;
   private readonly shapeInfoNameNode: HTMLElement;
@@ -182,6 +185,7 @@ class Main {
     }
 
     this.controls = new Controls();
+    this.viewportHud = createViewportHud(canvas);
     this.stage = stage;
     this.centerX = this.stage.canvas.width >> 1;
     this.centerY = this.stage.canvas.height >> 1;
@@ -258,8 +262,12 @@ class Main {
     this.syncToggleButtons();
   }
 
+  // The HUD's `dist` is the camera distance, not the raw offset: the offset
+  // alone runs 260 -> -220 across the slider and would print a negative
+  // distance. Focal plus offset stays positive throughout (560 -> 80).
   private changeZoom = (sliderValue: number) => {
     this.zOffset = sliderToZoomOffset(sliderValue);
+    this.viewportHud.setZoom(sliderValue, this.focal + this.zOffset);
     this.applyCameraSettingsToActiveMeshes();
     this.renderPausedFrame();
   };
@@ -551,6 +559,9 @@ class Main {
 
   private syncToggleButtons() {
     this.statusBar.setMode(this.wireframeEnabled);
+    // Same modeLabel() behind both: the bar writes the word, the HUD writes the
+    // attribute that keys the canvas filter.
+    this.viewportHud.setMode(this.wireframeEnabled);
     this.wireframeBtn.textContent = this.wireframeEnabled ? "off" : "on";
     this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
       ? "off"
@@ -694,6 +705,9 @@ class Main {
       this.primitivesName,
       this.requestPrimitiveChange,
     );
+    // Resolution and the four camera placeholders are written once: none of
+    // them changes while the console is open.
+    this.viewportHud.seed();
     this.applyDefaultControlValues();
     this.attachControlListeners();
     this.syncSettingsFromControls();

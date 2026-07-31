@@ -1,0 +1,588 @@
+/* Owns: the canvas stage, the HUD layer anchors, and the three layers the design draws only here — the crosshair, the selection bracket and the axis gizmo.
+   Must not own: the chip, camera-readout, divider or placeholder recipes — those are hud.css, divider.css and placeholder.css (D1). This file positions them and overrides only the two documented asymmetries. */
+
+/* ---- stage ----------------------------------------------------------------
+
+   The design paints the render surface as an <img> with object-fit: cover at
+   inset: 0. A canvas cannot be cropped that way without throwing pixels away,
+   so the picture gets its own box between the card and the canvas.
+
+   The stage exists for the HUD. Letterboxing produced by object-fit — or by
+   max-width/max-height on the canvas, which is what the shell shipped as the
+   interim fit — is invisible to layout: the element's box stays the size of the
+   card and only its painted content shrinks. A HUD anchored to that box would
+   inset itself from the letterbox bars rather than from the image. Anchoring to
+   a box that is exactly the picture is the whole reason this element exists.
+
+   16/10 is not a choice: the backing store is 1024 x 640 = 1.6 exactly, and the
+   mobile card asks for 16/10 = 1.6 exactly. The two agree, so the picture fills
+   a phone card edge to edge — give or take the 1.2px of matte the card's own 1px
+   border leaves, since aspect-ratio applies to the border box and the content
+   box inside it is fractionally wider than 1.6. Sub-pixel matte is the right
+   side of that trade; the alternative is stretching the render.
+
+   The width is computed from both of the card's axes at once, and that is not
+   a flourish. `aspect-ratio` only re-derives the axis that is auto: with a
+   definite width, clamping max-width transfers to the height, but clamping
+   max-height does *not* transfer back to the width. A card shorter than 16/10
+   therefore squashes the picture instead of letterboxing it — measured at 21%
+   of horizontal stretch in a 1800x620 window, and 0.4% on every phone, where
+   the card's 1px border makes its content box very slightly wider than 1.6.
+   Taking the smaller of the two axes up front sidesteps the asymmetry: the
+   height then falls out of the ratio and can never be clamped.
+
+   The third term is the epic's "scales down but never up" rule — the stage
+   stops at the backing store rather than resampling 1024 x 640 into a soft
+   picture. Lifting that cap is COS-250 (E9b), not this ticket.
+
+   The max-* pair below is the fallback for engines without size container
+   queries: same behaviour, minus the anti-squash. Neither ever binds once the
+   cq rule applies. */
+
+/* Required by the stage, not a style of the card: cqw/cqh need a size
+   container, and the card is the box the picture has to fit inside. It is safe
+   to contain — the card's own size comes from the shell's flex basis on desktop
+   and from its aspect-ratio on mobile, never from its contents. */
+.viewport {
+  container-type: size;
+}
+
+.viewportStage {
+  position: relative;
+  aspect-ratio: var(--size-canvas-ratio);
+  margin: auto;
+
+  width: 100%;
+  max-width: min(100%, var(--size-canvas-w));
+  max-height: min(100%, var(--size-canvas-h));
+
+  width: min(
+    100cqw,
+    calc(100cqh * var(--size-canvas-ratio)),
+    var(--size-canvas-w)
+  );
+}
+
+.viewportStage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- shading-mode filters -------------------------------------------------
+
+   A COSMETIC MOCK, NOT SHADING. The design fakes the six modes with a CSS
+   filter over the finished frame; none of them touches a normal, a light or a
+   per-face colour. De-mock E3 (COS-241 / COS-243) replaces them with real
+   shading and deletes this block.
+
+   Two of the six are reachable today, so a filter is live in the default state:
+   FLAT is the resting mode and WIRE is one toggle away. That costs a full-frame
+   composite over 1024 x 640 every frame — it is not free, and it is the reason
+   this block is worth deleting rather than keeping as decoration.
+
+   POINTS, GOURAUD, DEPTH and NORMALS are unreachable until the de-mock ticket
+   lands; they are written out so the mapping lives in one place. */
+
+[data-shading-mode="points"] .viewportStage canvas {
+  filter: contrast(1.15) saturate(.7);
+}
+
+[data-shading-mode="wire"] .viewportStage canvas {
+  filter: saturate(.5) contrast(1.2);
+}
+
+[data-shading-mode="flat"] .viewportStage canvas {
+  filter: saturate(1.05) contrast(1.05);
+}
+
+[data-shading-mode="gouraud"] .viewportStage canvas {
+  filter: none;
+}
+
+[data-shading-mode="depth"] .viewportStage canvas {
+  filter: grayscale(1) contrast(1.35) brightness(.9);
+}
+
+[data-shading-mode="normals"] .viewportStage canvas {
+  filter: hue-rotate(155deg) saturate(1.6);
+}
+
+/* ---- hud root -------------------------------------------------------------
+
+   Always rendered. `hudOverlays` was a Claude Design preview control with no
+   production surface and is dropped (D10) — there is no master gate and no
+   per-layer gate attribute.
+
+   pointer-events: none is not extracted from the design; without it the layer
+   would swallow the drag-orbit the de-mock camera ticket adds to the canvas
+   underneath. Any interactive child opts back in with pointer-events: auto.
+
+   No z-index anywhere in this file. Layer order is DOM order inside the
+   position: relative stage, so the HUD opens no stacking context and the mobile
+   sticky header at --layer-sticky keeps winning over it (D11). */
+
+.viewportHud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Keys inside a HUD chip. .hud-chip already paints its content in
+   --color-text-secondary at --text-sm mono, so only the dimmer label colour
+   needs stating. */
+.viewportHud__k {
+  color: var(--color-text-hud-label);
+}
+
+/* ---- top-left status chips ------------------------------------------------
+
+   One cluster, two rows' worth of DOM. Desktop lays the four chips out as a
+   single row — mode, projection, resolution, texture — and mobile turns the
+   cluster into a column so the inner row drops to the design's second band.
+   Nesting the three secondary chips is what lets one set of elements serve both
+   branches instead of a desktop copy and a mobile copy that can disagree.
+
+   --size-hud-chip-sm is 22px on desktop, the same as --size-hud-chip, so
+   .hud-chip--sm on the three secondary chips is inert above the breakpoint and
+   correct below it. */
+
+/* Both top clusters live in one row. The design draws them as two independent
+   corners and at desktop widths that is exactly what this produces — but the
+   left band runs about 190px and the mobile camera column about 176px, and a
+   297px card cannot seat both. Two absolutely-positioned corners overlap
+   silently there; space-between makes the overlap unrepresentable, and the left
+   cluster wraps into the room it actually has. */
+.viewportHud__top {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  left: var(--space-5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.viewportHud__topLeft {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.viewportHud__chipRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* The band at top: 40px is the quick-toggle row and belongs to COS-232.
+   Nothing in this file may be placed there. */
+
+/* ---- top-right camera readout (desktop) ----------------------------------- */
+
+.viewportHud__camera {
+  flex: 0 0 auto;
+}
+
+.viewportHud__camRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+/* ---- top-right chip column (mobile) ---------------------------------------
+   Built here, hidden on desktop. The mockup collapsed the four-row readout into
+   a single camPos chip and dropped cam.rot, target and dist; this restores them
+   as two-line chips rather than losing three readouts on every phone. */
+
+.viewportHud__camChips {
+  display: none;
+}
+
+/* ---- crosshair ------------------------------------------------------------
+   Decoration, not a readout: it marks the centre of the picture and nothing
+   feeds it. The two arms are 1px against --size-crosshair, and the centring
+   offset is half the arm — derived rather than restated, so the 24px desktop
+   and 20px mobile values both fall out of the one token. The .5px is a genuine
+   sub-pixel offset for a 1px rule, not a missing token. */
+
+.viewportHud__crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: var(--color-crosshair);
+}
+
+.viewportHud__crosshair--v {
+  width: var(--size-hairline);
+  height: var(--size-crosshair);
+  margin-top: calc(var(--size-crosshair) / -2);
+  margin-left: -.5px;
+}
+
+.viewportHud__crosshair--h {
+  width: var(--size-crosshair);
+  height: var(--size-hairline);
+  margin-top: -.5px;
+  margin-left: calc(var(--size-crosshair) / -2);
+}
+
+/* ---- selection bracket ----------------------------------------------------
+
+   A fixed rectangle in a fixed place. No screen-space AABB exists — nothing
+   projects the mesh bounds into canvas space — so the percentages and the box
+   size are the design's, not a measurement. De-mock E7 (COS-248) computes the
+   real rect and this geometry goes away with it.
+
+   The desktop box is a --size-selection-box square rather than a percentage
+   pair: it is centred on the shape at the design's 848 x 530 stage and drifts a
+   little at other stage sizes, which is the honest behaviour for a placeholder
+   whose real version will also be a pixel rect. Mobile keeps the design's
+   percentages. */
+
+.viewportHud__selection {
+  position: absolute;
+  top: 31.9%;
+  left: 39.2%;
+  width: var(--size-selection-box);
+  height: var(--size-selection-box);
+}
+
+.viewportHud__corner {
+  position: absolute;
+  width: var(--size-selection-corner);
+  height: var(--size-selection-corner);
+}
+
+/* Each corner draws only the two edges that face it. */
+.viewportHud__corner--tl {
+  top: 0;
+  left: 0;
+  border-top: var(--size-mark) solid var(--color-accent);
+  border-left: var(--size-mark) solid var(--color-accent);
+}
+
+.viewportHud__corner--tr {
+  top: 0;
+  right: 0;
+  border-top: var(--size-mark) solid var(--color-accent);
+  border-right: var(--size-mark) solid var(--color-accent);
+}
+
+.viewportHud__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: var(--size-mark) solid var(--color-accent);
+  border-left: var(--size-mark) solid var(--color-accent);
+}
+
+.viewportHud__corner--br {
+  bottom: 0;
+  right: 0;
+  border-bottom: var(--size-mark) solid var(--color-accent);
+  border-right: var(--size-mark) solid var(--color-accent);
+}
+
+/* Sits above the box by its own height plus a small gap, rather than by a
+   literal -20px that stops meaning anything if the badge is ever resized. */
+.viewportHud__selectionLabel {
+  position: absolute;
+  top: calc(-1 * (var(--size-selection-label-h) + var(--space-1-5)));
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: var(--size-selection-label-h);
+  padding: 0 var(--space-2);
+  background: var(--color-accent);
+  border-radius: var(--radius-xs);
+  font: var(--font-weight-bold) var(--text-xs) / var(--leading-none) var(--font-mono);
+  letter-spacing: var(--tracking-chip);
+  color: var(--color-on-accent);
+  white-space: nowrap;
+}
+
+/* ---- axis gizmo -----------------------------------------------------------
+   Static. The engine rotates the mesh and has no camera transform, so nothing
+   drives the axes — they sit at the design's angles. De-mock E1a (COS-237)
+   makes them follow the rig. The small insets below are the design's own and
+   stay literal rather than becoming tokens for a placeholder. */
+
+.viewportHud__gizmo {
+  position: absolute;
+  bottom: var(--space-5);
+  left: var(--space-5);
+  width: var(--size-gizmo);
+  height: var(--size-gizmo);
+  background: var(--elevation-hud-bg-gizmo);
+  border: var(--size-hairline) solid var(--color-hud-border);
+  border-radius: var(--radius-sm);
+}
+
+.viewportHud__axis {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+}
+
+.viewportHud__axis--x {
+  width: var(--size-gizmo-axis-xy);
+  height: var(--size-mark);
+  background: var(--color-axis-x);
+}
+
+.viewportHud__axis--y {
+  width: var(--size-mark);
+  height: var(--size-gizmo-axis-xy);
+  background: var(--color-axis-y);
+}
+
+.viewportHud__axis--z {
+  bottom: 15px;
+  left: 15px;
+  width: var(--size-mark);
+  height: var(--size-gizmo-axis-z);
+  background: var(--color-axis-z);
+  transform-origin: bottom center;
+  transform: rotate(215deg);
+}
+
+.viewportHud__axisLabel {
+  position: absolute;
+  font: var(--font-weight-bold) var(--text-2xs) / var(--leading-none) var(--font-mono);
+}
+
+.viewportHud__axisLabel--x {
+  right: 6px;
+  bottom: 8px;
+  color: var(--color-axis-x);
+}
+
+.viewportHud__axisLabel--y {
+  top: 4px;
+  left: 8px;
+  color: var(--color-axis-y);
+}
+
+.viewportHud__axisLabel--z {
+  top: 20px;
+  right: 8px;
+  color: var(--color-axis-z);
+}
+
+/* ---- bottom-right chips (desktop) ----------------------------------------- */
+
+.viewportHud__bottomRight {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* The design gives the top-left cluster and the camera readout a backdrop blur
+   and deliberately withholds it from the bottom row and the hint strip. That
+   asymmetry is reproduced locally rather than "fixed" in the .hud-chip recipe,
+   which stays untouched (D1). backdrop-filter does not inherit, so the override
+   has to land on the chips themselves, not on the cluster. */
+.viewportHud__bottomRight .hud-chip,
+.viewportHud__hint {
+  backdrop-filter: none;
+}
+
+.viewportHud__chipStatus {
+  border-color: var(--color-state-ok-border);
+}
+
+.viewportHud__ok {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-state-ok);
+}
+
+/* ---- bottom-centre hint strip (desktop only) ------------------------------
+   Not restored on mobile: with the status segment folded into the bottom-right
+   chip there is roughly 71px of centre space on a 300px card against a strip
+   that needs about 139px, and it still does not fit at 390px. The mobile
+   gestures documentation is the GESTURES card the shortcuts ticket adds. */
+
+.viewportHud__hint {
+  position: absolute;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  white-space: nowrap;
+}
+
+.viewportHud__hintId {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.viewportHud__hintDim {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-tertiary);
+}
+
+/* ---- bottom-right chip (mobile) ------------------------------------------- */
+
+.viewportHud__bottomChip {
+  display: none;
+}
+
+/* ---- mobile ---------------------------------------------------------------
+   Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md.
+
+   The denser HUD surface and the dropped blur come from .hud-chip's own mobile
+   block in hud.css and are not restated here. Every element marked
+   "not in mockup" is new spec restoring something the mobile design dropped. */
+
+@media (max-width: 899px) {
+  .viewportHud__top {
+    top: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+  }
+
+  /* 8px inset + the 22px mode chip + the 6px column gap puts the second band at
+     exactly the design's top: 36px, without either number being written down. */
+  .viewportHud__topLeft {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2-5);
+  }
+
+  /* The band takes the width left over after the camera column and wraps into
+     it rather than running underneath. At 430 the three chips still sit on one
+     line, which is the design; below that the resolution chip drops to a third
+     line instead of disappearing. */
+  .viewportHud__chipRow {
+    flex-wrap: wrap;
+  }
+
+  /* The mockup's mode chip drops the tracking the desktop one carries. */
+  .viewportHud__topLeft .hud-chip--accent {
+    letter-spacing: normal;
+  }
+
+  /* not in mockup — the resolution chip is restored, and the mobile band reads
+     projection, texture, resolution rather than the desktop order. */
+  .viewportHud__chipRes {
+    order: 1;
+  }
+
+  /* The four-row readout is a desktop shape: at 148px minimum it would eat a
+     third of a 300px card. */
+  .viewportHud__camera {
+    display: none;
+  }
+
+  .viewportHud__camChips {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1-5);
+  }
+
+  /* Two readouts per chip, right-aligned, so cam.rot / target / dist survive on
+     a card that has no room for the desktop panel. Height budget against a
+     16/10 card ~188px tall at a 320px device: 22 + ~30 + ~34 + two 4px gaps. */
+  .viewportHud__chipStack {
+    height: auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-0-5);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .viewportHud__stackLine {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2-5);
+  }
+
+  .viewportHud__crosshair {
+    background: var(--color-crosshair-dim);
+  }
+
+  /* The design's percentages rather than the desktop square: on a card this
+     small a fixed 190px box would be wider than the picture. */
+  .viewportHud__selection {
+    width: 22.4%;
+    height: 35.8%;
+  }
+
+  /* The corner marks shrink with the box; --size-selection-corner carries the
+     mobile value, so the base rule above needs no restatement here. */
+
+  /* not in mockup — the label badge is restored. No flip guard is needed: the
+     box top is 31.9% of the card, about 60px at a 320px device, so the badge
+     always clears the card edge. 9px rather than the desktop 8px so it stays
+     legible at arm's length; the gap above the box tightens to match. */
+  .viewportHud__selectionLabel {
+    top: calc(-1 * (var(--size-selection-label-h) + var(--space-0-5)));
+    font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-mono);
+  }
+
+  .viewportHud__gizmo {
+    bottom: var(--space-4);
+    left: var(--space-4);
+  }
+
+  .viewportHud__axis {
+    bottom: 11px;
+    left: 11px;
+  }
+
+  .viewportHud__axis--z {
+    bottom: 12px;
+    left: 12px;
+  }
+
+  /* not in mockup — the X/Y/Z letters are restored, one step up from the
+     desktop 7px so they survive inside a 52px box. Positions are the desktop
+     ones scaled by 52/66 and rounded. */
+  .viewportHud__axisLabel {
+    font-size: var(--text-xs);
+  }
+
+  .viewportHud__axisLabel--x {
+    right: 5px;
+    bottom: 6px;
+  }
+
+  .viewportHud__axisLabel--y {
+    top: 3px;
+    left: 6px;
+  }
+
+  .viewportHud__axisLabel--z {
+    top: 16px;
+    right: 6px;
+  }
+
+  /* fov and zoom move into the top-right column, and the status segment folds
+     into the bottom chip, so the desktop trio has nothing left to show. */
+  .viewportHud__bottomRight,
+  .viewportHud__hint {
+    display: none;
+  }
+
+  .viewportHud__bottomChip {
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    display: flex;
+    gap: var(--space-3);
+    padding: 0 var(--space-4-5);
+  }
+
+  /* not in mockup — the status segment is restored here rather than as its own
+     chip. The border stays --color-hud-border instead of the desktop green
+     variant so the chip does not change colour on every pause. This duplicates
+     the mobile status bar deliberately: the bar can be scrolled off while the
+     viewport is still in view. */
+}

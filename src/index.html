@@ -195,8 +195,239 @@
 
         <div class="colCenter">
 
-          <div class="viewport panel">
-            <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
+          <!-- data-shading-mode is written by ViewportHud from the one exported
+               modeLabel(), the same helper the status bar reads, so the chip,
+               the attribute and the SHAPE INFO row cannot disagree. Seeded to
+               the resting mode so the first paint is not unfiltered. -->
+          <div class="viewport panel" data-shading-mode="flat">
+
+            <!-- The stage is the picture, not the card. The canvas is a fixed
+                 1024x640 raster that letterboxes inside a card of any other
+                 shape, and letterboxing is invisible to layout — a HUD anchored
+                 to the card would inset itself from the bars instead of from
+                 the image. Everything below is anchored to the stage. -->
+            <div class="viewportStage">
+              <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
+
+              <!-- Always on. `hudOverlays` was a Claude Design preview control
+                   with no production surface and is dropped (D10): no master
+                   gate, no per-layer gate, no z-index. -->
+              <div class="viewportHud">
+
+                <!-- The two top clusters share one row rather than being
+                     anchored to opposite corners independently. The design
+                     draws them as two corners, and at 1440 they are — but the
+                     left band is about 190px wide and the mobile camera column
+                     about 176px, which will not both fit across a 297px card.
+                     Two absolutely-positioned corners overlap silently at that
+                     width; one flex row with space-between cannot. -->
+                <div class="viewportHud__top">
+
+                  <!-- One cluster for both branches: a row of four chips on
+                       desktop, and on mobile a column whose nested row falls to
+                       the design's second band. -->
+                  <div class="viewportHud__topLeft">
+                    <span class="hud-chip hud-chip--accent" data-field="shadingMode">FLAT</span>
+                    <span class="viewportHud__chipRow">
+                      <span
+                        class="hud-chip hud-chip--sm"
+                        data-placeholder="true"
+                        title="Orthographic projection is not wired to the engine yet (de-mock E2)."
+                        aria-describedby="ph-vp-projection"
+                      >PERSPECTIVE</span>
+                      <!-- The backing store, not the CSS box: that is the
+                           resolution the rasteriser actually works at. -->
+                      <span class="hud-chip hud-chip--sm viewportHud__chipRes" data-field="resolution">&mdash;</span>
+                      <span class="hud-chip hud-chip--sm" data-field="texLabel">SOLID</span>
+                    </span>
+                  </div>
+
+                  <!-- desktop camera readout -->
+                  <div class="hud-panel viewportHud__camera">
+                    <div class="viewportHud__camRow">
+                      <span class="hud-panel__key">cam.pos</span>
+                      <span
+                        class="hud-panel__value"
+                        data-field="camPos"
+                        data-placeholder="true"
+                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                        aria-describedby="ph-vp-camera"
+                      >&mdash;</span>
+                    </div>
+                    <div class="viewportHud__camRow">
+                      <span class="hud-panel__key">cam.rot</span>
+                      <span
+                        class="hud-panel__value"
+                        data-field="camRot"
+                        data-placeholder="true"
+                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                        aria-describedby="ph-vp-camera"
+                      >&mdash;</span>
+                    </div>
+                    <div class="viewportHud__camRow">
+                      <span class="hud-panel__key">target</span>
+                      <span
+                        class="hud-panel__value"
+                        data-field="camTarget"
+                        data-placeholder="true"
+                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                        aria-describedby="ph-vp-camera"
+                      >&mdash;</span>
+                    </div>
+                    <div class="viewportHud__camRow">
+                      <span class="hud-panel__key">dist</span>
+                      <span class="hud-panel__value" data-field="camDist">&mdash;</span>
+                    </div>
+                  </div>
+
+                  <!-- mobile camera readout: the four rows above as three chips.
+                       Same data-field names, so setField keeps the two mounts in
+                       sync without either branch knowing about the other. -->
+                  <div class="viewportHud__camChips">
+                    <span class="hud-chip">
+                      <span class="viewportHud__k">frame</span>
+                      <span data-field="frameMs">&mdash;</span>
+                      <span class="viewportHud__k">ms</span>
+                    </span>
+                    <span class="hud-chip viewportHud__chipStack">
+                      <span class="viewportHud__stackLine">
+                        <span class="viewportHud__k">pos</span>
+                        <span
+                          data-field="camPos"
+                          data-placeholder="true"
+                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                          aria-describedby="ph-vp-camera"
+                        >&mdash;</span>
+                      </span>
+                      <span class="viewportHud__stackLine">
+                        <span class="viewportHud__k">rot</span>
+                        <span
+                          data-field="camRot"
+                          data-placeholder="true"
+                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                          aria-describedby="ph-vp-camera"
+                        >&mdash;</span>
+                      </span>
+                    </span>
+                    <span class="hud-chip viewportHud__chipStack">
+                      <span class="viewportHud__stackLine">
+                        <span class="viewportHud__k">fov</span>
+                        <span
+                          data-field="fov"
+                          data-placeholder="true"
+                          title="The focal length is fixed and there is no FOV control yet (de-mock E2)."
+                          aria-describedby="ph-vp-fov"
+                        >&mdash;</span>
+                        <span class="viewportHud__k">zoom</span>
+                        <span data-field="zoom">&mdash;</span>
+                      </span>
+                      <span class="viewportHud__stackLine">
+                        <span class="viewportHud__k">target</span>
+                        <span
+                          data-field="camTarget"
+                          data-placeholder="true"
+                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
+                          aria-describedby="ph-vp-camera"
+                        >&mdash;</span>
+                        <span class="viewportHud__k">dist</span>
+                        <span data-field="camDist">&mdash;</span>
+                      </span>
+                    </span>
+                  </div>
+
+                </div>
+
+                <!-- Decoration, not a readout, and hidden from assistive tech
+                     for the same reason: it marks the centre of the picture. -->
+                <span class="viewportHud__crosshair viewportHud__crosshair--v" aria-hidden="true"></span>
+                <span class="viewportHud__crosshair viewportHud__crosshair--h" aria-hidden="true"></span>
+
+                <!-- A fixed rectangle: nothing projects the mesh bounds into
+                     canvas space yet (de-mock E7). aria-hidden rather than
+                     described-by — a decorative rect has nothing to announce,
+                     and the id it labels is already read out by the status bar
+                     and the hint strip. -->
+                <div
+                  class="viewportHud__selection"
+                  data-placeholder="true"
+                  title="The selection bounds are a fixed rectangle; projected bounds are not wired to the engine yet (de-mock E7)."
+                  aria-hidden="true"
+                >
+                  <span class="viewportHud__selectionLabel" data-field="selectedId">&mdash;</span>
+                  <span class="viewportHud__corner viewportHud__corner--tl"></span>
+                  <span class="viewportHud__corner viewportHud__corner--tr"></span>
+                  <span class="viewportHud__corner viewportHud__corner--bl"></span>
+                  <span class="viewportHud__corner viewportHud__corner--br"></span>
+                </div>
+
+                <div
+                  class="viewportHud__gizmo"
+                  data-placeholder="true"
+                  title="The axis gizmo does not follow the scene yet (de-mock E1a)."
+                  aria-hidden="true"
+                >
+                  <span class="viewportHud__axis viewportHud__axis--x"></span>
+                  <span class="viewportHud__axis viewportHud__axis--y"></span>
+                  <span class="viewportHud__axis viewportHud__axis--z"></span>
+                  <span class="viewportHud__axisLabel viewportHud__axisLabel--x">X</span>
+                  <span class="viewportHud__axisLabel viewportHud__axisLabel--y">Y</span>
+                  <span class="viewportHud__axisLabel viewportHud__axisLabel--z">Z</span>
+                </div>
+
+                <!-- desktop bottom-right cluster -->
+                <div class="viewportHud__bottomRight">
+                  <span class="hud-chip">
+                    <span class="viewportHud__k">fov</span>
+                    <span
+                      data-field="fov"
+                      data-placeholder="true"
+                      title="The focal length is fixed and there is no FOV control yet (de-mock E2)."
+                      aria-describedby="ph-vp-fov"
+                    >&mdash;</span>
+                  </span>
+                  <span class="hud-chip">
+                    <span class="viewportHud__k">zoom</span>
+                    <span data-field="zoom">&mdash;</span>
+                  </span>
+                  <span class="hud-chip viewportHud__chipStatus">
+                    <span class="viewportHud__ok" data-field="statusLabel">RUNNING</span>
+                  </span>
+                </div>
+
+                <!-- desktop hint strip; the mobile equivalent is the GESTURES
+                     card the shortcuts ticket adds, not a layer here. -->
+                <span class="hud-chip viewportHud__hint">
+                  <span class="viewportHud__hintId" data-field="selectedId">&mdash;</span>
+                  <span class="divider-v divider-v--hud"></span>
+                  <span class="viewportHud__hintDim">
+                    <span data-field="trisDrawn">0</span> tris drawn
+                  </span>
+                  <span class="divider-v divider-v--hud"></span>
+                  <span
+                    class="viewportHud__hintDim"
+                    data-placeholder="true"
+                    title="The canvas has no pointer handlers yet (de-mock E1b)."
+                    aria-describedby="ph-vp-gestures"
+                  >drag orbit &middot; scroll zoom</span>
+                </span>
+
+                <!-- mobile bottom-right chip: the desktop status chip and hint
+                     strip folded into the one chip that fits. -->
+                <span class="hud-chip viewportHud__bottomChip">
+                  <span class="viewportHud__ok" data-field="statusLabel">RUNNING</span>
+                  <span class="divider-v divider-v--hud"></span>
+                  <span data-field="selectedId">&mdash;</span>
+                  <span class="divider-v divider-v--hud"></span>
+                  <span><span data-field="trisDrawn">0</span> &#9651;</span>
+                </span>
+
+                <span class="placeholder-hint" id="ph-vp-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
+                <span class="placeholder-hint" id="ph-vp-camera">The engine rotates the mesh; there is no camera transform yet (de-mock E1a).</span>
+                <span class="placeholder-hint" id="ph-vp-fov">The focal length is fixed and there is no FOV control yet (de-mock E2).</span>
+                <span class="placeholder-hint" id="ph-vp-gestures">The canvas has no pointer handlers yet (de-mock E1b).</span>
+
+              </div>
+            </div>
           </div>
 
           <!-- order 3 — mobile only -->
