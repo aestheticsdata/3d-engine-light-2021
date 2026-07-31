@@ -1,0 +1,35 @@
+/* Owns: the horizontal section rules and the three vertical separators.
+   Must not own: panel borders — those belong to the element they enclose. */
+
+.divider {
+  height: var(--size-hairline);
+  background: var(--color-border-panel);
+}
+
+/* The inset rule inside the shape-info list. */
+.divider--inset {
+  margin: var(--space-2) 0;
+}
+
+.divider--subtle {
+  background: var(--color-border-subtle);
+}
+
+.divider-v {
+  width: var(--size-hairline);
+  background: var(--color-border-muted);
+}
+
+.divider-v--toolbar {
+  height: var(--size-divider-toolbar);
+  margin: 0 var(--space-1-5);
+}
+
+.divider-v--status {
+  height: var(--size-divider-status);
+}
+
+.divider-v--hud {
+  height: var(--size-divider-hud);
+  background: var(--color-slate-500);
+}

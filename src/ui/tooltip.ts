@@ -17,8 +17,16 @@ class FollowCursorTooltip {
     this.tooltipNode = document.createElement("div");
     this.tooltipNode.className = "hoverTooltip";
     this.tooltipNode.textContent = options.message;
-    this.tooltipNode.style.backgroundColor = options.backgroundColor ?? "#ffffff";
-    this.tooltipNode.style.color = options.textColor ?? "#000000";
+    // Only set these when a caller actually asks for them. An inline style beats
+    // the class rule, so defaulting here would pin the tooltip to white-on-black
+    // and make .hoverTooltip in the stylesheet unreachable.
+    if (options.backgroundColor !== undefined) {
+      this.tooltipNode.style.backgroundColor = options.backgroundColor;
+    }
+
+    if (options.textColor !== undefined) {
+      this.tooltipNode.style.color = options.textColor;
+    }
     document.body.appendChild(this.tooltipNode);
 
     this.target.addEventListener("mouseleave", this.hide);

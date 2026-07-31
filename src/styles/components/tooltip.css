@@ -1,0 +1,19 @@
+/* Owns: the follow-cursor tooltip's appearance.
+   Must not own: when it shows — FollowCursorTooltip drives display, position and the message. */
+
+/* Keeps its camelCase name: src/ui/tooltip.ts assigns this class string
+   directly, so renaming it here would silently unstyle the node. */
+.hoverTooltip {
+  position: fixed;
+  z-index: 1000;
+  display: none;
+  max-width: var(--size-tooltip-max-w);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-hud-bg);
+  border: var(--size-hairline) solid var(--color-hud-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-hud);
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-hud) var(--font-mono);
+  color: var(--color-text-primary);
+  pointer-events: none;
+}

@@ -1,0 +1,81 @@
+/* Owns: the segmented ON/OFF control, its row, and the four colour slots that paint both halves.
+   Must not own: what the toggle switches — widget tickets bind .is-on. The design has no hover here; do not invent one. */
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--size-toggle-row);
+}
+
+.toggle-row__label {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-sm);
+  color: var(--color-text-tertiary);
+}
+
+.toggle {
+  display: flex;
+  width: var(--size-toggle-w);
+  height: var(--size-toggle-h);
+  border: var(--size-hairline) solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.toggle__half {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  font: var(--font-weight-bold) var(--text-xs) / var(--leading-none) var(--font-mono);
+}
+
+/* Both halves are always painted; which one lights up is the whole signal.
+   Off state: the ON half recedes, the OFF half is the solid slate block. */
+.toggle .toggle__half--on {
+  background: var(--color-surface-sunken);
+  color: var(--color-slate-500);
+}
+
+.toggle .toggle__half--off {
+  background: var(--color-slate-500);
+  color: var(--color-text-primary);
+}
+
+/* On state: the ON half takes the accent, the OFF half recedes. */
+.toggle.is-on .toggle__half--on {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.toggle.is-on .toggle__half--off {
+  background: var(--color-surface-sunken);
+  color: var(--color-slate-500);
+}
+
+/* NEW — no focus styling in the design. */
+.toggle:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: var(--size-hairline);
+}
+
+@media (max-width: 899px) {
+  /* Mobile draws a divider under each toggle row; desktop does not. */
+  .toggle-row {
+    border-bottom: var(--size-hairline) solid var(--color-border-row);
+  }
+
+  /* Lighter than desktop's tertiary — deliberate, the mobile rows carry more
+     visual weight because they are the primary control surface there. */
+  .toggle-row__label {
+    font: var(--font-weight-medium) var(--text-md) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .toggle__half {
+    font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-mono);
+  }
+}

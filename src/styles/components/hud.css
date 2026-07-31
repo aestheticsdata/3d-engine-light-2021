@@ -1,0 +1,105 @@
+/* Owns: the viewport overlay surfaces — the HUD chip, the camera readout panel, and the quick toggle.
+   Must not own: where they are positioned over the canvas; the viewport ticket owns that. */
+
+.hud-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  height: var(--size-hud-chip);
+  padding: 0 var(--space-4);
+  background: var(--elevation-hud-bg);
+  border: var(--size-hairline) solid var(--elevation-hud-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-hud);
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+.hud-chip--accent {
+  border-color: var(--color-accent-overlay-border);
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-mono);
+  letter-spacing: var(--tracking-xs);
+  color: var(--color-accent);
+}
+
+.hud-chip--sm {
+  height: var(--size-hud-chip-sm);
+}
+
+/* The desktop camera readout. Mobile collapses it to three stacked chips, which
+   the viewport ticket owns, so this has no mobile block. */
+.hud-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: var(--size-camera-readout-minw);
+  padding: var(--space-3) var(--space-4-5);
+  background: var(--elevation-hud-bg);
+  border: var(--size-hairline) solid var(--elevation-hud-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-hud);
+}
+
+.hud-panel__key {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-hud) var(--font-mono);
+  color: var(--color-text-hud-label);
+}
+
+.hud-panel__value {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-hud) var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.quick-toggle {
+  height: var(--size-chip-quick);
+  padding: 0 var(--space-5);
+  background: var(--color-hud-bg);
+  border: var(--size-hairline) solid var(--color-hud-border-strong);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-hud);
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-mono);
+  letter-spacing: var(--tracking-chip);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.quick-toggle.is-on {
+  background: var(--color-accent-overlay);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* NEW — no focus styling in the design. */
+.quick-toggle:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: var(--size-hairline);
+}
+
+@media (hover: hover) {
+  .quick-toggle:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+@media (max-width: 899px) {
+  /* The denser background replaces the blur on mobile — deliberate asymmetry,
+     backdrop-filter is expensive on phones and the extra alpha reads the same. */
+  .hud-chip {
+    background: var(--elevation-hud-bg-dense);
+    backdrop-filter: none;
+  }
+
+  .hud-chip--sm {
+    padding: 0 var(--space-3);
+  }
+
+  /* The quick toggles leave the viewport entirely on mobile and become a
+     five-column grid row under it, so they lose the blur and take a larger
+     radius than the desktop overlay. */
+  .quick-toggle {
+    border-radius: var(--radius-md);
+    backdrop-filter: none;
+    font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-mono);
+    letter-spacing: var(--tracking-chip);
+  }
+}

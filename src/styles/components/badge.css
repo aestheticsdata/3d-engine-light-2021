@@ -1,0 +1,55 @@
+/* Owns: the info badge (DENSITY) and the keyboard pill.
+   Must not own: the chip — a badge is read-only, a chip is a control. */
+
+.badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: var(--space-2) var(--space-4-5);
+  border-radius: var(--radius-sm);
+}
+
+.badge--info {
+  background: var(--color-badge-info-bg);
+  border: var(--size-hairline) solid var(--color-border-badge-info);
+}
+
+.badge__label {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-lg);
+  color: var(--color-text-info);
+}
+
+.badge__value {
+  font: var(--font-weight-bold) var(--text-base) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2-5);
+  background: var(--color-surface-sunken);
+  border: var(--size-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font: var(--font-weight-regular) var(--text-xs) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 899px) {
+  .badge--info {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+  }
+
+  .badge__label {
+    font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-md);
+  }
+
+  .badge__value {
+    font: var(--font-weight-bold) var(--text-md) / var(--leading-none) var(--font-mono);
+  }
+}

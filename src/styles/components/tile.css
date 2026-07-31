@@ -1,0 +1,64 @@
+/* Owns: the stat tile and the row that groups tiles.
+   Must not own: the label/value row (rows.css) — a tile stacks caption over a large value, a row sits them side by side. */
+
+.stat-tile-row {
+  display: flex;
+  gap: var(--space-2-5);
+}
+
+.stat-tile {
+  flex: 1;
+  padding: var(--space-1-5) var(--space-2-5);
+  background: var(--color-surface-sunken);
+  border: var(--size-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+/* The DROPPED tile, which carries a wider value. */
+.stat-tile--wide {
+  flex: 1.1;
+}
+
+.stat-tile__caption {
+  font: var(--font-weight-medium) var(--text-xs) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-muted);
+}
+
+.stat-tile__value {
+  margin-top: var(--space-1);
+  font: var(--font-weight-bold) var(--text-2xl) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.stat-tile__value--warn {
+  color: var(--color-state-warn);
+}
+
+.stat-tile__value--ok {
+  color: var(--color-state-ok);
+}
+
+@media (max-width: 899px) {
+  /* The row becomes a fixed four-column grid and the --wide tile is not used.
+     On a narrow device the four tiles still clear the larger mono value plus
+     its caption inside the card padding. */
+  .stat-tile-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2-5);
+  }
+
+  .stat-tile--wide {
+    flex: none;
+  }
+
+  .stat-tile {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .stat-tile__value {
+    margin-top: var(--space-1-5);
+    font: var(--font-weight-bold) var(--text-3xl) / var(--leading-none) var(--font-mono);
+  }
+}
