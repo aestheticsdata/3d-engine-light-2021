@@ -18,6 +18,12 @@
   display: flex;
   width: var(--size-toggle-w);
   height: var(--size-toggle-h);
+  /* The host is a <button> and reset.css normalises a long element list that
+     does not include one, so the UA padding and buttonface survive: under
+     border-box the default 6px sides eat 12px of a 62px control and paint grey
+     beside the halves and in the corners overflow: hidden clips. */
+  padding: 0;
+  background: none;
   border: var(--size-hairline) solid var(--color-border-control);
   border-radius: var(--radius-sm);
   overflow: hidden;
