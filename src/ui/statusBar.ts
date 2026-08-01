@@ -12,8 +12,7 @@
 import FieldWriter from "@ui/FieldWriter";
 import { sceneObjectId } from "@ui/sceneObjectId";
 import { modeLabel } from "@ui/modeLabel";
-import { texLabel } from "@ui/texLabel";
-import { Object3D } from "@data/types";
+import MaterialSummary from "@ui/MaterialSummary";
 
 export const createStatusBar = (fields: FieldWriter) => ({
   setRunState: (isPlaying: boolean) => {
@@ -30,8 +29,11 @@ export const createStatusBar = (fields: FieldWriter) => ({
     fields.write("shadingMode", modeLabel(wireframeEnabled));
   },
 
-  setTexture: (object3D: Object3D) => {
-    fields.write("texLabel", texLabel(object3D));
+  // Takes the summary, not the shape: Main already built one for the panel, and
+  // deriving it a second time here is how the bar and the MATERIAL row start
+  // disagreeing.
+  setTexture: (material: MaterialSummary) => {
+    fields.write("texLabel", material.label);
   },
 });
 
