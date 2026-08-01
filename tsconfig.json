@@ -3,6 +3,7 @@
     "baseUrl": ".",
     "paths": {
       "@animations/*": ["src/animations/*"],
+      "@app/*": ["src/app/*"],
       "@primitives/*": ["src/primitives/*"],
       "@data/*": ["src/data/*"],
       "@textures/*": ["src/textures/*"],
