@@ -1,5 +1,12 @@
-import { addConvexPolyhedron, triangle } from "@data/builder";
+import MeshBuilder from "@data/builders/MeshBuilder";
+import { AXES, SIGNS } from "@data/builders/symmetry";
 import { Object3D } from "@data/types";
+
+// Rewired, not converted. T21 deleted the module this file used to call into,
+// so its two call sites move to MeshBuilder and its copies of AXES and SIGNS
+// move to the shared table — nothing else. The conversion to a generator class,
+// and the checked lookup that replaces `directionIndex`'s `as number`, belong to
+// COS-368, which owns this file whole.
 
 // kisRhombic dodecahedron (kR12), better known as the disdyakis dodecahedron —
 // R12 with a pyramid raised on each of its 12 rhombic faces, which is exactly
@@ -38,9 +45,6 @@ const LONG = 1 + 2 * SQRT2;
 const OCTAGON_PLANE = LONG; //                  n = (1, 0, 0)
 const HEXAGON_PLANE = SHORT + MID + LONG; //    n = (1, 1, 1)
 const SQUARE_PLANE = MID + LONG; //             n = (1, 1, 0)
-
-const AXES = [0, 1, 2];
-const SIGNS = [1, -1];
 
 const vertices: number[][] = [];
 const indexByDirection = new Map<string, number>();
@@ -135,18 +139,15 @@ AXES.forEach((zeroAxis) => {
   });
 });
 
-const points: number[][] = [];
-const triangles: triangle[] = [];
+const builder = new MeshBuilder();
 
-addConvexPolyhedron({
-  points,
-  triangles,
+builder.addConvexPolyhedron({
   vertices,
   faces,
   radius: CIRCUMRADIUS,
   colorForFace: (_vertexCount, faceIndex) => FACE_COLORS[faceTones[faceIndex]],
 });
 
-const kisRhombicDodecahedron: Object3D = { points, triangles };
+const kisRhombicDodecahedron: Object3D = builder.mesh;
 
 export default kisRhombicDodecahedron;
