@@ -17,6 +17,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@animations": path.resolve(__dirname, "src/animations"),
+      "@app": path.resolve(__dirname, "src/app"),
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
       "@textures": path.resolve(__dirname, "src/textures"),

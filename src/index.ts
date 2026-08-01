@@ -1,47 +1,34 @@
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import data, { Data3D } from "@data/data";
 import shapeInfo, { ShapeReference } from "@data/shapeInfo";
-import Matrix3D from "@primitives/Matrix3D";
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
 import Surface3D from "@primitives/Surface3D";
 import Triangle from "@primitives/Triangle";
 import { loadTextures } from "@textures/textures";
-import BackgroundRenderer from "@rendering/BackgroundRenderer";
+import Bootstrapper, { BootContext } from "@app/Bootstrapper";
+import CameraController, {
+  DEFAULT_PITCH,
+  DEFAULT_ROLL,
+  DEFAULT_ROTATION_SPEED,
+  DEFAULT_YAW,
+  DEFAULT_ZOOM_SLIDER_VALUE,
+  ROTATION_SPEED_SLIDER_MAX,
+} from "@app/CameraController";
 import FollowCursorTooltip from "@ui/tooltip";
 import FieldWriter from "@ui/FieldWriter";
-import TabGroup from "@ui/TabGroup";
 import { uiState } from "@ui/UiStateStore";
-import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
-import { createStatusBar, StatusBar } from "@ui/statusBar";
-import { createViewportHud, ViewportHud } from "@ui/viewportHud";
-import {
-  createSceneGraph,
-  isMeshHidden,
-  MESH_ROW_ID,
-  SceneGraph,
-} from "@ui/sceneGraph";
+import StatusBar from "@ui/StatusBar";
+import ViewportHud from "@ui/ViewportHud";
+import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
+import { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import MaterialSummary from "@ui/MaterialSummary";
 import { modeLabel } from "@ui/modeLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
-import skyUrl from "./img/sky.avif";
 
 const TRANSITION_DURATION_MS = 1250;
-const PITCH_YAW_ROTATION_DIVISOR = 110;
-const ROLL_ROTATION_DIVISOR = 500;
-const DEFAULT_FOCAL_LENGTH = 300;
-const ZOOM_SLIDER_MIN = 0;
-const ZOOM_SLIDER_MAX = 100;
-const DEFAULT_ZOOM_SLIDER_VALUE = 50;
-const ZOOM_ZOFFSET_FAR = 260;
-const ZOOM_ZOFFSET_NEAR = -220;
-const DEFAULT_PITCH = 400;
-const DEFAULT_YAW = 400;
-const DEFAULT_ROLL = 200;
-const DEFAULT_ROTATION_SPEED = 200;
-const ROTATION_SPEED_SLIDER_MAX = 2000;
 const OPACITY_SLIDER_MIN = 0;
 const OPACITY_SLIDER_MAX = 100;
 const DEFAULT_OPACITY_SLIDER_VALUE = 100;
@@ -54,27 +41,6 @@ const sliderProgress = (value: number, min: number, max: number): number =>
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
-
-const lerp = (start: number, end: number, progress: number): number =>
-  start + (end - start) * progress;
-
-const sliderToZoomOffset = (sliderValue: number): number => {
-  const progress = clamp(
-    sliderProgress(sliderValue, ZOOM_SLIDER_MIN, ZOOM_SLIDER_MAX),
-    0,
-    1,
-  );
-
-  return lerp(ZOOM_ZOFFSET_FAR, ZOOM_ZOFFSET_NEAR, progress);
-};
-
-const loadImageAsset = (src: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
-    image.src = src;
-  });
 
 class Main {
   private readonly times: number[];
@@ -92,7 +58,7 @@ class Main {
   private readonly statusBar: StatusBar;
   // Needs the canvas, so it is built in the constructor rather than here.
   private readonly viewportHud: ViewportHud;
-  private readonly sceneGraph: SceneGraph;
+  private readonly sceneGraph: SceneGraphPanel;
   // A change detector, not a second copy of the state: sceneGraph publishes
   // the drawn count through the same store, so an unguarded subscriber would
   // re-enter renderPausedFrame on its own notification.
@@ -123,18 +89,10 @@ class Main {
   private readonly objects3D: Data3D;
   private readonly primitivesName: string[];
   private readonly stage: CanvasRenderingContext2D;
-  private readonly centerX: number;
-  private readonly centerY: number;
   private readonly surface3D: Surface3D;
-  private readonly matrix3D: Matrix3D;
+  private readonly camera: CameraController;
   private readonly controls: Controls;
   private readonly transitionMachine: ShapeTransitionMachine;
-  private focal: number;
-  private zOffset: number;
-  private pitch: number;
-  private yaw: number;
-  private roll: number;
-  private rotationSpeed: number;
   private opacity: number;
   private wireframeEnabled: boolean;
   private backfaceCullingEnabled: boolean;
@@ -145,11 +103,11 @@ class Main {
   private targetPrimitiveName: string | null;
   private queuedPrimitiveName: string | null;
 
-  constructor(backgroundRenderer: BackgroundRenderer | null, fields: FieldWriter) {
-    const canvas = document.querySelector("canvas");
-    if (!(canvas instanceof HTMLCanvasElement)) {
-      throw new Error("Canvas element not found.");
-    }
+  // The canvas arrives resolved. Main used to repeat the Bootstrapper's own
+  // querySelector and instanceof guard, so a missing canvas threw from whichever
+  // of the two ran first.
+  constructor(context: BootContext) {
+    const { canvas, backgroundRenderer, fields } = context;
 
     const stage = canvas.getContext("2d");
     if (!stage) {
@@ -200,16 +158,14 @@ class Main {
     }
 
     this.fields = fields;
-    this.statusBar = createStatusBar(this.fields);
+    this.statusBar = new StatusBar(this.fields);
     this.controls = new Controls();
-    this.viewportHud = createViewportHud(canvas, this.fields);
-    this.sceneGraph = createSceneGraph();
-    this.meshHidden = isMeshHidden();
+    this.viewportHud = new ViewportHud(canvas, this.fields);
+    this.sceneGraph = new SceneGraphPanel(uiState);
+    this.meshHidden = this.sceneGraph.isMeshHidden();
     this.stage = stage;
-    this.centerX = this.stage.canvas.width >> 1;
-    this.centerY = this.stage.canvas.height >> 1;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
-    this.matrix3D = new Matrix3D();
+    this.camera = new CameraController(canvas);
     this.transitionMachine = new ShapeTransitionMachine({
       width: this.stage.canvas.width,
       height: this.stage.canvas.height,
@@ -217,16 +173,10 @@ class Main {
     });
     this.objects3D = data;
     this.primitivesName = Object.keys(this.objects3D);
-    this.pitch = DEFAULT_PITCH;
-    this.yaw = DEFAULT_YAW;
-    this.roll = DEFAULT_ROLL;
-    this.rotationSpeed = DEFAULT_ROTATION_SPEED;
     this.opacity = 1;
     this.wireframeEnabled = false;
     this.backfaceCullingEnabled = true;
     this.renderedTriangles = 0;
-    this.focal = DEFAULT_FOCAL_LENGTH;
-    this.zOffset = sliderToZoomOffset(DEFAULT_ZOOM_SLIDER_VALUE);
     this.times = [];
     this.fps = 0;
     this.smoothedFps = 0;
@@ -282,7 +232,7 @@ class Main {
     // Hiding the mesh has to repaint immediately when the loop is not
     // running; while it is, the next frame already picks it up.
     uiState.subscribe(() => {
-      const hidden = isMeshHidden();
+      const hidden = this.sceneGraph.isMeshHidden();
       if (hidden === this.meshHidden) {
         return;
       }
@@ -295,17 +245,27 @@ class Main {
   // alone runs 260 -> -220 across the slider and would print a negative
   // distance. Focal plus offset stays positive throughout (560 -> 80).
   private changeZoom = (sliderValue: number) => {
-    this.zOffset = sliderToZoomOffset(sliderValue);
-    this.viewportHud.setZoom(sliderValue, this.focal + this.zOffset);
+    this.camera.setZoomFromSlider(sliderValue);
+    this.viewportHud.setZoom(sliderValue, this.camera.distance);
     this.applyCameraSettingsToActiveMeshes();
     this.renderPausedFrame();
   };
 
-  private changePitch = (pitch: number) => (this.pitch = pitch);
-  private changeYaw = (yaw: number) => (this.yaw = yaw);
-  private changeRoll = (roll: number) => (this.roll = roll);
-  private changeRotationSpeed = (rotationSpeed: number) =>
-    (this.rotationSpeed = rotationSpeed);
+  private changePitch = (pitch: number) => {
+    this.camera.setPitch(pitch);
+  };
+
+  private changeYaw = (yaw: number) => {
+    this.camera.setYaw(yaw);
+  };
+
+  private changeRoll = (roll: number) => {
+    this.camera.setRoll(roll);
+  };
+
+  private changeRotationSpeed = (rotationSpeed: number) => {
+    this.camera.setRotationSpeed(rotationSpeed);
+  };
   private changeOpacity = (sliderValue: number) => {
     const progress = clamp(
       sliderProgress(sliderValue, OPACITY_SLIDER_MIN, OPACITY_SLIDER_MAX),
@@ -470,8 +430,7 @@ class Main {
   }
 
   private applyCameraSettings(mesh: Mesh) {
-    mesh.changeFocal(this.focal);
-    mesh.changeOffsetZ(this.zOffset);
+    this.camera.applyTo(mesh);
   }
 
   private applyCameraSettingsToActiveMeshes() {
@@ -510,22 +469,7 @@ class Main {
   }
 
   private rotateMesh(mesh: Mesh) {
-    const speedFactor = this.rotationSpeed / 100;
-
-    this.matrix3D.setAngle(
-      ((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-    );
-    mesh.transformMesh(this.matrix3D.pitch);
-
-    this.matrix3D.setAngle(
-      (-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-    );
-    mesh.transformMesh(this.matrix3D.yaw);
-
-    this.matrix3D.setAngle(
-      (this.roll / ROLL_ROTATION_DIVISOR) * speedFactor,
-    );
-    mesh.transformMesh(this.matrix3D.roll);
+    this.camera.rotate(mesh);
   }
 
   private startTransitionToPrimitive(primitive: string, now: number) {
@@ -708,7 +652,7 @@ class Main {
   };
 
   private visibleRenderables(renderables: ReturnType<Main["getCurrentRenderables"]>) {
-    return isMeshHidden() ? [] : renderables;
+    return this.sceneGraph.isMeshHidden() ? [] : renderables;
   }
 
   private getCurrentRenderables() {
@@ -747,16 +691,15 @@ class Main {
       this.controls.getNumericValue("#zoomSlider") ??
         DEFAULT_ZOOM_SLIDER_VALUE,
     );
-    this.changePitch(this.controls.getNumericValue("#pitchSlider") ?? this.pitch);
-    this.changeYaw(this.controls.getNumericValue("#yawSlider") ?? this.yaw);
-    this.changeRoll(this.controls.getNumericValue("#rollSlider") ?? this.roll);
+    this.camera.setPitch(this.controls.getNumericValue("#pitchSlider"));
+    this.camera.setYaw(this.controls.getNumericValue("#yawSlider"));
+    this.camera.setRoll(this.controls.getNumericValue("#rollSlider"));
     this.changeOpacity(
       this.controls.getNumericValue("#opacitySlider") ??
         DEFAULT_OPACITY_SLIDER_VALUE,
     );
-    this.changeRotationSpeed(
-      this.controls.getNumericValue("#rotationSpeedSlider") ??
-        this.rotationSpeed,
+    this.camera.setRotationSpeed(
+      this.controls.getNumericValue("#rotationSpeedSlider"),
     );
   }
 
@@ -811,61 +754,6 @@ class Main {
   }
 }
 
-// The desktop inspector and the mobile tab bar are two independent groups over
-// one DOM tree: each writes its own attribute on #app and CSS does the rest, so
-// crossing the breakpoint never re-renders or re-binds anything.
-const setupTabGroups = () => {
-  const app = document.getElementById("app");
-  if (!app) {
-    return;
-  }
-
-  const inspectorTabs = document.getElementById("inspectorTabs");
-  if (inspectorTabs) {
-    new TabGroup({
-      tablist: inspectorTabs,
-      root: app,
-      attribute: "data-tab",
-      initial: "shape",
-    });
-  }
-
-  const mobileTabs = document.getElementById("mobileTabs");
-  if (mobileTabs) {
-    new TabGroup({
-      tablist: mobileTabs,
-      root: app,
-      attribute: "data-mtab",
-      initial: "shape",
-    });
-  }
-};
-
-const boot = async () => {
-  setupTabGroups();
-
-  // The writer is created here, not on Main: the build labels are written
-  // before Main exists, and every collaborator that writes a field is handed
-  // this same instance.
-  const fields = new FieldWriter();
-
-  // Written from one source rather than typed into both branches' markup.
-  fields.write("buildDesktop", BUILD_LABEL_DESKTOP);
-  fields.write("buildMobile", BUILD_LABEL_MOBILE);
-
-  const skyImage = await loadImageAsset(skyUrl);
-  const canvas = document.querySelector("canvas");
-  if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error("Canvas element not found.");
-  }
-
-  const backgroundRenderer = new BackgroundRenderer({
-    width: canvas.width,
-    height: canvas.height,
-    skyImage,
-  });
-
-  await new Main(backgroundRenderer, fields).init(Object.keys(data)[0]);
-};
-
-boot();
+new Bootstrapper()
+  .run()
+  .then((context) => new Main(context).init(Object.keys(data)[0]));
