@@ -24,5 +24,3 @@ export const chartTokens = Object.freeze({
   gradientBottom: "rgba(255,200,30,0)",
   font: "500 8px 'JetBrains Mono', monospace",
 });
-
-export default chartTokens;
