@@ -1,8 +1,11 @@
-import StateMachine, { StateDefinition } from "@animations/StateMachine";
+import StateMachine from "@animations/StateMachine";
+import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
+import EnteringState from "@animations/shapeTransition/EnteringState";
+import IdleState from "@animations/shapeTransition/IdleState";
+import SwitchingState from "@animations/shapeTransition/SwitchingState";
+import { ShapeTransitionState } from "@animations/shapeTransition/types";
 import Mesh from "@primitives/Mesh";
 import { MeshRenderRequest } from "@primitives/Surface3D";
-
-type ShapeTransitionState = "idle" | "entering" | "switching";
 
 interface ShapeTransitionOptions {
   width: number;
@@ -10,130 +13,6 @@ interface ShapeTransitionOptions {
   duration?: number;
   margin?: number;
 }
-
-interface TransitionPayload {
-  mesh: Mesh;
-}
-
-interface ShapeTransitionContext {
-  currentMesh: Mesh | null;
-  incomingMesh: Mesh | null;
-  outgoingMesh: Mesh | null;
-  renderables: MeshRenderRequest[];
-  duration: number;
-  travelX: number;
-  travelY: number;
-}
-
-const easeInOutCubic = (progress: number): number =>
-  progress < 0.5
-    ? 4 * progress * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-const lerp = (start: number, end: number, progress: number): number =>
-  start + (end - start) * progress;
-
-const requirePayload = (payload?: unknown): TransitionPayload => {
-  if (!payload || typeof payload !== "object" || !("mesh" in payload)) {
-    throw new Error("Shape transition requires a mesh payload.");
-  }
-
-  return payload as TransitionPayload;
-};
-
-const states: Record<
-  ShapeTransitionState,
-  StateDefinition<ShapeTransitionContext, ShapeTransitionState>
-> = {
-  idle: {
-    onEnter: (context) => {
-      context.outgoingMesh = null;
-      context.incomingMesh = null;
-      context.renderables = context.currentMesh
-        ? [{ mesh: context.currentMesh, offsetX: 0, offsetY: 0 }]
-        : [];
-    },
-  },
-  entering: {
-    onEnter: (context, _controller, payload) => {
-      const transition = requirePayload(payload);
-
-      context.currentMesh = null;
-      context.outgoingMesh = null;
-      context.incomingMesh = transition.mesh;
-      context.renderables = [
-        { mesh: transition.mesh, offsetX: 0, offsetY: -context.travelY },
-      ];
-    },
-    onUpdate: (context, update) => {
-      if (!context.incomingMesh) {
-        update.transition("idle");
-        return;
-      }
-
-      const progress = easeInOutCubic(update.progress(context.duration));
-      context.renderables = [
-        {
-          mesh: context.incomingMesh,
-          offsetX: 0,
-          offsetY: lerp(-context.travelY, 0, progress),
-        },
-      ];
-
-      if (progress >= 1) {
-        context.currentMesh = context.incomingMesh;
-        context.incomingMesh = null;
-        update.transition("idle");
-      }
-    },
-  },
-  switching: {
-    onEnter: (context, _controller, payload) => {
-      const transition = requirePayload(payload);
-
-      context.outgoingMesh = context.currentMesh;
-      context.incomingMesh = transition.mesh;
-      context.renderables = [
-        ...(context.outgoingMesh
-          ? [{ mesh: context.outgoingMesh, offsetX: 0, offsetY: 0 }]
-          : []),
-        { mesh: transition.mesh, offsetX: 0, offsetY: -context.travelY },
-      ];
-    },
-    onUpdate: (context, update) => {
-      if (!context.incomingMesh) {
-        update.transition("idle");
-        return;
-      }
-
-      const progress = easeInOutCubic(update.progress(context.duration));
-      const renderables: MeshRenderRequest[] = [];
-
-      if (context.outgoingMesh) {
-        renderables.push({
-          mesh: context.outgoingMesh,
-          offsetX: lerp(0, -context.travelX, progress),
-          offsetY: 0,
-        });
-      }
-
-      renderables.push({
-        mesh: context.incomingMesh,
-        offsetX: 0,
-        offsetY: lerp(-context.travelY, 0, progress),
-      });
-
-      context.renderables = renderables;
-
-      if (progress >= 1) {
-        context.currentMesh = context.incomingMesh;
-        context.outgoingMesh = null;
-        context.incomingMesh = null;
-        update.transition("idle");
-      }
-    },
-  },
-};
 
 class ShapeTransitionMachine {
   private readonly context: ShapeTransitionContext;
@@ -143,20 +22,28 @@ class ShapeTransitionMachine {
   >;
 
   constructor(options: ShapeTransitionOptions) {
-    this.context = {
-      currentMesh: null,
-      incomingMesh: null,
-      outgoingMesh: null,
-      renderables: [],
-      duration: options.duration ?? 650,
-      travelX: options.width + (options.margin ?? 160),
-      travelY: options.height + (options.margin ?? 160),
-    };
+    // How far off-screen a mesh starts and ends. One margin for both axes,
+    // resolved once — it was applied twice, so a caller passing a margin had it
+    // read from two places that could drift apart.
+    const margin = options.margin ?? 160;
 
+    this.context = new ShapeTransitionContext({
+      duration: options.duration ?? 650,
+      travelX: options.width + margin,
+      travelY: options.height + margin,
+    });
+
+    // A fresh state object per machine. That is only equivalent to the shared
+    // table it replaces because none of the three holds a field: give one state
+    // some state of its own and two machines stop agreeing.
     this.machine = new StateMachine({
       context: this.context,
       initialState: "idle",
-      states,
+      states: {
+        idle: new IdleState(),
+        entering: new EnteringState(),
+        switching: new SwitchingState(),
+      },
     });
   }
 
@@ -183,6 +70,7 @@ class ShapeTransitionMachine {
   public switchTo(mesh: Mesh, now: number) {
     if (!this.context.currentMesh) {
       this.playInitialEntrance(mesh, now);
+
       return;
     }
 
@@ -193,11 +81,12 @@ class ShapeTransitionMachine {
     return this.context.renderables;
   }
 
+  // Deduped by identity rather than by value: the camera writes focal length and
+  // z offset straight onto these objects, so they have to be the very meshes
+  // being drawn.
   public getActiveMeshes(): Mesh[] {
     return Array.from(
-      new Set(
-        this.context.renderables.map((renderable) => renderable.mesh),
-      ),
+      new Set(this.context.renderables.map((renderable) => renderable.mesh)),
     );
   }
 }

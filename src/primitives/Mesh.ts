@@ -2,9 +2,12 @@ import Triangle, { TriangleRenderOptions } from "@primitives/Triangle";
 import Point3D from "@primitives/Point3D";
 
 class Mesh {
-  private readonly points: Point3D[] = [];
-  private readonly triangles: Triangle[] = [];
+  private readonly points: Point3D[];
+  private readonly triangles: Triangle[];
 
+  // Copied rather than aliased: the factory hands over the arrays it was
+  // building, and a mesh whose geometry a caller can still push into is not a
+  // mesh.
   constructor(points: Point3D[], triangles: Triangle[]) {
     this.points = [...points];
     this.triangles = [...triangles];
@@ -16,11 +19,12 @@ class Mesh {
     offsetY: number = 0,
     options: TriangleRenderOptions,
   ): number {
-    this.triangles.sort((t1, t2) => t2.depth - t1.depth);
+    this.sortByDepth();
+
     let renderedTriangles = 0;
 
-    for (const i in this.triangles) {
-      if (this.triangles[i].render(context, offsetX, offsetY, options)) {
+    for (const triangle of this.triangles) {
+      if (triangle.render(context, offsetX, offsetY, options)) {
         renderedTriangles++;
       }
     }
@@ -29,21 +33,29 @@ class Mesh {
   }
 
   public changeFocal(value: number) {
-    for (const i in this.triangles) {
-      this.triangles[i].changeFocal(value);
+    for (const triangle of this.triangles) {
+      triangle.changeFocal(value);
     }
   }
 
   public changeOffsetZ(value: number) {
-    for (const i in this.triangles) {
-      this.triangles[i].changeOffsetZ(value);
+    for (const triangle of this.triangles) {
+      triangle.changeOffsetZ(value);
     }
   }
 
   public transformMesh(rot: number[][]) {
-    for (const i in this.points) {
-      this.points[i].transformPt(rot);
+    for (const point of this.points) {
+      point.transformPt(rot);
     }
+  }
+
+  // The painter's algorithm: far faces first, so near ones paint over them.
+  // Descending, and the direction is not a preference — invert it and every mesh
+  // renders inside-out. In place, because the order is only ever read here and a
+  // sorted copy per frame would allocate one array per mesh per frame.
+  private sortByDepth() {
+    this.triangles.sort((t1, t2) => t2.depth - t1.depth);
   }
 }
 

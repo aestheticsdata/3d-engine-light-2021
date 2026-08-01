@@ -9,7 +9,7 @@
 //
 // 2) Textured:
 //    - material is a texture key (e.g. "dog", "galaxy") used to fetch an image
-//      from the global textures registry.
+//      from the textures registry carried in the render options.
 //    - uva/uvb/uvc define the (u,v) texture coordinates for each vertex.
 //
 // UV coordinates:
@@ -20,43 +20,17 @@
 // Why UVs are optional:
 // - most primitives are still solid colors.
 // - only some objects (like the cube faces) need textures.
-// - keeping UVs optional avoids changing every triangle in data.ts.
+// - keeping UVs optional avoids changing every triangle in the registry.
 //
+// The affine mapping itself, and the notes explaining it, live with
+// AffineTextureMapper.
 // -----------------------------------------------------------------------------
-// Canvas 2D implementation notes (Affine mapping)
-// -----------------------------------------------------------------------------
-// The HTML Canvas 2D API does not provide perspective-correct texturing.
-// Instead, we approximate texture mapping using an affine transform.
-//
-// Steps:
-// 1) Project 3D points -> 2D screen coordinates (ax,ay) (bx,by) (cx,cy).
-// 2) Convert UVs -> pixel coordinates in texture space (x1,y1) (x2,y2) (x3,y3).
-// 3) Compute the 2D affine transform that maps texture triangle -> screen triangle.
-//    In other words, find matrix M + translation D such that:
-//
-//      [sx]   [m11 m21 dx] [tx]
-//      [sy] = [m12 m22 dy] [ty]
-//      [ 1]   [ 0   0   1] [ 1]
-//
-//    where (tx,ty) are texture-space coordinates and (sx,sy) are screen-space.
-//
-// 4) Clip to the projected triangle in screen space, then draw the full image
-//    through the transform. Only the clipped triangle region becomes visible.
-//
-// This is fast and simple, but not perspective-correct:
-// - rotating faces can show stretching / shearing artifacts.
-// - we reduce those artifacts by subdividing faces into many small triangles.
-//
-// uvDet:
-// - uvDet is twice the signed area of the UV triangle.
-// - uvDet == 0 means the UV triangle is degenerate, so we skip rendering.
-// -----------------------------------------------------------------------------```
 
 import Point3D from "@primitives/Point3D";
 import Point2D from "@primitives/Point2D";
+import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import TextureRegistry from "@textures/TextureRegistry";
-
-type UV = [number, number];
+import { UV } from "@data/types";
 
 export interface TriangleRenderOptions {
   // Required, not optional. An optional registry means a wiring mistake falls
@@ -73,18 +47,32 @@ class Triangle {
   private b: Point3D;
   private c: Point3D;
 
-  public aproj: Point2D;
-  public bproj: Point2D;
-  public cproj: Point2D;
+  // Scratch, rewritten by every render and read by nothing outside this class.
+  // Declared rather than assigned in the constructor on purpose: under
+  // `useDefineForClassFields` these are real properties holding undefined from
+  // construction, not properties that appear on the first render.
+  private aproj: Point2D;
+  private bproj: Point2D;
+  private cproj: Point2D;
 
   // can be a color OR a texture key
-  public material: string;
+  private material: string;
 
   // optional UVs
   private uva?: UV;
   private uvb?: UV;
   private uvc?: UV;
 
+  // One per triangle rather than one shared instance, which costs an empty
+  // object per triangle at mesh-build time and nothing at all per frame. The
+  // alternatives were a module-scope singleton — the shape this epic is
+  // removing everywhere else — or an eighth constructor argument on a
+  // constructor that has to stay spreadable from a registry tuple.
+  private readonly textureMapper: AffineTextureMapper;
+
+  // Positional, and one of the constructors R4 exempts by name: MeshFactory
+  // spreads a registry tuple straight into it, and the order of a, b, c is the
+  // winding.
   constructor(
     a: Point3D,
     b: Point3D,
@@ -101,134 +89,64 @@ class Triangle {
     this.uva = uva;
     this.uvb = uvb;
     this.uvc = uvc;
+    this.textureMapper = new AffineTextureMapper();
   }
 
   public get depth(): number {
     return (this.a.zValue + this.b.zValue + this.c.zValue) / 3;
   }
 
+  // One save, one restore, on every path that reaches them. The cull exit leaves
+  // before the save and so restores nothing; the other three each close the one
+  // pair this method opened. The textured branch opens a second pair inside the
+  // mapper and closes it there.
   public render(
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
     offsetY: number = 0,
     options: TriangleRenderOptions,
   ): boolean {
-    const aproj = this.a.convert3D2D();
-    const bproj = this.b.convert3D2D();
-    const cproj = this.c.convert3D2D();
+    this.project(offsetX, offsetY);
 
-    this.aproj = new Point2D(aproj.x + offsetX, aproj.y + offsetY);
-    this.bproj = new Point2D(bproj.x + offsetX, bproj.y + offsetY);
-    this.cproj = new Point2D(cproj.x + offsetX, cproj.y + offsetY);
-
-    // 2D backface culling (optional)
-    const v1x = this.bproj.x - this.aproj.x;
-    const v1y = this.bproj.y - this.aproj.y;
-    const v2x = this.cproj.x - this.aproj.x;
-    const v2y = this.cproj.y - this.aproj.y;
-    if ((options.cullBackfaces ?? true) && v1x * v2y - v1y * v2x <= 0) {
+    if ((options.cullBackfaces ?? true) && this.isBackfacing()) {
       return false;
     }
 
-    const opacity = Math.min(1, Math.max(0, options.opacity ?? 1));
     context.save();
-    context.globalAlpha = opacity;
+    context.globalAlpha = Math.min(1, Math.max(0, options.opacity ?? 1));
 
     if (options.wireframe) {
-      context.strokeStyle = "rgba(10, 20, 60, 0.95)";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(this.aproj.x, this.aproj.y);
-      context.lineTo(this.bproj.x, this.bproj.y);
-      context.lineTo(this.cproj.x, this.cproj.y);
-      context.closePath();
-      context.stroke();
+      this.strokeWireframe(context);
       context.restore();
+
       return true;
     }
 
     // Read at render time, never snapshotted at mesh-build time: a texture
     // that finishes decoding after the mesh was built still appears.
-    const img = options.textures.get(this.material);
+    const image = options.textures.get(this.material);
 
-    // flat color
-    if (!img || !this.uva || !this.uvb || !this.uvc) {
-      context.fillStyle = this.material;
-      context.beginPath();
-      context.moveTo(this.aproj.x, this.aproj.y);
-      context.lineTo(this.bproj.x, this.bproj.y);
-      context.lineTo(this.cproj.x, this.cproj.y);
-      context.closePath();
-      context.fill();
+    if (!image || !this.uva || !this.uvb || !this.uvc) {
+      this.fillFlat(context);
       context.restore();
+
       return true;
     }
 
-    // textured triangle (affine)
-    const ax = this.aproj.x,
-      ay = this.aproj.y;
-    const bx = this.bproj.x,
-      by = this.bproj.y;
-    const cx = this.cproj.x,
-      cy = this.cproj.y;
-
-    const [u1, v1] = this.uva;
-    const [u2, v2] = this.uvb;
-    const [u3, v3] = this.uvc;
-
-    const w = img.width;
-    const h = img.height;
-
-    // UV in pixels
-    const x1 = u1 * w,
-      y1 = v1 * h;
-    const x2 = u2 * w,
-      y2 = v2 * h;
-    const x3 = u3 * w,
-      y3 = v3 * h;
-
-    // Solve affine transform (UV->Screen)
-    const uvDet = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
-    if (uvDet === 0) {
-      context.restore();
-      return false;
-    }
-
-    const m11 = (ax * (y2 - y3) + bx * (y3 - y1) + cx * (y1 - y2)) / uvDet;
-    const m12 = (ay * (y2 - y3) + by * (y3 - y1) + cy * (y1 - y2)) / uvDet;
-
-    const m21 = (ax * (x3 - x2) + bx * (x1 - x3) + cx * (x2 - x1)) / uvDet;
-    const m22 = (ay * (x3 - x2) + by * (x1 - x3) + cy * (x2 - x1)) / uvDet;
-
-    const dx =
-      (ax * (x2 * y3 - x3 * y2) +
-        bx * (x3 * y1 - x1 * y3) +
-        cx * (x1 * y2 - x2 * y1)) /
-      uvDet;
-
-    const dy =
-      (ay * (x2 * y3 - x3 * y2) +
-        by * (x3 * y1 - x1 * y3) +
-        cy * (x1 * y2 - x2 * y1)) /
-      uvDet;
-
-    context.save();
-
-    // clip triangle in screen space
-    context.beginPath();
-    context.moveTo(ax, ay);
-    context.lineTo(bx, by);
-    context.lineTo(cx, cy);
-    context.closePath();
-    context.clip();
-
-    // apply transform and draw image in UV space
-    context.setTransform(m11, m12, m21, m22, dx, dy);
-    context.drawImage(img, 0, 0);
+    const drawn = this.textureMapper.draw({
+      context,
+      a: this.aproj,
+      b: this.bproj,
+      c: this.cproj,
+      uva: this.uva,
+      uvb: this.uvb,
+      uvc: this.uvc,
+      image,
+    });
 
     context.restore();
-    context.restore();
-    return true;
+
+    return drawn;
   }
 
   public changeFocal(value: number) {
@@ -237,6 +155,48 @@ class Triangle {
 
   public changeOffsetZ(value: number) {
     this.a.zOffset = this.b.zOffset = this.c.zOffset = value;
+  }
+
+  private project(offsetX: number, offsetY: number) {
+    const aproj = this.a.convert3D2D();
+    const bproj = this.b.convert3D2D();
+    const cproj = this.c.convert3D2D();
+
+    this.aproj = new Point2D(aproj.x + offsetX, aproj.y + offsetY);
+    this.bproj = new Point2D(bproj.x + offsetX, bproj.y + offsetY);
+    this.cproj = new Point2D(cproj.x + offsetX, cproj.y + offsetY);
+  }
+
+  // 2D backface culling: the sign of the cross product of the two projected
+  // edges, which is the winding the face ended up with on screen.
+  private isBackfacing(): boolean {
+    const v1x = this.bproj.x - this.aproj.x;
+    const v1y = this.bproj.y - this.aproj.y;
+    const v2x = this.cproj.x - this.aproj.x;
+    const v2y = this.cproj.y - this.aproj.y;
+
+    return v1x * v2y - v1y * v2x <= 0;
+  }
+
+  private strokeWireframe(context: CanvasRenderingContext2D) {
+    context.strokeStyle = "rgba(10, 20, 60, 0.95)";
+    context.lineWidth = 1;
+    this.tracePath(context);
+    context.stroke();
+  }
+
+  private fillFlat(context: CanvasRenderingContext2D) {
+    context.fillStyle = this.material;
+    this.tracePath(context);
+    context.fill();
+  }
+
+  private tracePath(context: CanvasRenderingContext2D) {
+    context.beginPath();
+    context.moveTo(this.aproj.x, this.aproj.y);
+    context.lineTo(this.bproj.x, this.bproj.y);
+    context.lineTo(this.cproj.x, this.cproj.y);
+    context.closePath();
   }
 }
 
