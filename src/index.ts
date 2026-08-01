@@ -10,7 +10,7 @@ import { loadTextures } from "@textures/textures";
 import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
 import FieldWriter from "@ui/FieldWriter";
-import { createTabGroup } from "@ui/tabs";
+import TabGroup from "@ui/TabGroup";
 import { uiState } from "@ui/UiStateStore";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import { createStatusBar, StatusBar } from "@ui/statusBar";
@@ -822,7 +822,7 @@ const setupTabGroups = () => {
 
   const inspectorTabs = document.getElementById("inspectorTabs");
   if (inspectorTabs) {
-    createTabGroup({
+    new TabGroup({
       tablist: inspectorTabs,
       root: app,
       attribute: "data-tab",
@@ -832,7 +832,7 @@ const setupTabGroups = () => {
 
   const mobileTabs = document.getElementById("mobileTabs");
   if (mobileTabs) {
-    createTabGroup({
+    new TabGroup({
       tablist: mobileTabs,
       root: app,
       attribute: "data-mtab",
