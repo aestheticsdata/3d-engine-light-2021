@@ -21,7 +21,7 @@ import {
   MESH_ROW_ID,
   SceneGraph,
 } from "@ui/sceneGraph";
-import { textureKeys, texLabel } from "@ui/texLabel";
+import MaterialSummary from "@ui/MaterialSummary";
 import { modeLabel } from "@ui/modeLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
@@ -342,14 +342,15 @@ class Main {
   private syncShapeInfoPanel(primitive: string) {
     const object3D = this.objects3D[primitive];
     const info = shapeInfo[primitive];
-    // Derived once, in @ui/texLabel — the panel needs the key list, the MATERIAL
-    // row and the status bar need the two-value label, and the three must not
-    // disagree.
-    const texturedMaterials = textureKeys(object3D);
+    // Derived once, here — the panel needs the key list, the MATERIAL row and
+    // the status bar need the two-value label, and the three must not disagree.
+    // Built on primitive change, never on the render path.
+    const material = new MaterialSummary(object3D);
+    const texturedMaterials = material.textureKeys;
 
     this.sceneGraph.setMeshId(primitive);
     this.statusBar.setSelected(primitive);
-    this.statusBar.setTexture(object3D);
+    this.statusBar.setTexture(material);
 
     this.setShapeInfoValue(
       this.shapeInfoNameNode,
@@ -370,7 +371,7 @@ class Main {
       this.shapeInfoTexturesNode,
       texturedMaterials.length > 0 ? texturedMaterials.join(", ") : "none",
     );
-    this.setShapeInfoValue(this.shapeInfoMaterialNode, texLabel(object3D));
+    this.setShapeInfoValue(this.shapeInfoMaterialNode, material.label);
     this.syncShapeInfoOpacity();
 
     // Unreachable today — every primitive in data.ts has a shapeInfo entry — and
