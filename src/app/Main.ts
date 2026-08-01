@@ -13,6 +13,7 @@ import shapeInfo from "@data/shapeInfo";
 import Mesh from "@primitives/Mesh";
 import MeshFactory from "@primitives/MeshFactory";
 import Surface3D, { MeshRenderRequest } from "@primitives/Surface3D";
+import Viewport from "@primitives/Viewport";
 import TextureRegistry from "@textures/TextureRegistry";
 import { BootContext } from "@app/Bootstrapper";
 import FpsMeter from "@app/FpsMeter";
@@ -106,7 +107,9 @@ class Main {
     this.stage = stage;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.camera = new CameraController(canvas);
-    this.meshFactory = new MeshFactory();
+    // The projection centre, resolved once from the canvas the Bootstrapper
+    // already handed over, and shared by every point of every mesh built here.
+    this.meshFactory = new MeshFactory(new Viewport(canvas));
     this.textures = new TextureRegistry();
     this.objects3D = data;
     this.renderedTriangles = 0;

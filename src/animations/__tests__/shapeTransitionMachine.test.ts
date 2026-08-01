@@ -1,5 +1,5 @@
-// The transition machine's observable contract, pinned before COS-388 turns its
-// three state literals into classes.
+// The transition machine's observable contract, pinned before COS-388 turned its
+// three state literals into classes and unchanged by that conversion.
 //
 // The subtle one is the transition raised from inside onUpdate: `entering`
 // finishes by calling update.transition("idle") while StateMachine.update is
@@ -15,8 +15,7 @@ import Mesh from "@primitives/Mesh";
 const DURATION = 100;
 
 // A mesh with no geometry is enough: nothing under test reads a point or a
-// triangle, and staying empty keeps Point3D — which queries the DOM from a field
-// initialiser — out of a node test.
+// triangle.
 const emptyMesh = () => new Mesh([], []);
 
 const machine = () =>

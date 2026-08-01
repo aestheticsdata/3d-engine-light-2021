@@ -164,9 +164,18 @@ an aliased folder, not at the root.
 ### R17 — one class per file, split past roughly 160 lines of code
 
 The recovered set runs 18–157 lines: 18 (`Point2D`), 42, 50, 51, 53, 67, 81, 131, 157.
-`Triangle.ts` (237) and `shapeTransitionMachine.ts` (205) exceed it, and both are
-majority comment block and state table rather than method bulk. `index.ts` at 856 is
-the acknowledged catch-all, not a model.
+
+**Measure code lines, not raw lines.** The two files originally recorded as exceeding
+the rule were measured wrong, and the correction matters because one of them turned out
+not to breach it at all. `Triangle.ts` was 237 raw but **143 code**, and the reason
+given for exempting it — "majority comment block" — was arithmetically false at 26%;
+the exemption held on the right metric and the file never needed one. It is 121 code
+lines after COS-383. `shapeTransitionMachine.ts` was 205 raw and **174 code** with zero
+comment lines, so it genuinely breached, and the state table that made up 45% of it is
+exactly what COS-388 moved out — it is 69 code lines now.
+
+The one live exemption is `src/app/Main.ts`, at 282 code lines, and it is exempt by
+ownership rather than by length: see **D7** in `decisions.md`.
 
 ### R18 — comments explain *why*, never *what*, in full sentences
 
@@ -219,6 +228,11 @@ fields (`sceneGraph.ts:26,29,31`); it is not the house form and is not a precede
 | I5 | File name casing | `BackgroundRenderer.ts` vs `tooltip.ts`, `shapeTransitionMachine.ts`, `controls.ts` | New class files match the class name exactly (R13) |
 | I6 | Stray `;` after a method body | `Matrix3D.ts:29,37` | No terminator after a method body |
 
+I2, I3, I4 and I6 no longer have a live counter-example anywhere in `src/`: COS-372 and
+COS-379 converted the four files they cite. The **rulings stand** — they are what a new
+file is held to. The evidence cells are now historical, and their line numbers are where
+the conflict was read off in the original tree, not where anything is today.
+
 ## What is enforced mechanically
 
 `pnpm run lint` (`eslint.config.mjs`) encodes the rules below and **nothing else** —
@@ -228,14 +242,16 @@ no preset, no stylistic pack. Everything not in this table is enforced by review
 | -- | -- | -- | -- |
 | R1 — no `export default class` / `export class` | `no-restricted-syntax` | 0 | error |
 | R3 — no parameter properties | `@typescript-eslint/parameter-properties` (`prefer: class-property`) | 0 | error |
-| R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | `@typescript-eslint/explicit-member-accessibility` | 2 — `Point2D.ts:10,13` | warn → error at **COS-372** |
+| R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | `@typescript-eslint/explicit-member-accessibility` | 0 — cleared by **COS-372** | error |
 | R15 — no module-level mutable state | `no-restricted-syntax` | 0 — cleared by **COS-362 / COS-366** | error |
-| I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 4 — `Mesh.ts:22,32,38,44` | warn → error at **COS-372** |
+| I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 0 — cleared by **COS-372** | error |
 | D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
 
 A rule with a non-zero baseline is `warn`, never `off`, and never silenced with an
 inline disable — the file is downgraded whole and the config names the ticket that
-raises it. Total today: **0 errors, 9 warnings.**
+raises it. **No baseline is non-zero any more.** Every rule is an error across all of
+`src/`, the per-file downgrade blocks are gone from `eslint.config.mjs`, and there is
+not one inline disable comment in the repo. Total today: **0 errors, 0 warnings.**
 
 Deliberately **not** linted: R17 (file length) — line-count linting produces noise; and
 R18 (comments) — a judgement call no rule can make.

@@ -1,8 +1,8 @@
 // Registry data in, a Mesh out.
 //
-// The single construction site of Point3D and Triangle in the repo, which is
-// what makes it worth naming: the viewport work that stops Point3D querying the
-// DOM once per vertex needs exactly this seam.
+// The single construction site of Point3D and Triangle in the repo, and this is
+// where that pays: the viewport is resolved once, here, instead of by every
+// point for itself.
 //
 // Pure. No DOM, no store, no camera. The caller applies the camera afterwards,
 // as it always did.
@@ -10,12 +10,19 @@
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
 import Triangle from "@primitives/Triangle";
+import Viewport from "@primitives/Viewport";
 import { Object3D } from "@data/types";
 
 class MeshFactory {
+  private readonly viewport: Viewport;
+
+  constructor(viewport: Viewport) {
+    this.viewport = viewport;
+  }
+
   public build(object3D: Object3D): Mesh {
     const points = object3D.points.map(
-      (point) => new Point3D(point[0], point[1], point[2]),
+      (point) => new Point3D(point[0], point[1], point[2], this.viewport),
     );
 
     // `triangle` is a union of a 4-tuple (flat colour) and a 7-tuple (colour

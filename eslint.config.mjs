@@ -82,15 +82,10 @@ const RESTRICTED = [
   I4_FOR_IN,
 ];
 
-// The seven files that still violate a rule the epic has not reached yet. ESLint
-// allows one severity per rule per file, so a file with a pending violation is
-// downgraded whole rather than having its one bad line silenced — `warn`, never
-// `off`, and never an inline disable comment. Each entry names the ticket that
-// deletes it. When this array is empty, delete it and the block below with it.
-const PENDING = {
-  // I4 — four `for…in` loops at :22, :32, :38, :44.
-  "src/primitives/Mesh.ts": "COS-372",
-};
+// Nothing is pending. Every rule above is an error everywhere in src/, with no
+// per-file downgrade and no inline disable comment anywhere in the repo — the
+// last two, Mesh's four `for…in` loops and Point2D's two bare getters, went with
+// COS-372.
 
 export default tseslint.config(
   {
@@ -123,23 +118,6 @@ export default tseslint.config(
         { accessibility: "explicit", overrides: { constructors: "off" } },
       ],
     },
-  },
-
-  {
-    // R6 — Point2D.ts:10,13 are the repo's only two bare getters. COS-372 annotates
-    // them and this block goes away.
-    files: ["src/primitives/Point2D.ts"],
-    rules: {
-      "@typescript-eslint/explicit-member-accessibility": [
-        "warn",
-        { accessibility: "explicit", overrides: { constructors: "off" } },
-      ],
-    },
-  },
-
-  {
-    files: Object.keys(PENDING),
-    rules: { "no-restricted-syntax": ["warn", ...RESTRICTED] },
   },
 
   { ignores: ["dist/**", "node_modules/**"] },

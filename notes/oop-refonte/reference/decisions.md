@@ -137,3 +137,55 @@ method touches two or more, the file is the right size.
 
 This is the only exemption from R17 in the epic. It is not precedent for a second
 "coordinator" class — a second one would mean the first is not the composition root.
+
+## D8 — Four readings recorded against the engine batch
+
+COS-368, COS-372, COS-379, COS-383 and COS-388 were implemented as written except on
+these four points. Each is a place where following the ticket to the letter would have
+contradicted something the epic had already settled.
+
+**`AffineTextureMapper.draw` takes a named options object, not four positional
+arguments.** COS-383 specifies `draw(context, screen, uv, image)`, which is four
+arguments and therefore R4 territory, and the R4 exemption — "value types where the
+order *is* the meaning" — does not cover it. The usual counter-argument is allocation,
+since this runs once per textured triangle per frame, but the arithmetic goes the other
+way: the ticket's own form allocates two fresh tuples per call for `screen` and `uv`,
+where one flat options literal allocates one object. The options object is both the
+house form and the cheaper one. It is flat rather than nested for exactly that reason.
+
+For scale, `Triangle.render` already allocates six `Point2D` per triangle per frame by
+design, so one more short-lived object on that path is not the thing to optimise.
+
+**`easeInOutCubic` and `lerp` changed file but stayed functions.** COS-388's review
+correction says to leave them where they are, because they are R15's own cited example
+of a sanctioned module-scope helper and turning them into a class would delete the
+evidence for a rule this epic enforces. Their file had to change anyway — the states
+that call them moved out, and the acceptance criterion is that
+`shapeTransitionMachine.ts` declares no module-scope `const` at all. They live in
+`shapeTransition/easing.ts` as two `const` arrows. The correction's intent was "not a
+class", and that is honoured exactly; only the address changed.
+
+R15 says such helpers are "never exported", and these now are, because two state classes
+need them and the alternative is the same six lines in both files. That is the same
+trade the geometry batch already made for `data/builders/symmetry.ts`: a helper shared
+by more than one class has to be exported or duplicated, and duplication is the worse of
+the two. The clause that is actually load-bearing — pure, stateless, not a class — holds.
+
+`shapeTransition/types.ts` exists for a narrower reason: the façade imports the three
+states and the states need the state-name union, so declaring the union on the façade
+would make the two files import each other.
+
+**"A named error" means a specific message, not an `Error` subclass.** COS-368 asks the
+direction lookup to throw a named error. D4 bans inheritance outright, so a subclass is
+not available; the guard throws a plain `Error` whose message names the shape and prints
+the direction that was not registered. Verified by reordering the three build phases,
+which is the real mis-ordering the old unchecked cast swallowed: it now throws
+`kisRhombicDodecahedron: no vertex is registered for direction (0, 1, 0).` instead of
+producing NaN indices.
+
+**The `Viewport` is constructed in `Main`, not carried in `BootContext`.** COS-379's
+review correction adds `Bootstrapper.ts` to the file list because the viewport has to
+come from the canvas the Bootstrapper owns. It does — `BootContext` already carries that
+canvas and `Main` already destructures it, so `new Viewport(canvas)` there satisfies the
+requirement without widening the boot contract with a fourth field that only one
+collaborator reads. `Bootstrapper.ts` is unchanged.
