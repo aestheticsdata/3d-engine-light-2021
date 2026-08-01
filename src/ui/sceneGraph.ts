@@ -11,7 +11,7 @@
 // read the same booleans later without a second copy. Everything here is either
 // derived from that store or pushed in by Main.
 
-import { registerSlice, setState, subscribe, getState } from "@ui/uiState";
+import { uiState } from "@ui/UiStateStore";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
 // The mesh row is addressed by this constant everywhere — Main resets selection
@@ -44,13 +44,13 @@ const ROWS: readonly SceneRow[] = [
 
 const HINT_ID = "ph-scene-row";
 
-registerSlice({
+uiState.registerSlice({
   sceneSelection: MESH_ROW_ID,
   sceneHidden: [],
   drawnTriangles: 0,
 });
 
-const isHidden = (id: string) => (getState().sceneHidden ?? []).includes(id);
+const isHidden = (id: string) => (uiState.getState().sceneHidden ?? []).includes(id);
 
 const formatTriangles = (count: number | null) =>
   count === null ? "—" : `${count} △`;
@@ -131,12 +131,12 @@ export const createSceneGraph = () => {
     }
 
     select.addEventListener("click", () => {
-      setState({ sceneSelection: row.id });
+      uiState.setState({ sceneSelection: row.id });
     });
 
     vis.addEventListener("click", () => {
-      const hidden = getState().sceneHidden ?? [];
-      setState({
+      const hidden = uiState.getState().sceneHidden ?? [];
+      uiState.setState({
         sceneHidden: hidden.includes(row.id)
           ? hidden.filter((entry) => entry !== row.id)
           : [...hidden, row.id],
@@ -153,7 +153,7 @@ export const createSceneGraph = () => {
   }
 
   const paint = () => {
-    const state = getState();
+    const state = uiState.getState();
     const selection = state.sceneSelection ?? MESH_ROW_ID;
     const drawn = state.drawnTriangles ?? 0;
 
@@ -190,7 +190,7 @@ export const createSceneGraph = () => {
     });
   };
 
-  subscribe(paint);
+  uiState.subscribe(paint);
   paint();
 
   return {

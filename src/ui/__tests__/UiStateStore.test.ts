@@ -1,27 +1,24 @@
-// The store's four hard guarantees, pinned before COS-367 rebuilds it as a class.
+// The store's hard guarantees, carried across from the module form COS-367
+// replaced. The assertions are unchanged on purpose — that is the whole point of
+// having written them first.
 //
-// Each of them is the kind of thing a rewrite breaks without throwing: notifying
-// once per slice instead of once per reset still repaints the console, just N
-// times; copying the listener Set before iterating still delivers, just not to
-// whoever joined mid-pass. Both would ship green.
+// Each is the kind of thing a rewrite breaks without throwing: notifying once
+// per slice instead of once per reset still repaints the console, just N times;
+// copying the listener Set before iterating still delivers, just not to whoever
+// joined mid-pass. Both would ship green.
 //
-// The store is a module-scope singleton, so every test pulls a fresh copy through
-// a reset module registry. Sharing one instance would let a slice registered
-// above make a reset assertion below pass for the wrong reason.
+// The module form needed vi.resetModules() to get an uncontaminated store per
+// test. A class does not — `new UiStateStore()` is the isolation, and losing
+// that scaffolding is the first dividend of the conversion.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import type { UiState } from "@ui/uiState";
-
-const freshStore = async (): Promise<typeof import("@ui/uiState")> => {
-  vi.resetModules();
-
-  return import("@ui/uiState");
-};
+import UiStateStore from "@ui/UiStateStore";
+import type { UiState } from "@ui/UiStateStore";
 
 describe("registerSlice", () => {
-  it("writes the slice into state and notifies exactly once", async () => {
-    const store = await freshStore();
+  it("writes the slice into state and notifies exactly once", () => {
+    const store = new UiStateStore();
     const seen: Readonly<UiState>[] = [];
     store.subscribe((state) => seen.push({ ...state }));
 
@@ -36,8 +33,8 @@ describe("registerSlice", () => {
 
   // The second write is the one that matters: registerSlice fills `defaults` as
   // well as `state`, and that is the whole reason RESET coverage is automatic.
-  it("records the slice as the value RESET restores it to", async () => {
-    const store = await freshStore();
+  it("records the slice as the value RESET restores it to", () => {
+    const store = new UiStateStore();
     store.registerSlice({ drawnTriangles: 0 });
     store.setState({ drawnTriangles: 4096 });
 
@@ -48,8 +45,8 @@ describe("registerSlice", () => {
 });
 
 describe("resetAll", () => {
-  it("restores every registered slice in a single notification", async () => {
-    const store = await freshStore();
+  it("restores every registered slice in a single notification", () => {
+    const store = new UiStateStore();
     store.registerSlice({ drawnTriangles: 0 });
     store.registerSlice({ sceneSelection: "MESH_01" });
     store.registerSlice({ sceneHidden: [] });
@@ -73,8 +70,8 @@ describe("resetAll", () => {
 });
 
 describe("subscribe", () => {
-  it("returns an unsubscribe that stops delivery", async () => {
-    const store = await freshStore();
+  it("returns an unsubscribe that stops delivery", () => {
+    const store = new UiStateStore();
     const seen: (number | undefined)[] = [];
     const unsubscribe = store.subscribe((state) =>
       seen.push(state.drawnTriangles),
@@ -88,8 +85,8 @@ describe("subscribe", () => {
     expect(store.getState().drawnTriangles).toBe(2);
   });
 
-  it("delivers in subscription order", async () => {
-    const store = await freshStore();
+  it("delivers in subscription order", () => {
+    const store = new UiStateStore();
     const order: string[] = [];
     store.subscribe(() => order.push("first"));
     store.subscribe(() => order.push("second"));
@@ -101,10 +98,10 @@ describe("subscribe", () => {
 
   // Set.forEach visits entries added while it is iterating, so a listener that
   // subscribes from inside a notification is reached in that same pass. A
-  // defensive `[...listeners].forEach(...)` in uiState.ts:47 looks harmless and
-  // would delay it to the next one.
-  it("visits a listener that subscribed during the pass already running", async () => {
-    const store = await freshStore();
+  // defensive `[...this.listeners].forEach(...)` in UiStateStore.notify looks
+  // harmless and would delay it to the next one.
+  it("visits a listener that subscribed during the pass already running", () => {
+    const store = new UiStateStore();
     const order: string[] = [];
     store.subscribe(() => {
       order.push("first");
@@ -119,8 +116,8 @@ describe("subscribe", () => {
   // index.ts:276-283 subscribes a listener that repaints, and guards itself with
   // a change detector precisely because notify is synchronous and re-entrant.
   // Queueing or coalescing the nested pass would make that guard the wrong shape.
-  it("runs a notification raised from inside a notification immediately", async () => {
-    const store = await freshStore();
+  it("runs a notification raised from inside a notification immediately", () => {
+    const store = new UiStateStore();
     const order: (number | undefined)[] = [];
     let reentered = false;
 
@@ -138,5 +135,18 @@ describe("subscribe", () => {
     store.setState({ drawnTriangles: 1 });
 
     expect(order).toEqual([1, 2]);
+  });
+});
+
+describe("the module-scope singleton", () => {
+  // Stage one keeps `export const uiState` alive because sceneGraph.ts still
+  // reads the store from module scope. COS-392 deletes it, and this test is the
+  // reminder that it is a temporary shape rather than the design.
+  it("is one instance shared by every current consumer", async () => {
+    const first = await import("@ui/UiStateStore");
+    const second = await import("@ui/UiStateStore");
+
+    expect(first.uiState).toBe(second.uiState);
+    expect(first.uiState).toBeInstanceOf(UiStateStore);
   });
 });

@@ -11,7 +11,7 @@ import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
 import { setField } from "@ui/fields";
 import { createTabGroup } from "@ui/tabs";
-import { resetAll, setState, subscribe } from "@ui/uiState";
+import { uiState } from "@ui/UiStateStore";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import { createStatusBar } from "@ui/statusBar";
 import { createViewportHud, ViewportHud } from "@ui/viewportHud";
@@ -273,7 +273,7 @@ class Main {
 
     // Hiding the mesh has to repaint immediately when the loop is not
     // running; while it is, the next frame already picks it up.
-    subscribe(() => {
+    uiState.subscribe(() => {
       const hidden = isMeshHidden();
       if (hidden === this.meshHidden) {
         return;
@@ -457,7 +457,7 @@ class Main {
   // graph row through here and nowhere else, so the three cannot disagree.
   private publishDrawnTriangles(count: number) {
     setField("trisDrawn", count);
-    setState({ drawnTriangles: count });
+    uiState.setState({ drawnTriangles: count });
   }
 
   private applyCameraSettings(mesh: Mesh) {
@@ -523,7 +523,7 @@ class Main {
     // Selection returns to the mesh row on every shape change (D11):
     // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
     // the object the row describes changes underneath it.
-    setState({ sceneSelection: MESH_ROW_ID });
+    uiState.setState({ sceneSelection: MESH_ROW_ID });
     const mesh = this.buildMesh(primitive);
     this.animateShapeInfoPanel(primitive);
 
@@ -767,7 +767,7 @@ class Main {
     this.applyDefaultControlValues();
     this.syncSettingsFromControls();
     this.syncOpacitySliderAvailability();
-    resetAll();
+    uiState.resetAll();
     this.renderPausedFrame();
   };
 
