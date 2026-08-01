@@ -1,0 +1,182 @@
+/* Owns: the story card's content box — its padding and rhythm, the title, the accent rule, the two prose paragraphs, the pinned footer with its rows, and the reference links.
+   Must not own: the card, its header, its title or its note (panel.css), the DENSITY badge (badge.css) or the scrollbar (scrollbar.css) — no .panel, .badge or ::-webkit-scrollbar selector appears here. The note is reached through .shape-story__note, a class the markup adds beside .panel__note for exactly that reason. */
+
+/* Overrides .panel__body's 7px 8px: this is prose, not a readout, and the design
+   gives it a wider, bottom-weighted box. .panel__body--scroll supplies the
+   flex: 1 / min-height: 0 / overflow that make the card scroll instead of the
+   sidebar; none of it is restated here. */
+.shape-story__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-6) var(--space-7);
+}
+
+.shape-story__title {
+  font: var(--font-weight-bold) var(--text-4xl) / var(--leading-tight) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-max);
+}
+
+/* The one element in the card that never scales — 28x2 on both branches, so it
+   has no mobile rule. flex: none because a 2px box is the first thing a column
+   flex container shrinks when the prose is long. */
+.shape-story__rule {
+  flex: none;
+  width: var(--size-story-rule-w);
+  height: var(--size-story-rule-h);
+  background: var(--color-accent);
+}
+
+.shape-story__text {
+  margin: 0;
+  font: var(--font-weight-regular) var(--text-lg) / var(--leading-relaxed) var(--font-sans);
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+/* One rung down the text ramp: the description says what the shape is, the
+   geometric feature is the aside under it. */
+.shape-story__text--dim {
+  color: var(--color-text-tertiary);
+}
+
+/* margin-top: auto is what pins the footer to the bottom of a short story
+   (cuboctahedron) without making it sticky — on a long one (menger) it scrolls
+   away with the prose, which is the design's behaviour. */
+.shape-story__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  border-top: var(--size-hairline) solid var(--color-border-panel);
+}
+
+/* align-items rather than a fixed height: the REFERENCES row is taller than the
+   other two on mobile, where its links carry a touch target. */
+.shape-story__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.shape-story__key {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-lg);
+  color: var(--color-text-muted);
+}
+
+/* NEW, and only on the leading: the design sets these values at leading 1
+   because at its own 1440 frame they are always one line. The sidebar here is
+   fluid down to a 200px floor, where the longest generator does wrap — and two
+   mono lines at leading 1 collide. --leading-snug changes nothing on the single
+   line the design draws. No ellipsis clamp: unlike SHAPE INFO's fixed-height
+   rows, this card is allowed to be tall. Right-aligned so a wrapped value reads
+   as one right-hand block instead of drifting back under its label. */
+.shape-story__value {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-snug) var(--font-mono);
+  color: var(--color-text-tertiary);
+  text-align: right;
+}
+
+.shape-story__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.shape-story__link {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-accent);
+  border-bottom: var(--size-hairline) solid var(--color-accent);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+/* Outside the hover query on purpose: this is the state a keyboard reaches, and
+   on a touch device — where (hover: hover) never matches — it would otherwise be
+   the one link state with no feedback at all. The browser's own focus ring is
+   left in place; this only recolours the link under it. */
+.shape-story__link:focus-visible {
+  border-bottom-color: var(--color-accent-hover);
+  color: var(--color-accent-hover);
+}
+
+@media (hover: hover) {
+  .shape-story__link:hover {
+    border-bottom-color: var(--color-accent-hover);
+    color: var(--color-accent-hover);
+  }
+}
+
+/* not in mockup — the design's footer is GENERATOR and WINDING only. COS-212
+   shipped the reference links and this rebuild keeps them, as a third row.
+
+   The cross is the one shape with no canonical write-up to link to. Hiding just
+   the empty container would leave the label and the footer's gap behind, so the
+   whole row goes — the same idiom main.css used on .storyLinks:empty, lifted one
+   level to the row that now wraps it. */
+.shape-story__row--refs:has(.shape-story__links:empty) {
+  display: none;
+}
+
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  /* The design's mobile card is the title alone. */
+  .shape-story__note {
+    display: none;
+  }
+
+  /* The card sizes to its prose and the page scrolls, so .panel__body--scroll's
+     desktop behaviour is released here. The card's own flex comes from
+     layout.css's [data-mpanel] gate, which is why .panel--fill is not restated:
+     that gate is declared after the component layer and already wins. */
+  .shape-story__body {
+    flex: none;
+    gap: var(--space-5-5);
+    padding: var(--space-7);
+    overflow: visible;
+  }
+
+  .shape-story__title {
+    font: var(--font-weight-bold) var(--text-5xl) / var(--leading-tight) var(--font-sans);
+  }
+
+  .shape-story__text {
+    font: var(--font-weight-regular) var(--text-2xl) / var(--leading-relaxed) var(--font-sans);
+  }
+
+  /* Nothing to push against in a content-sized card, so the pin is released
+     rather than left to resolve against an auto height. */
+  .shape-story__footer {
+    gap: var(--space-2-5);
+    margin-top: 0;
+    padding-top: var(--space-5-5);
+  }
+
+  .shape-story__key {
+    font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-md);
+  }
+
+  .shape-story__value {
+    font: var(--font-weight-regular) var(--text-base) / var(--leading-snug) var(--font-mono);
+  }
+
+  .shape-story__links {
+    gap: var(--space-7);
+  }
+
+  /* The painted text is unchanged; only the box grows to the platform touch
+     minimum. These links are the card's only interactive elements. */
+  .shape-story__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--size-touch-min);
+    font: var(--font-weight-regular) var(--text-base) / var(--leading-none) var(--font-mono);
+  }
+}

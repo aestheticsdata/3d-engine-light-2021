@@ -219,23 +219,50 @@
               </div>
             </section>
 
-            <section class="panel panel--fill shapeStory" data-mpanel="scene">
+            <!-- The one card in the console that is prose rather than telemetry.
+                 .panel--fill lets it absorb whatever height the scene graph and
+                 SHAPE INFO leave in the column; its body is the scroller, so the
+                 sidebar itself never scrolls. -->
+            <section class="panel panel--fill shape-story" data-mpanel="scene">
               <div class="panel__header">
                 <span class="panel__title">shape story</span>
+                <!-- Carries a second class only so the mobile branch can drop it:
+                     the design's mobile card is the title alone, and hiding it
+                     there beats shipping a second header. -->
+                <span class="panel__note shape-story__note">read</span>
               </div>
-              <!-- .panelSection carries the vertical rhythm between these blocks
-                   and is still styled in main.css; the shape story ticket replaces
-                   both when it rebuilds this panel. -->
-              <div class="panel__body panel__body--scroll">
-                <div class="panelSection">
-                <h2 id="shapeStoryTitle" class="storyTitle"></h2>
-                <p id="shapeStoryDescription" class="storyText"></p>
-                <p id="shapeStoryFeature" class="storyText"></p>
+              <div class="panel__body panel__body--scroll shape-story__body">
+                <h2 id="shapeStoryTitle" class="shape-story__title"></h2>
+                <span class="shape-story__rule" aria-hidden="true"></span>
+                <p id="shapeStoryDescription" class="shape-story__text"></p>
+                <p id="shapeStoryFeature" class="shape-story__text shape-story__text--dim"></p>
                 <span class="badge badge--info">
-                  <span class="badge__label">DENSITY :</span>
+                  <span class="badge__label">DENSITY</span>
                   <span id="shapeStoryDensity" class="badge__value"></span>
                 </span>
-                <div id="shapeStoryReferences" class="storyLinks"></div>
+                <div class="shape-story__footer">
+                  <div class="shape-story__row">
+                    <span class="shape-story__key">GENERATOR</span>
+                    <span id="shapeStoryGenerator" class="shape-story__value"></span>
+                  </div>
+                  <div class="shape-story__row">
+                    <span class="shape-story__key">WINDING</span>
+                    <!-- A literal, not a data field: every primitive in this
+                         engine emits counter-clockwise triangles, and commit
+                         2fab553 normalised the torus knot and the Menger sponge
+                         so backface culling works uniformly. If a primitive ever
+                         lands with the opposite winding this moves into
+                         ShapeInfo alongside `generator`. -->
+                    <span class="shape-story__value">counter-clockwise</span>
+                  </div>
+                  <!-- Not in the mockup: COS-212 shipped the reference links and
+                       this rebuild keeps them, as the value slot of a third row.
+                       syncShapeReferences fills the container; the row hides
+                       itself when a shape has none. -->
+                  <div class="shape-story__row shape-story__row--refs">
+                    <span class="shape-story__key">REFERENCES</span>
+                    <div id="shapeStoryReferences" class="shape-story__links"></div>
+                  </div>
                 </div>
               </div>
             </section>

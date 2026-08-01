@@ -104,6 +104,7 @@ class Main {
   private readonly shapeStoryDescriptionNode: HTMLElement;
   private readonly shapeStoryFeatureNode: HTMLElement;
   private readonly shapeStoryDensityNode: HTMLElement;
+  private readonly shapeStoryGeneratorNode: HTMLElement;
   private readonly shapeStoryReferencesNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly wireframeRow: HTMLElement;
@@ -166,6 +167,7 @@ class Main {
     const shapeStoryDescriptionNode = document.getElementById("shapeStoryDescription");
     const shapeStoryFeatureNode = document.getElementById("shapeStoryFeature");
     const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
+    const shapeStoryGeneratorNode = document.getElementById("shapeStoryGenerator");
     const shapeStoryReferencesNode = document.getElementById("shapeStoryReferences");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const wireframeRow = document.getElementById("wireframeRow");
@@ -189,6 +191,7 @@ class Main {
       !shapeStoryDescriptionNode ||
       !shapeStoryFeatureNode ||
       !shapeStoryDensityNode ||
+      !shapeStoryGeneratorNode ||
       !shapeStoryReferencesNode ||
       !wireframeBtn ||
       !wireframeRow ||
@@ -245,6 +248,7 @@ class Main {
     this.shapeStoryDescriptionNode = shapeStoryDescriptionNode;
     this.shapeStoryFeatureNode = shapeStoryFeatureNode;
     this.shapeStoryDensityNode = shapeStoryDensityNode;
+    this.shapeStoryGeneratorNode = shapeStoryGeneratorNode;
     this.shapeStoryReferencesNode = shapeStoryReferencesNode;
     this.wireframeBtn = wireframeBtn;
     this.wireframeRow = wireframeRow;
@@ -377,11 +381,16 @@ class Main {
     this.setShapeInfoValue(this.shapeInfoMaterialNode, texLabel(object3D));
     this.syncShapeInfoOpacity();
 
+    // Unreachable today — every primitive in data.ts has a shapeInfo entry — and
+    // kept for the one that eventually lands without a write-up. The generator
+    // row falls back to an em dash rather than an empty slot, so the label never
+    // stands over nothing.
     if (!info) {
       this.shapeStoryTitleNode.textContent = this.formatPrimitiveName(primitive);
       this.shapeStoryDescriptionNode.textContent = "";
       this.shapeStoryFeatureNode.textContent = "";
       this.shapeStoryDensityNode.textContent = "";
+      this.shapeStoryGeneratorNode.textContent = "—";
       this.syncShapeReferences();
       return;
     }
@@ -390,6 +399,7 @@ class Main {
     this.shapeStoryDescriptionNode.textContent = info.description;
     this.shapeStoryFeatureNode.textContent = info.geometricFeature;
     this.shapeStoryDensityNode.textContent = info.densityLabel;
+    this.shapeStoryGeneratorNode.textContent = info.generator;
     this.syncShapeReferences(info.references);
   }
 
@@ -400,7 +410,7 @@ class Main {
 
     references.forEach((reference) => {
       const link = document.createElement("a");
-      link.className = "storyLink";
+      link.className = "shape-story__link";
       link.href = reference.url;
       link.textContent = reference.label;
       link.target = "_blank";
