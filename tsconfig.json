@@ -6,6 +6,7 @@
       "@app/*": ["src/app/*"],
       "@primitives/*": ["src/primitives/*"],
       "@data/*": ["src/data/*"],
+      "@img/*": ["src/img/*"],
       "@textures/*": ["src/textures/*"],
       "@rendering/*": ["src/rendering/*"],
       "@ui/*": ["src/ui/*"]
