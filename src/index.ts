@@ -9,11 +9,11 @@ import Triangle from "@primitives/Triangle";
 import { loadTextures } from "@textures/textures";
 import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FollowCursorTooltip from "@ui/tooltip";
-import { setField } from "@ui/fields";
+import FieldWriter from "@ui/FieldWriter";
 import { createTabGroup } from "@ui/tabs";
 import { uiState } from "@ui/UiStateStore";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
-import { createStatusBar } from "@ui/statusBar";
+import { createStatusBar, StatusBar } from "@ui/statusBar";
 import { createViewportHud, ViewportHud } from "@ui/viewportHud";
 import {
   createSceneGraph,
@@ -81,9 +81,15 @@ class Main {
   private fps: number;
   // FPS and the drawn-triangle count no longer resolve a node here: both appear
   // in more than one place in the DOM (toolbar, mobile header, telemetry card),
-  // so they go through setField, which writes every [data-field] node at once.
-  // Writers only — the bar holds no state of its own.
-  private readonly statusBar = createStatusBar();
+  // so they go through the writer, which touches every [data-field] node at
+  // once. boot() owns the instance because it writes the build labels before
+  // Main exists.
+  private readonly fields: FieldWriter;
+  // Writers only — the bar holds no state of its own. Built in the constructor
+  // body rather than here: it needs `fields`, a constructor parameter, and a
+  // field initializer runs before the constructor body under
+  // useDefineForClassFields, so it would read undefined.
+  private readonly statusBar: StatusBar;
   // Needs the canvas, so it is built in the constructor rather than here.
   private readonly viewportHud: ViewportHud;
   private readonly sceneGraph: SceneGraph;
@@ -139,7 +145,7 @@ class Main {
   private targetPrimitiveName: string | null;
   private queuedPrimitiveName: string | null;
 
-  constructor(backgroundRenderer: BackgroundRenderer | null) {
+  constructor(backgroundRenderer: BackgroundRenderer | null, fields: FieldWriter) {
     const canvas = document.querySelector("canvas");
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error("Canvas element not found.");
@@ -193,8 +199,10 @@ class Main {
       throw new Error("UI controls are missing.");
     }
 
+    this.fields = fields;
+    this.statusBar = createStatusBar(this.fields);
     this.controls = new Controls();
-    this.viewportHud = createViewportHud(canvas);
+    this.viewportHud = createViewportHud(canvas, this.fields);
     this.sceneGraph = createSceneGraph();
     this.meshHidden = isMeshHidden();
     this.stage = stage;
@@ -449,14 +457,14 @@ class Main {
     }
 
     this.lastFpsDisplayUpdateAt = now;
-    setField("fps", Math.round(this.smoothedFps));
+    this.fields.write("fps", Math.round(this.smoothedFps));
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
   // The drawn count reaches the readouts, the telemetry card and the scene
   // graph row through here and nowhere else, so the three cannot disagree.
   private publishDrawnTriangles(count: number) {
-    setField("trisDrawn", count);
+    this.fields.write("trisDrawn", count);
     uiState.setState({ drawnTriangles: count });
   }
 
@@ -694,7 +702,7 @@ class Main {
     this.lastFpsDisplayUpdateAt = 0;
     this.smoothedFps = 0;
     this.renderedTriangles = 0;
-    setField("fps", 0);
+    this.fields.write("fps", 0);
     this.publishDrawnTriangles(0);
   };
 
@@ -834,9 +842,15 @@ const setupTabGroups = () => {
 
 const boot = async () => {
   setupTabGroups();
+
+  // The writer is created here, not on Main: the build labels are written
+  // before Main exists, and every collaborator that writes a field is handed
+  // this same instance.
+  const fields = new FieldWriter();
+
   // Written from one source rather than typed into both branches' markup.
-  setField("buildDesktop", BUILD_LABEL_DESKTOP);
-  setField("buildMobile", BUILD_LABEL_MOBILE);
+  fields.write("buildDesktop", BUILD_LABEL_DESKTOP);
+  fields.write("buildMobile", BUILD_LABEL_MOBILE);
 
   const skyImage = await loadImageAsset(skyUrl);
   const canvas = document.querySelector("canvas");
@@ -850,7 +864,7 @@ const boot = async () => {
     skyImage,
   });
 
-  await new Main(backgroundRenderer).init(Object.keys(data)[0]);
+  await new Main(backgroundRenderer, fields).init(Object.keys(data)[0]);
 };
 
 boot();

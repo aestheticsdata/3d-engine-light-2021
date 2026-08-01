@@ -32,7 +32,7 @@
 
       <!-- order 0 — mobile only. Carries its own PAUSE and fps mounts: there is
            one DOM tree, and neither can be moved out of the desktop strip into
-           this header, so both are two mounts driven by one handler. setField
+           this header, so both are two mounts driven by one handler. FieldWriter
            writes every [data-field] node, which keeps the pair in sync. -->
       <header class="appBar panel">
         <span class="brand__mark"></span>
@@ -359,8 +359,8 @@
                   </div>
 
                   <!-- mobile camera readout: the four rows above as three chips.
-                       Same data-field names, so setField keeps the two mounts in
-                       sync without either branch knowing about the other. -->
+                       Same data-field names, so FieldWriter keeps the two mounts
+                       in sync without either branch knowing about the other. -->
                   <div class="viewportHud__camChips">
                     <span class="hud-chip">
                       <span class="viewportHud__k">frame</span>
