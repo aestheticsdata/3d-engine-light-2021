@@ -22,7 +22,7 @@ class Surface3D {
 
   public render(
     renderables: MeshRenderRequest[],
-    options: TriangleRenderOptions = {},
+    options: TriangleRenderOptions,
   ): number {
     this.backgroundRenderer?.render(this.surface3DContainer);
     if (!this.backgroundRenderer) {

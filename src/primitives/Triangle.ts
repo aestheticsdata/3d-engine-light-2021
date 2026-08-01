@@ -54,11 +54,15 @@
 
 import Point3D from "@primitives/Point3D";
 import Point2D from "@primitives/Point2D";
-import { textures } from "@textures/textures";
+import TextureRegistry from "@textures/TextureRegistry";
 
 type UV = [number, number];
 
 export interface TriangleRenderOptions {
+  // Required, not optional. An optional registry means a wiring mistake falls
+  // through to filling with the raw material string — "dog" as a fillStyle,
+  // which paints black and throws nothing. Required makes that a compile error.
+  textures: TextureRegistry;
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
@@ -107,7 +111,7 @@ class Triangle {
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
     offsetY: number = 0,
-    options: TriangleRenderOptions = {},
+    options: TriangleRenderOptions,
   ): boolean {
     const aproj = this.a.convert3D2D();
     const bproj = this.b.convert3D2D();
@@ -143,7 +147,9 @@ class Triangle {
       return true;
     }
 
-    const img = textures[this.material];
+    // Read at render time, never snapshotted at mesh-build time: a texture
+    // that finishes decoding after the mesh was built still appears.
+    const img = options.textures.get(this.material);
 
     // flat color
     if (!img || !this.uva || !this.uvb || !this.uvc) {
