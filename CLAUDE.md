@@ -99,8 +99,10 @@ console rebuild) and **COS-234** (de-mock, the engine behind it).
 
 `notes/` holds only what a ticket cannot: the rules and the rulings.
 
-- `notes/oop-refonte/reference/` — the house style (R1–R18) and the binding decisions
-  behind COS-356: what makes a file exempt, the ten files not converted, and the
-  recorded baselines. Read `decisions.md` before arguing that something should or
-  should not become a class.
+- `notes/oop-refonte/` — the house style (R1–R18) and the binding decisions behind
+  COS-356: what makes a file exempt, the ten files not converted, and the recorded
+  baselines. Read `reference/decisions.md` before arguing that something should or
+  should not become a class. Its `README.md` documents `pnpm run snapshot:geometry`,
+  the byte-identical dump of all fourteen shapes that every geometry ticket runs
+  before QA.
 - `notes/ui-refonte/` — the design-system rules and per-widget layout specs for COS-213.

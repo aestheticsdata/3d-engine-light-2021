@@ -103,3 +103,37 @@ criterion.
 typed as `HTMLCanvasElement`, and conditionally-assigned `readonly vpX/vpY`. Unpicking
 that is T29's territory, and turning the flags on repo-wide is its own piece of work
 outside this epic.
+
+## D7 — The composition root is measured by ownership, not by length
+
+`src/app/Main.ts` is **282 code lines** after T19 and does not meet R17's ~160-line
+split. It is exempt, and the exemption is narrow: it applies to the one class whose job
+is to construct collaborators and connect them, and to nothing else.
+
+R17 exists to stop a file accumulating behaviour that belongs somewhere else — the rule
+is a proxy for "this file is doing too many jobs". Main is the file that proxy was
+written against, and after the eight extractions it fails the proxy while passing the
+thing the proxy measures. Every method left on it spans collaborators that must not know
+about each other:
+
+* `repaintForPrimitive` writes the scene graph, the status bar and both inspector cards
+  inside one callback, because a shape change must land on all four together.
+* `syncPipelineReadouts` writes the status bar, the viewport HUD and the SHADING row
+  from one flag, for the same reason.
+* `renderFrame` / `renderPausedFrame` / `paint` own the frame; `buildMesh` owns the
+  registry lookup and the camera application; `sliderBindings` pairs six selectors with
+  six collaborators.
+
+Give any one of them to a widget and that widget starts reaching for a second one.
+
+**What the size is instead.** Roughly a sixth of the file is the import list — twenty
+collaborators, one line each under the alias rule — and the field block that mirrors it.
+A composition root grows with the number of things composed, which is the number this
+epic deliberately increased.
+
+**The criterion that replaces the line count**, and the one a reviewer should apply:
+*does any method here belong to exactly one collaborator?* If yes, it moves. If every
+method touches two or more, the file is the right size.
+
+This is the only exemption from R17 in the epic. It is not precedent for a second
+"coordinator" class — a second one would mean the first is not the composition root.

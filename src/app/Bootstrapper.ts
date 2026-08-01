@@ -14,7 +14,7 @@ import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import FieldWriter from "@ui/FieldWriter";
 import TabGroup from "@ui/TabGroup";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
-import skyUrl from "../img/sky.avif";
+import skyUrl from "@img/sky.avif";
 
 // What boot hands to Main. Three inputs, so a named interface rather than three
 // positional arguments (R4).
