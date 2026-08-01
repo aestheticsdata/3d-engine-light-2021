@@ -8,6 +8,11 @@ export interface ShapeInfo {
   description: string;
   geometricFeature: string;
   densityLabel: string;
+  // How the mesh is actually produced, as the SHAPE STORY footer prints it.
+  // Required on purpose: a shape that lands without one is a compile error
+  // rather than an em dash nobody notices. Each value names the construction the
+  // shape's own file uses, not a generic description of the family.
+  generator: string;
   textureSummary: string;
   // Optional: shapes with no canonical write-up (the cross) simply omit these.
   references?: ShapeReference[];
@@ -21,6 +26,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
     densityLabel: "Medium density",
+    generator: "lat/long bands",
     textureSummary: "No textures",
     references: [
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Sphere" },
@@ -34,6 +40,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
     densityLabel: "High density",
+    generator: "unit hull + subdivided faces",
     textureSummary: "Dog and galaxy textures",
     references: [
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Cube" },
@@ -47,6 +54,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
     densityLabel: "Low density",
+    generator: "square base + apex fan",
     textureSummary: "No textures",
     references: [
       {
@@ -66,6 +74,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
     densityLabel: "Medium density",
+    generator: "extruded 2D profile",
     textureSummary: "No textures",
   },
   donut: {
@@ -75,6 +84,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "A circular tube is swept around a larger circle, producing a continuous loop with no sharp corners.",
     densityLabel: "High density",
+    generator: "ring sweep",
     textureSummary: "No textures",
     references: [
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Torus" },
@@ -88,6 +98,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "The tube follows a p/q knot centerline and uses transported frames to keep the cross-section stable.",
     densityLabel: "High density",
+    generator: "p/q knot sweep",
     textureSummary: "No textures",
     references: [
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Torus_knot" },
@@ -104,6 +115,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Only exposed voxel faces are emitted, revealing tunnels and cavities while preserving a clean outer silhouette.",
     densityLabel: "Very high density",
+    generator: "level-2 recursive carve",
     textureSummary: "No textures",
     references: [
       {
@@ -123,6 +135,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Its 12 vertices are the midpoints of a cube's edges, so cube and octahedron faces alternate around every vertex.",
     densityLabel: "Low density",
+    generator: "convex hull builder",
     textureSummary: "No textures",
     references: [
       {
@@ -142,6 +155,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "The convex hull of a cube and its dual octahedron, and the dual of the cuboctahedron: a face here for every vertex there.",
     densityLabel: "Low density",
+    generator: "cube + octahedron hull",
     textureSummary: "No textures",
     references: [
       {
@@ -161,6 +175,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "A pyramid raised on each of the rhombic dodecahedron's 12 faces, placed by reciprocating the truncated cuboctahedron rather than by eye.",
     densityLabel: "Low density",
+    generator: "tCO reciprocal",
     textureSummary: "No textures",
     references: [
       {
@@ -180,6 +195,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Its 26 faces sit on the 26 axes of the cube — an octagon per face axis, a hexagon per corner axis, a square per edge axis.",
     densityLabel: "Medium density",
+    generator: "signed permutations",
     textureSummary: "No textures",
     references: [
       {
@@ -199,6 +215,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "Its 30 vertices are the midpoints of an icosahedron's edges, so triangles and pentagons alternate around every one of them.",
     densityLabel: "Low density",
+    generator: "icosahedron edge midpoints",
     textureSummary: "No textures",
     references: [
       {
@@ -218,6 +235,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "The convex hull of a dodecahedron and its dual icosahedron, and the dual of the icosidodecahedron: a face here for every vertex there.",
     densityLabel: "Low density",
+    generator: "dodecahedron + icosahedron hull",
     textureSummary: "No textures",
     references: [
       {
@@ -237,6 +255,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     geometricFeature:
       "A pyramid raised on each of the rhombic triacontahedron's 30 faces, placed by reciprocating the truncated icosidodecahedron.",
     densityLabel: "High density",
+    generator: "tID reciprocal",
     textureSummary: "No textures",
     references: [
       {

@@ -24,6 +24,7 @@
 @import url(components/placeholder.css);
 @import url(components/scene-graph.css);
 @import url(components/shape-info.css);
+@import url(components/shape-story.css);
 @import url(components/toolbar.css);
 @import url(components/viewport.css);
 @import url(components/status-bar.css);
@@ -67,86 +68,12 @@ a:hover {
   color: var(--color-accent-hover);
 }
 
-/* ---------------------------------------------------------------------------
-   LEGACY — still live, each owned by the widget ticket that will replace it.
-   The shell teardown deliberately stopped here: these rules style markup that
-   is still on the page, so deleting them now would strip the shape info and
-   story panels before their own tickets rebuild them.
-
-   .panelTitle / .panelSubTitle / .panelSection
-   .storyTitle / .storyText / .storyBadgeRow
-   .storyLinks / .storyLink                      -> shape story ticket
-
-   .panelSection was listed here for the shape info ticket, which was its first
-   user. It turned out to have a second: the story panel's markup still wraps its
-   blocks in it for the 8px rhythm, so it moves to the story ticket with the rest
-   of that panel rather than being deleted a ticket early and leaving the text
-   unspaced in between.
-
-   Gone with the shape info ticket: .infoRow / .infoLabel / .infoValue, whose
-   markup the shell replaced, and .panelFadeOut / .panelFadeIn / @keyframes,
-   which moved into components/shape-info.css unchanged.
-   --------------------------------------------------------------------------- */
-
-.panelTitle,
-.panelSubTitle {
-  display: block;
-  color: #ffef93;
-  font: 10px Futura, "Century Gothic", sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.panelSubTitle {
-  margin-bottom: 8px;
-}
-
-.panelSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.storyTitle {
-  color: #fff;
-  font: 18px Futura, "Century Gothic", sans-serif;
-  margin: 0;
-}
-
-.storyText {
-  color: rgba(232, 239, 255, 0.92);
-  font: 11px/1.45 Futura, "Century Gothic", sans-serif;
-  margin: 0;
-}
-
-.storyBadgeRow {
-  display: flex;
-}
-
-.storyLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-/* Shapes without a canonical write-up leave the container empty; without this
-   the panel section's gap would still reserve a gap for it. */
-.storyLinks:empty {
-  display: none;
-}
-
-.storyLink {
-  border-bottom: 1px solid rgba(255, 239, 147, 0.4);
-  color: #ffef93;
-  font: 10px Futura, "Century Gothic", sans-serif;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.storyLink:hover,
-.storyLink:focus-visible {
-  border-bottom-color: #fff;
-  color: #fff;
-}
+/* The LEGACY block that stood here is gone. It held the last Futura rules of
+   the pre-refonte console — .panelTitle / .panelSubTitle / .panelSection and
+   the .story* family — kept alive only because the shape info and shape story
+   panels were still drawing with them. The story ticket rebuilt the last of
+   that markup on the design system, so every rule in the block lost its user at
+   once. Nothing replaced them here: the card is components/panel.css, its
+   content is components/shape-story.css, and the fade is
+   components/shape-info.css. main.css is now imports plus base rules, which is
+   all it was ever meant to be. */
