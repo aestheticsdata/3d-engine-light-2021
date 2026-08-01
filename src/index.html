@@ -568,16 +568,29 @@
             <section id="panelRender" class="inspectorPanel" role="tabpanel" data-panel="render" data-mpanel="render">
               <div class="section-title">PIPELINE</div>
               <!-- Same convention as the slider labels above: literal capitals
-                   in the markup. Only the labels — the two buttons are still the
-                   shell's parked controls, and COS-230 replaces them with the
-                   design's two-half .toggle rather than uppercasing their text. -->
-              <div id="wireframeRow" class="toggle-row">
-                <span id="wireframeLabel" class="toggle-row__label">WIREFRAME</span>
-                <button id="toggleWireframe" type="button">on</button>
+                   in the markup, halves included. The control is the segmented
+                   toggle from the primitives layer — both halves are painted at
+                   all times and .is-on decides which one lights, so the state is
+                   the lit half and there is no word to rewrite. The element
+                   stays a native button: .toggle:focus-visible is already
+                   written for a focusable host, and Space and Enter come free.
+                   CULLING carries .is-on here because it defaults on, so the
+                   first paint matches the engine before the sync runs.
+                   COS-230 rebuilds both rows through toggleRow.ts, with the
+                   other three pipeline flags and the switch semantics. -->
+              <div class="toggle-row">
+                <span class="toggle-row__label">WIREFRAME</span>
+                <button id="toggleWireframe" class="toggle" type="button">
+                  <span class="toggle__half toggle__half--on">ON</span>
+                  <span class="toggle__half toggle__half--off">OFF</span>
+                </button>
               </div>
-              <div id="backfaceCullingRow" class="toggle-row">
-                <span id="backfaceCullingLabel" class="toggle-row__label">BACKFACE CULLING</span>
-                <button id="toggleBackfaceCulling" type="button">off</button>
+              <div class="toggle-row">
+                <span class="toggle-row__label">BACKFACE CULLING</span>
+                <button id="toggleBackfaceCulling" class="toggle is-on" type="button">
+                  <span class="toggle__half toggle__half--on">ON</span>
+                  <span class="toggle__half toggle__half--off">OFF</span>
+                </button>
               </div>
             </section>
 

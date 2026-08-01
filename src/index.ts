@@ -103,11 +103,7 @@ class Main {
   private readonly shapeStoryDensityNode: HTMLElement;
   private readonly shapeStoryReferencesNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
-  private readonly wireframeRow: HTMLElement;
-  private readonly wireframeLabel: HTMLElement;
   private readonly backfaceCullingBtn: HTMLElement;
-  private readonly backfaceCullingRow: HTMLElement;
-  private readonly backfaceCullingLabel: HTMLElement;
   private readonly resetBtn: HTMLElement;
   private readonly opacitySlider: HTMLInputElement;
   private readonly opacityDisabledTooltip: FollowCursorTooltip;
@@ -163,11 +159,7 @@ class Main {
     const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
     const shapeStoryReferencesNode = document.getElementById("shapeStoryReferences");
     const wireframeBtn = document.getElementById("toggleWireframe");
-    const wireframeRow = document.getElementById("wireframeRow");
-    const wireframeLabel = document.getElementById("wireframeLabel");
     const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
-    const backfaceCullingRow = document.getElementById("backfaceCullingRow");
-    const backfaceCullingLabel = document.getElementById("backfaceCullingLabel");
     const resetBtn = document.getElementById("resetControls");
     const opacitySlider = document.getElementById("opacitySlider");
     if (
@@ -184,11 +176,7 @@ class Main {
       !shapeStoryDensityNode ||
       !shapeStoryReferencesNode ||
       !wireframeBtn ||
-      !wireframeRow ||
-      !wireframeLabel ||
       !backfaceCullingBtn ||
-      !backfaceCullingRow ||
-      !backfaceCullingLabel ||
       !resetBtn ||
       !(opacitySlider instanceof HTMLInputElement)
     ) {
@@ -238,11 +226,7 @@ class Main {
     this.shapeStoryDensityNode = shapeStoryDensityNode;
     this.shapeStoryReferencesNode = shapeStoryReferencesNode;
     this.wireframeBtn = wireframeBtn;
-    this.wireframeRow = wireframeRow;
-    this.wireframeLabel = wireframeLabel;
     this.backfaceCullingBtn = backfaceCullingBtn;
-    this.backfaceCullingRow = backfaceCullingRow;
-    this.backfaceCullingLabel = backfaceCullingLabel;
     this.resetBtn = resetBtn;
     this.opacitySlider = opacitySlider;
     this.opacityDisabledTooltip = new FollowCursorTooltip({
@@ -609,22 +593,14 @@ class Main {
     // Same modeLabel() behind both: the bar writes the word, the HUD writes the
     // attribute that keys the canvas filter.
     this.viewportHud.setMode(this.wireframeEnabled);
-    this.wireframeBtn.textContent = this.wireframeEnabled ? "off" : "on";
-    this.backfaceCullingBtn.textContent = this.backfaceCullingEnabled
-      ? "off"
-      : "on";
-    this.wireframeRow.classList.toggle("toggleRowOff", !this.wireframeEnabled);
-    this.backfaceCullingRow.classList.toggle(
-      "toggleRowOff",
-      !this.backfaceCullingEnabled,
-    );
-    this.wireframeLabel.classList.toggle(
-      "toggleLabelMuted",
-      !this.wireframeEnabled,
-    );
-    this.backfaceCullingLabel.classList.toggle(
-      "toggleLabelMuted",
-      !this.backfaceCullingEnabled,
+    // The segmented control paints both halves at all times and .is-on decides
+    // which one lights, so the flag is the whole binding: no word to write, and
+    // nothing for the row or the label to do. The old text wrote the action
+    // rather than the state, which is why the two disagreed at every default.
+    this.wireframeBtn.classList.toggle("is-on", this.wireframeEnabled);
+    this.backfaceCullingBtn.classList.toggle(
+      "is-on",
+      this.backfaceCullingEnabled,
     );
   }
 
