@@ -22,8 +22,8 @@
 @import url(components/scrollbar.css);
 @import url(components/tooltip.css);
 @import url(components/placeholder.css);
-@import url(components/sceneGraph.css);
-@import url(components/shapeInfo.css);
+@import url(components/scene-graph.css);
+@import url(components/shape-info.css);
 @import url(components/toolbar.css);
 @import url(components/viewport.css);
 @import url(components/status-bar.css);
@@ -85,7 +85,7 @@ a:hover {
 
    Gone with the shape info ticket: .infoRow / .infoLabel / .infoValue, whose
    markup the shell replaced, and .panelFadeOut / .panelFadeIn / @keyframes,
-   which moved into components/shapeInfo.css unchanged.
+   which moved into components/shape-info.css unchanged.
    --------------------------------------------------------------------------- */
 
 .panelTitle,
