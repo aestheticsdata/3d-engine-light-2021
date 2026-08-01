@@ -9,12 +9,25 @@
   border-bottom: var(--size-hairline) solid var(--color-border-panel);
 }
 
+/* `border: 0` ahead of the underline is not redundant. reset.css lists no form
+   element and main.css sets no button base rule, so any side this recipe leaves
+   undeclared keeps the UA button border — 2px of outset white, measured on every
+   cell, active or not, which boxed the whole strip and turned the active tab
+   into a chip drawn around its own underline. Zeroed the way the scene-graph
+   buttons already zero theirs.
+
+   That bevel was also counterweighting the underline: 2px top against 2px
+   bottom left the label on the cell's mid-line by accident. It now centres in
+   the space above the mark and sits 1px high, which is the same construction
+   .scene-row uses — the mark lives inside the box and the content centres in
+   what is left. No counterweight border is added back; the codebase has none. */
 .tabs__tab {
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: center;
   background: transparent;
+  border: 0;
   border-bottom: var(--size-mark) solid transparent;
   font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-xl);

@@ -63,11 +63,31 @@
   overflow: auto;
 }
 
+/* A heading belongs to the group under it, so the space above it has to beat the
+   space below it. Both distances start from the container's own gap — the
+   inspector body's sections are flex columns with a 6px gap, and margins do not
+   collapse in flex layout, they add — so a margin-bottom here only ever doubles
+   the side that was already the larger of the two. The bottom is therefore left
+   to that gap alone and the group separation is the top margin stacked on it:
+   6px under a heading, 18px over it.
+
+   The design draws a hairline across the panel inside that upper gap. The rule
+   is markup, and the tickets that rebuild the tab bodies own it; 18px reads as a
+   group break on its own until then. */
 .section-title {
   font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-2xl);
   color: var(--color-accent);
-  margin-bottom: var(--space-2-5);
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-0);
+}
+
+/* The first heading opens no group — nothing sits above it but the panel's own
+   edge, which already contributes .panel__body's 7px (and on mobile the stack
+   gap). It takes the difference only, so the distance from the tab strip to
+   PRIMITIVE comes to the same 12px the heading's margin gives everywhere else. */
+.section-title:first-child {
+  margin-top: var(--space-2);
 }
 
 /* Exclusive at 900: desktop is min-width 900, mobile is max-width 899.
