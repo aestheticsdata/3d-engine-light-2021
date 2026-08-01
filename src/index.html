@@ -595,41 +595,64 @@
               </span>
 
               <div class="section-title">TRANSFORM</div>
+              <!-- Labels are uppercase in the markup, not text-transformed: the
+                   row label is 9px tracked type and the design sets it as
+                   literal capitals, the same convention the shape info rows
+                   follow. The names themselves are still the engine's own —
+                   COS-229 renames them to the design's PITCH / YAW / ROLL RATE,
+                   SPIN and SCALE when it remaps the sliders to UI space. -->
               <label class="slider-row" for="zoomSlider">
-                <span class="slider-row__label">zoom</span>
+                <span class="slider-row__label">ZOOM</span>
                 <input id="zoomSlider" type="range" min="0" max="100" value="50" />
               </label>
               <label class="slider-row" for="opacitySlider">
-                <span class="slider-row__label">opacity</span>
+                <span class="slider-row__label">OPACITY</span>
                 <input id="opacitySlider" type="range" min="0" max="100" value="100" />
               </label>
               <label class="slider-row" for="pitchSlider">
-                <span class="slider-row__label">pitch</span>
+                <span class="slider-row__label">PITCH</span>
                 <input id="pitchSlider" type="range" min="0" max="800" value="400" />
               </label>
               <label class="slider-row" for="yawSlider">
-                <span class="slider-row__label">yaw</span>
+                <span class="slider-row__label">YAW</span>
                 <input id="yawSlider" type="range" min="0" max="800" value="400" />
               </label>
               <label class="slider-row" for="rollSlider">
-                <span class="slider-row__label">roll</span>
+                <span class="slider-row__label">ROLL</span>
                 <input id="rollSlider" type="range" min="-1000" max="1200" value="200" />
               </label>
               <label class="slider-row" for="rotationSpeedSlider">
-                <span class="slider-row__label">rotation speed</span>
+                <span class="slider-row__label">ROTATION SPEED</span>
                 <input id="rotationSpeedSlider" type="range" min="0" max="2000" value="100" />
               </label>
             </section>
 
             <section id="panelRender" class="inspectorPanel" role="tabpanel" data-panel="render" data-mpanel="render">
               <div class="section-title">PIPELINE</div>
-              <div id="wireframeRow" class="toggle-row">
-                <span id="wireframeLabel" class="toggle-row__label">wireframe</span>
-                <button id="toggleWireframe" type="button">on</button>
+              <!-- Same convention as the slider labels above: literal capitals
+                   in the markup, halves included. The control is the segmented
+                   toggle from the primitives layer — both halves are painted at
+                   all times and .is-on decides which one lights, so the state is
+                   the lit half and there is no word to rewrite. The element
+                   stays a native button: .toggle:focus-visible is already
+                   written for a focusable host, and Space and Enter come free.
+                   CULLING carries .is-on here because it defaults on, so the
+                   first paint matches the engine before the sync runs.
+                   COS-230 rebuilds both rows through toggleRow.ts, with the
+                   other three pipeline flags and the switch semantics. -->
+              <div class="toggle-row">
+                <span class="toggle-row__label">WIREFRAME</span>
+                <button id="toggleWireframe" class="toggle" type="button">
+                  <span class="toggle__half toggle__half--on">ON</span>
+                  <span class="toggle__half toggle__half--off">OFF</span>
+                </button>
               </div>
-              <div id="backfaceCullingRow" class="toggle-row">
-                <span id="backfaceCullingLabel" class="toggle-row__label">backface culling</span>
-                <button id="toggleBackfaceCulling" type="button">off</button>
+              <div class="toggle-row">
+                <span class="toggle-row__label">BACKFACE CULLING</span>
+                <button id="toggleBackfaceCulling" class="toggle is-on" type="button">
+                  <span class="toggle__half toggle__half--on">ON</span>
+                  <span class="toggle__half toggle__half--off">OFF</span>
+                </button>
               </div>
             </section>
 

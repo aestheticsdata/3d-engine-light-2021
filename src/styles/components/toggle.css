@@ -1,4 +1,4 @@
-/* Owns: the segmented ON/OFF control, its row, and the four colour slots that paint both halves.
+/* Owns: the segmented ON/OFF control — its row, the block that travels between the two halves, and the four colour slots that paint them.
    Must not own: what the toggle switches — widget tickets bind .is-on. The design has no hover here; do not invent one. */
 
 .toggle-row {
@@ -14,45 +14,100 @@
   color: var(--color-text-tertiary);
 }
 
+/* The control is the track. It carries the receding colour permanently, which
+   is also what keeps the UA buttonface off the host: reset.css normalises a
+   long element list that does not include <button>, so without this the
+   default surface and its 6px sides survive — under border-box those sides eat
+   12px of a 62px control and paint grey beside the halves and in the corners
+   overflow: hidden clips. */
 .toggle {
+  position: relative;
   display: flex;
   width: var(--size-toggle-w);
   height: var(--size-toggle-h);
+  padding: 0;
+  background: var(--color-surface-sunken);
   border: var(--size-hairline) solid var(--color-border-control);
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
 }
 
+/* NEW — the design draws no motion; its frames describe two rest states and
+   nothing about the change between them.
+
+   The lit side is one block that travels rather than two halves that repaint,
+   because repainting has nothing continuous to interpolate: the colour would
+   leave one side and arrive on the other in the same frame, which reads as a
+   blink rather than as a switch. Half the track wide, moved by transform so the
+   travel stays off the layout. */
+.toggle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: var(--color-slate-500);
+  transform: translateX(100%);
+  transition:
+    transform var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard);
+}
+
+/* On state: the block travels to the ON half and takes the accent. */
+.toggle.is-on::before {
+  background: var(--color-accent);
+  transform: translateX(0);
+}
+
+/* Positioned, so the labels paint over the block: both are positioned at
+   z-index auto and the pseudo-element is the first child in paint order. */
 .toggle__half {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: center;
   font: var(--font-weight-bold) var(--text-xs) / var(--leading-none) var(--font-mono);
+  /* --duration-fast against the block's --duration-base, deliberately.
+     --ease-standard front-loads the distance, so the block is most of the way
+     across well before it formally arrives; matching the labels to the
+     perceived arrival is what stops --color-on-accent from sitting on the bare
+     track mid-flight, where it is unreadable. */
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
-/* Both halves are always painted; which one lights up is the whole signal.
-   Off state: the ON half recedes, the OFF half is the solid slate block. */
+/* Which half the block covers is the whole signal, and the label colours say
+   the same thing twice: the covered one is legible against the block, the
+   uncovered one recedes into the track.
+   Off state: the block sits on OFF. */
 .toggle .toggle__half--on {
-  background: var(--color-surface-sunken);
   color: var(--color-slate-500);
 }
 
 .toggle .toggle__half--off {
-  background: var(--color-slate-500);
   color: var(--color-text-primary);
 }
 
-/* On state: the ON half takes the accent, the OFF half recedes. */
+/* On state: the block has travelled to ON. */
 .toggle.is-on .toggle__half--on {
-  background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
 .toggle.is-on .toggle__half--off {
-  background: var(--color-surface-sunken);
   color: var(--color-slate-500);
+}
+
+/* Gated where select.css's picker fade deliberately is not, and for the reason
+   written down there: the preference is for motion that can trigger vestibular
+   symptoms — travel, parallax, scale — while a cross-fade in place is the
+   standard exception. This control is the travel case, so the journey goes and
+   the colour stays. */
+@media (prefers-reduced-motion: reduce) {
+  .toggle::before {
+    transition: background-color var(--duration-base) var(--ease-standard);
+  }
 }
 
 /* NEW — no focus styling in the design. */
