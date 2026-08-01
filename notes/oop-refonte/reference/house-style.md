@@ -57,7 +57,7 @@ collaborator is genuinely optional (`Surface3D.ts:17`).
 
 ## State
 
-### R6 — every field carries an explicit modifier
+### R6 — every field and accessor carries an explicit modifier, but constructors do not
 
 Collaborators and constructor-injected state are `private readonly`; internal mutable
 state is `private`; `public` only when something outside genuinely writes it.
@@ -69,6 +69,12 @@ Mutable `private`: `Point3D.ts:4-6`, `Matrix3D.ts:5-6`, `StateMachine.ts:40-42`,
 `Triangle.ts:68-70,80-82`.
 Legitimate `public` mutable: `Point3D.ts:11-12` (`fl`, `zOffset` — written from outside
 by `Triangle.changeFocal`, `Triangle.ts:228-234`), `Triangle.ts:72-77`.
+
+**Constructors are the exception and always bare.** Not one of the eleven classes writes
+`public constructor` — `Mesh.ts:8`, `Point2D.ts:5`, `Point3D.ts:17`, `Surface3D.ts:15`,
+`Triangle.ts:84`, `BackgroundRenderer.ts:6`, `tooltip.ts:14`. Recorded because the lint
+rule's default would have demanded a modifier on all nine and rewritten conformant files
+to satisfy a convention this codebase never adopted.
 
 ### R7 — no public field that only the class itself writes; expose it through a getter
 
@@ -204,12 +210,50 @@ fields (`sceneGraph.ts:26,29,31`); it is not the house form and is not a precede
 
 ## Inconsistencies, and the single rule to follow
 
-| Conflict | Evidence | Rule |
-| -- | -- | -- |
-| Options object: named interface vs inline type | `StateMachine.ts:30`, `tooltip.ts:1` vs `BackgroundRenderer.ts:6-10` | Named interface above the class (R4) |
-| Getter among the fields vs after the constructor | `Point3D.ts:8` vs `Triangle.ts:102`, `StateMachine.ts:58` | After the constructor (R12) |
-| Public mutable field vs getter | `Matrix3D.ts:2-4` vs `Point2D.ts:10` | Getter, unless an outside class legitimately writes it — `Point3D.ts:11-12` (R7) |
-| Iteration form | `for (const i in …)` over arrays at `Mesh.ts:22,32,38,44` vs `for (const … of …)` at `Surface3D.ts:38` | `for…of` — `for…in` yields string indices |
-| File name casing | `BackgroundRenderer.ts` vs `tooltip.ts`, `shapeTransitionMachine.ts`, `controls.ts` | New class files match the class name exactly (R13) |
-| Stray `;` after a method body | `Matrix3D.ts:29,37` | No terminator after a method body |
+| | Conflict | Evidence | Rule |
+| -- | -- | -- | -- |
+| I1 | Options object: named interface vs inline type | `StateMachine.ts:30`, `tooltip.ts:1` vs `BackgroundRenderer.ts:6-10` | Named interface above the class (R4) |
+| I2 | Getter among the fields vs after the constructor | `Point3D.ts:8` vs `Triangle.ts:102`, `StateMachine.ts:58` | After the constructor (R12) |
+| I3 | Public mutable field vs getter | `Matrix3D.ts:2-4` vs `Point2D.ts:10` | Getter, unless an outside class legitimately writes it — `Point3D.ts:11-12` (R7) |
+| I4 | Iteration form | `for (const i in …)` over arrays at `Mesh.ts:22,32,38,44` vs `for (const … of …)` at `Surface3D.ts:38` | `for…of` — `for…in` yields string indices |
+| I5 | File name casing | `BackgroundRenderer.ts` vs `tooltip.ts`, `shapeTransitionMachine.ts`, `controls.ts` | New class files match the class name exactly (R13) |
+| I6 | Stray `;` after a method body | `Matrix3D.ts:29,37` | No terminator after a method body |
 
+## What is enforced mechanically
+
+`pnpm run lint` (`eslint.config.mjs`) encodes the rules below and **nothing else** —
+no preset, no stylistic pack. Everything not in this table is enforced by review.
+
+| Rule | Lint rule | Baseline | Severity |
+| -- | -- | -- | -- |
+| R1 — no `export default class` / `export class` | `no-restricted-syntax` | 0 | error |
+| R3 — no parameter properties | `@typescript-eslint/parameter-properties` (`prefer: class-property`) | 0 | error |
+| R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | `@typescript-eslint/explicit-member-accessibility` | 2 — `Point2D.ts:10,13` | warn → error at **COS-372** |
+| R15 — no module-level mutable state | `no-restricted-syntax` | 3 — `torusKnot.ts:94,134`, `rhombicTriacontahedron.ts:105` | warn → error at **COS-362 / COS-366** |
+| I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 4 — `Mesh.ts:22,32,38,44` | warn → error at **COS-372** |
+| D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
+
+A rule with a non-zero baseline is `warn`, never `off`, and never silenced with an
+inline disable — the file is downgraded whole and the config names the ticket that
+raises it. Total today: **0 errors, 9 warnings.**
+
+Deliberately **not** linted: R17 (file length) — line-count linting produces noise; and
+R18 (comments) — a judgement call no rule can make.
+
+**Not covered by lint, and therefore the rules most likely to rot:** R9 (arrow property
+for bound listeners), R12 (member order), R13 (filename === class name) and R16 (import
+through the alias). R9 is the one that breaks at runtime rather than at review.
+
+## Where the codebase stands against these rules
+
+The engine — `src/primitives/`, `src/rendering/`, `src/animations/` — holds them. The
+UI layer does not: `sceneGraph.ts:69,210`, `tabs.ts:21,106`, `statusBar.ts:18,40` and
+`viewportHud.ts:50,90` are `export const createX = () => ({…})` factory closures each
+followed by a redundant `export default`; `fields.ts:18,28` is a plain exported helper
+with the same redundant default; `uiState.ts` is a module-scope singleton store with
+five named exports and module-level mutable state (`:40-41`).
+
+**That is not an open question.** Converting the UI layer is decided and scoped as
+Linear epic **COS-356**. Until a COS-356 ticket covers a given module, leave its current
+form alone rather than converting it as a side effect of touching the file — and when a
+ticket does cover it, hold every rule above.
