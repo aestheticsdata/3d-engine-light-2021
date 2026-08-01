@@ -1,9 +1,9 @@
 // The viewport HUD's writers, and the home of its placeholder constants.
 //
 // Like the status bar, this widget owns no state. Most of what the HUD shows is
-// already published by someone else through setField — the shading mode, the
-// texture label, the selected id, the run state, the drawn-triangle count and
-// the frame time all reach the overlay because setField writes *every*
+// already published by someone else through the FieldWriter — the shading mode,
+// the texture label, the selected id, the run state, the drawn-triangle count
+// and the frame time all reach the overlay because write() touches *every*
 // [data-field] node, and the HUD's nodes carry the same names as the status bar
 // and the telemetry cards. That is deliberate: the viewport cannot print a
 // different triangle count from the geometry card, because there is only one
@@ -17,10 +17,10 @@
 //   * zoom and dist, the two live camera readouts the engine can actually feed.
 //
 // There is no per-frame update() call. Everything the HUD shows per frame is
-// already written by Main's own setField calls, and adding a second pass over
-// the same nodes would be work that changes nothing.
+// already written by Main's own writes, and adding a second pass over the same
+// nodes would be work that changes nothing.
 
-import { setField } from "@ui/fields";
+import FieldWriter from "@ui/FieldWriter";
 import { modeLabel } from "@ui/modeLabel";
 
 // Placeholders. Each is a constant, never derived from engine state — a value
@@ -47,7 +47,10 @@ const FOV = "60°";
 // COS-246 (E5a) is what introduces world units.
 const DISTANCE_UNIT = "u";
 
-export const createViewportHud = (canvas: HTMLCanvasElement) => {
+export const createViewportHud = (
+  canvas: HTMLCanvasElement,
+  fields: FieldWriter,
+) => {
   const card = canvas.closest<HTMLElement>(".viewport");
   if (!card) {
     throw new Error("Viewport card not found.");
@@ -58,16 +61,16 @@ export const createViewportHud = (canvas: HTMLCanvasElement) => {
     // the stage at its own 1440 frame; what the rasteriser works at is the
     // canvas buffer, and that is the number worth showing.
     seed: () => {
-      setField("resolution", `${canvas.width} × ${canvas.height}`);
-      setField("camPos", CAM_POS);
-      setField("camRot", CAM_ROT);
-      setField("camTarget", CAM_TARGET);
-      setField("fov", FOV);
+      fields.write("resolution", `${canvas.width} × ${canvas.height}`);
+      fields.write("camPos", CAM_POS);
+      fields.write("camRot", CAM_ROT);
+      fields.write("camTarget", CAM_TARGET);
+      fields.write("fov", FOV);
     },
 
     // Owns the attribute only. The chip's text is the same modeLabel() the
-    // status bar pushes through setField, so the two cannot drift — there is one
-    // derivation and one write.
+    // status bar pushes through the writer, so the two cannot drift — there is
+    // one derivation and one write.
     setMode: (wireframeEnabled: boolean) => {
       card.setAttribute(
         "data-shading-mode",
@@ -79,8 +82,8 @@ export const createViewportHud = (canvas: HTMLCanvasElement) => {
     // length and the zoom curve, and a second copy of that arithmetic here is
     // how the readout ends up disagreeing with the camera.
     setZoom: (sliderValue: number, distance: number) => {
-      setField("zoom", `${Math.round(sliderValue)}%`);
-      setField("camDist", `${Math.round(distance)} ${DISTANCE_UNIT}`);
+      fields.write("zoom", `${Math.round(sliderValue)}%`);
+      fields.write("camDist", `${Math.round(distance)} ${DISTANCE_UNIT}`);
     },
   };
 };
