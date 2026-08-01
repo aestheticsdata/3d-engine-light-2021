@@ -1,0 +1,101 @@
+/* Owns: the fade box that holds SHAPE INFO and SHAPE STORY, the panel fade classes and their keyframes, and the one-line clamp on a value.
+   Must not own: the card, its header or its body (panel.css), the label/value row (rows.css) or the inset rule (divider.css) — no .panel / .info-row / .divider recipe selector appears here. The two camelCase .panelFade* classes are not part of that recipe; they are this file's own, relocated with the animation they drive. */
+
+/* One box around both cards, because animateShapeInfoPanel fades the pair as a
+   unit and the scene graph has to stay out of it — its selected row would blink
+   on every shape change.
+
+   The box is itself a flex item of the left column, so it restates what the two
+   cards used to take from the column directly: flex: 1 and min-height: 0, so the
+   story card's own flex: 1 still resolves against the height left over below the
+   scene graph, and the 8px gap the column's --size-stack-gap was putting between
+   them. */
+#shapeInfoPanelContent {
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  /* Moved here with the animation it exists for. It used to sit on
+     .panelContent, which the shell ticket deleted. */
+  will-change: opacity, transform;
+}
+
+/* display is the one property held back to the desktop branch. Below 900px the
+   value belongs to layout.css's tab gate, and an id selector outranks its
+   `[data-mpanel] { display: none }` — declaring display here unqualified would
+   pin the pair visible on the RENDER, WORLD and STATS tabs too. */
+@media (min-width: 900px) {
+  #shapeInfoPanelContent {
+    display: flex;
+  }
+}
+
+/* NEW — the design never shows a value long enough to overflow. TEXTURES on the
+   cube reads `dog, galaxy`, which is wider than the column it sits in, and
+   without the clamp the row wraps to two lines and breaks the fixed row height
+   the list depends on. index.ts writes the same string into `title`, so
+   clamping never costs the reader the value. */
+.shape-info__value {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- the panel fade -------------------------------------------------------
+   Relocated from main.css unchanged — same 180ms, same ease, same 8px shift.
+   The duration is mirrored by SHAPE_INFO_PANEL_FADE_DURATION_MS in index.ts,
+   which times the text swap against it; the two move together or the swap
+   happens mid-fade.
+
+   The 8px shift is the one raw px literal in this file. It is a motion offset
+   rather than a layout measure, and spending --space-4 on it would tie how far
+   the panel travels to the width of the page gutter. */
+
+.panelFadeOut {
+  animation: panelFadeOut 180ms ease forwards;
+}
+
+.panelFadeIn {
+  animation: panelFadeIn 180ms ease forwards;
+}
+
+@keyframes panelFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Exclusive at 900: desktop is the unqualified default above, mobile is
+   max-width 899. The literal is repeated because a media query cannot read
+   --breakpoint-md. */
+@media (max-width: 899px) {
+  /* Deliberately not display: contents. An element with no box has no opacity
+     and no transform, so the fade would simply not exist below the breakpoint.
+     The box stays, drops the desktop flex: 1 — the mobile stack is content-sized
+     — and takes the tab's own 10px gap, which is what lines the two cards up
+     with SCENE GRAPH above them and GESTURES below. `order` and `display` come
+     from the [data-mpanel] rules in layout.css. */
+  #shapeInfoPanelContent {
+    flex: none;
+    gap: var(--space-5);
+  }
+}
