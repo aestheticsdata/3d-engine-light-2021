@@ -14,7 +14,7 @@ class Mesh {
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
     offsetY: number = 0,
-    options: TriangleRenderOptions = {},
+    options: TriangleRenderOptions,
   ): number {
     this.triangles.sort((t1, t2) => t2.depth - t1.depth);
     let renderedTriangles = 0;

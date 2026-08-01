@@ -1,12 +1,14 @@
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import data, { Data3D } from "@data/data";
-import shapeInfo, { ShapeReference } from "@data/shapeInfo";
+import shapeInfo from "@data/shapeInfo";
 import Mesh from "@primitives/Mesh";
-import Point3D from "@primitives/Point3D";
+import MeshFactory from "@primitives/MeshFactory";
 import Surface3D from "@primitives/Surface3D";
-import Triangle from "@primitives/Triangle";
-import { loadTextures } from "@textures/textures";
+import TextureRegistry from "@textures/TextureRegistry";
 import Bootstrapper, { BootContext } from "@app/Bootstrapper";
+import FpsMeter from "@app/FpsMeter";
+import RenderLoop from "@app/RenderLoop";
+import ShapeSwitcher from "@app/ShapeSwitcher";
 import CameraController, {
   DEFAULT_PITCH,
   DEFAULT_ROLL,
@@ -20,6 +22,8 @@ import FieldWriter from "@ui/FieldWriter";
 import { uiState } from "@ui/UiStateStore";
 import StatusBar from "@ui/StatusBar";
 import ViewportHud from "@ui/ViewportHud";
+import ShapeInfoPanel from "@ui/ShapeInfoPanel";
+import ShapeStoryPanel from "@ui/ShapeStoryPanel";
 import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
 import { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import MaterialSummary from "@ui/MaterialSummary";
@@ -32,9 +36,6 @@ const TRANSITION_DURATION_MS = 1250;
 const OPACITY_SLIDER_MIN = 0;
 const OPACITY_SLIDER_MAX = 100;
 const DEFAULT_OPACITY_SLIDER_VALUE = 100;
-const FPS_DISPLAY_UPDATE_INTERVAL_MS = 90;
-const FPS_SMOOTHING_FACTOR = 0.2;
-const SHAPE_INFO_PANEL_FADE_DURATION_MS = 180;
 
 const sliderProgress = (value: number, min: number, max: number): number =>
   (value - min) / (max - min);
@@ -43,8 +44,6 @@ const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 class Main {
-  private readonly times: number[];
-  private fps: number;
   // FPS and the drawn-triangle count no longer resolve a node here: both appear
   // in more than one place in the DOM (toolbar, mobile header, telemetry card),
   // so they go through the writer, which touches every [data-field] node at
@@ -64,44 +63,27 @@ class Main {
   // re-enter renderPausedFrame on its own notification.
   private meshHidden: boolean;
   private readonly pauseBtn: HTMLElement;
-  private readonly shapeInfoPanelContent: HTMLElement;
-  private readonly shapeInfoNameNode: HTMLElement;
-  private readonly shapeInfoPointsNode: HTMLElement;
-  private readonly shapeInfoTrianglesNode: HTMLElement;
-  private readonly shapeInfoTexturesNode: HTMLElement;
-  private readonly shapeInfoOpacityNode: HTMLElement;
-  private readonly shapeInfoShadingNode: HTMLElement;
-  private readonly shapeInfoMaterialNode: HTMLElement;
-  private readonly shapeStoryTitleNode: HTMLElement;
-  private readonly shapeStoryDescriptionNode: HTMLElement;
-  private readonly shapeStoryFeatureNode: HTMLElement;
-  private readonly shapeStoryDensityNode: HTMLElement;
-  private readonly shapeStoryGeneratorNode: HTMLElement;
-  private readonly shapeStoryReferencesNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly backfaceCullingBtn: HTMLElement;
   private readonly resetBtn: HTMLElement;
   private readonly opacitySlider: HTMLInputElement;
   private readonly opacityDisabledTooltip: FollowCursorTooltip;
-  private shapeInfoPanelFadeTimeoutId: number | null;
-  private requestAnimationID: number;
-  private isPlaying: boolean;
+  private readonly shapeInfo: ShapeInfoPanel;
+  private readonly shapeStory: ShapeStoryPanel;
+  private readonly fpsMeter: FpsMeter;
+  private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
-  private readonly primitivesName: string[];
   private readonly stage: CanvasRenderingContext2D;
   private readonly surface3D: Surface3D;
+  private readonly meshFactory: MeshFactory;
+  private readonly textures: TextureRegistry;
   private readonly camera: CameraController;
   private readonly controls: Controls;
-  private readonly transitionMachine: ShapeTransitionMachine;
+  private readonly shapes: ShapeSwitcher;
   private opacity: number;
   private wireframeEnabled: boolean;
   private backfaceCullingEnabled: boolean;
   private renderedTriangles: number;
-  private smoothedFps: number;
-  private lastFpsDisplayUpdateAt: number;
-  private currentPrimitiveName: string | null;
-  private targetPrimitiveName: string | null;
-  private queuedPrimitiveName: string | null;
 
   // The canvas arrives resolved. Main used to repeat the Bootstrapper's own
   // querySelector and instanceof guard, so a missing canvas threw from whichever
@@ -115,40 +97,12 @@ class Main {
     }
 
     const pauseBtn = document.getElementById("playPause");
-    const shapeInfoPanelContent = document.getElementById("shapeInfoPanelContent");
-    const shapeInfoNameNode = document.getElementById("shapeInfoName");
-    const shapeInfoPointsNode = document.getElementById("shapeInfoPoints");
-    const shapeInfoTrianglesNode = document.getElementById("shapeInfoTriangles");
-    const shapeInfoTexturesNode = document.getElementById("shapeInfoTextures");
-    const shapeInfoOpacityNode = document.getElementById("shapeInfoOpacity");
-    const shapeInfoShadingNode = document.getElementById("shapeInfoShading");
-    const shapeInfoMaterialNode = document.getElementById("shapeInfoMaterial");
-    const shapeStoryTitleNode = document.getElementById("shapeStoryTitle");
-    const shapeStoryDescriptionNode = document.getElementById("shapeStoryDescription");
-    const shapeStoryFeatureNode = document.getElementById("shapeStoryFeature");
-    const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
-    const shapeStoryGeneratorNode = document.getElementById("shapeStoryGenerator");
-    const shapeStoryReferencesNode = document.getElementById("shapeStoryReferences");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
     const resetBtn = document.getElementById("resetControls");
     const opacitySlider = document.getElementById("opacitySlider");
     if (
       !pauseBtn ||
-      !shapeInfoPanelContent ||
-      !shapeInfoNameNode ||
-      !shapeInfoPointsNode ||
-      !shapeInfoTrianglesNode ||
-      !shapeInfoTexturesNode ||
-      !shapeInfoOpacityNode ||
-      !shapeInfoShadingNode ||
-      !shapeInfoMaterialNode ||
-      !shapeStoryTitleNode ||
-      !shapeStoryDescriptionNode ||
-      !shapeStoryFeatureNode ||
-      !shapeStoryDensityNode ||
-      !shapeStoryGeneratorNode ||
-      !shapeStoryReferencesNode ||
       !wireframeBtn ||
       !backfaceCullingBtn ||
       !resetBtn ||
@@ -166,36 +120,30 @@ class Main {
     this.stage = stage;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.camera = new CameraController(canvas);
-    this.transitionMachine = new ShapeTransitionMachine({
-      width: this.stage.canvas.width,
-      height: this.stage.canvas.height,
-      duration: TRANSITION_DURATION_MS,
-    });
+    this.meshFactory = new MeshFactory();
+    this.textures = new TextureRegistry();
     this.objects3D = data;
-    this.primitivesName = Object.keys(this.objects3D);
+    this.shapes = new ShapeSwitcher({
+      objects3D: this.objects3D,
+      transitionMachine: new ShapeTransitionMachine({
+        width: this.stage.canvas.width,
+        height: this.stage.canvas.height,
+        duration: TRANSITION_DURATION_MS,
+      }),
+      buildMesh: (primitive) => this.buildMesh(primitive),
+      onTransitionStart: (primitive) => {
+        // Selection returns to the mesh row on every shape change (D11):
+        // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
+        // the object the row describes changes underneath it.
+        uiState.setState({ sceneSelection: MESH_ROW_ID });
+        this.animateShapeInfoPanel(primitive);
+      },
+    });
     this.opacity = 1;
     this.wireframeEnabled = false;
     this.backfaceCullingEnabled = true;
     this.renderedTriangles = 0;
-    this.times = [];
-    this.fps = 0;
-    this.smoothedFps = 0;
-    this.lastFpsDisplayUpdateAt = 0;
     this.pauseBtn = pauseBtn;
-    this.shapeInfoPanelContent = shapeInfoPanelContent;
-    this.shapeInfoNameNode = shapeInfoNameNode;
-    this.shapeInfoPointsNode = shapeInfoPointsNode;
-    this.shapeInfoTrianglesNode = shapeInfoTrianglesNode;
-    this.shapeInfoTexturesNode = shapeInfoTexturesNode;
-    this.shapeInfoOpacityNode = shapeInfoOpacityNode;
-    this.shapeInfoShadingNode = shapeInfoShadingNode;
-    this.shapeInfoMaterialNode = shapeInfoMaterialNode;
-    this.shapeStoryTitleNode = shapeStoryTitleNode;
-    this.shapeStoryDescriptionNode = shapeStoryDescriptionNode;
-    this.shapeStoryFeatureNode = shapeStoryFeatureNode;
-    this.shapeStoryDensityNode = shapeStoryDensityNode;
-    this.shapeStoryGeneratorNode = shapeStoryGeneratorNode;
-    this.shapeStoryReferencesNode = shapeStoryReferencesNode;
     this.wireframeBtn = wireframeBtn;
     this.backfaceCullingBtn = backfaceCullingBtn;
     this.resetBtn = resetBtn;
@@ -205,12 +153,24 @@ class Main {
       message: "Turn backface culling off to adjust opacity.",
       shouldShow: () => this.opacitySlider.disabled,
     });
-    this.shapeInfoPanelFadeTimeoutId = null;
-    this.requestAnimationID = 0;
-    this.isPlaying = true;
-    this.currentPrimitiveName = null;
-    this.targetPrimitiveName = null;
-    this.queuedPrimitiveName = null;
+    this.shapeInfo = new ShapeInfoPanel();
+    this.shapeStory = new ShapeStoryPanel();
+    this.fpsMeter = new FpsMeter(() => performance.now());
+    this.loop = new RenderLoop({
+      onFrame: (timestamp) => {
+        this.renderFrame(timestamp);
+        this.publishFrameStats();
+      },
+      // Re-syncing the transition clock on resume is what stops a shape change
+      // paused mid-flight from jumping when the loop restarts.
+      onStart: () => this.shapes.syncClock(performance.now()),
+      onStop: () => {
+        this.fpsMeter.reset();
+        this.renderedTriangles = 0;
+        this.fields.write("fps", 0);
+        this.publishDrawnTriangles(0);
+      },
+    });
 
     // Transport and RESET each have two mounts — the desktop strip and the
     // mobile header / RESET SCENE bar — because there is one DOM tree and
@@ -273,152 +233,55 @@ class Main {
       1,
     );
     this.opacity = progress;
-    this.syncShapeInfoOpacity();
+    this.shapeInfo.setOpacity(this.opacity);
     this.renderPausedFrame();
   };
 
-  private formatPrimitiveName(name: string): string {
-    return name
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  }
 
-  // Every value in the panel is clamped to a single line, so the full string has
-  // to stay reachable somewhere; title is that somewhere. Written together with
-  // the text so a truncated value and its tooltip can never disagree.
-  private setShapeInfoValue(node: HTMLElement, value: string) {
-    node.textContent = value;
-    node.title = value;
-  }
 
-  private syncShapeInfoOpacity() {
-    this.setShapeInfoValue(
-      this.shapeInfoOpacityNode,
-      `${Math.round(this.opacity * 100)}%`,
-    );
-  }
 
-  private syncShapeInfoPanel(primitive: string) {
+
+
+
+  // Everything a shape change repaints, in one callback. SHAPE INFO's fade
+  // wraps this, so the two cards, the scene-graph row and the status bar all
+  // change inside the same 180ms boundary rather than 180ms apart.
+  private repaintForPrimitive(primitive: string) {
     const object3D = this.objects3D[primitive];
-    const info = shapeInfo[primitive];
     // Derived once, here — the panel needs the key list, the MATERIAL row and
     // the status bar need the two-value label, and the three must not disagree.
     // Built on primitive change, never on the render path.
     const material = new MaterialSummary(object3D);
-    const texturedMaterials = material.textureKeys;
 
     this.sceneGraph.setMeshId(primitive);
     this.statusBar.setSelected(primitive);
     this.statusBar.setTexture(material);
-
-    this.setShapeInfoValue(
-      this.shapeInfoNameNode,
-      this.formatPrimitiveName(primitive),
-    );
-    this.setShapeInfoValue(
-      this.shapeInfoPointsNode,
-      String(object3D.points.length),
-    );
-    // The registry count, not the drawn one: this row states what the shape is
-    // made of, and it must not move when culling hides half of it. The scene
-    // graph's mesh row is the one that follows the renderer.
-    this.setShapeInfoValue(
-      this.shapeInfoTrianglesNode,
-      String(object3D.triangles.length),
-    );
-    this.setShapeInfoValue(
-      this.shapeInfoTexturesNode,
-      texturedMaterials.length > 0 ? texturedMaterials.join(", ") : "none",
-    );
-    this.setShapeInfoValue(this.shapeInfoMaterialNode, material.label);
-    this.syncShapeInfoOpacity();
-
-    // Unreachable today — every primitive in data.ts has a shapeInfo entry — and
-    // kept for the one that eventually lands without a write-up. The generator
-    // row falls back to an em dash rather than an empty slot, so the label never
-    // stands over nothing.
-    if (!info) {
-      this.shapeStoryTitleNode.textContent = this.formatPrimitiveName(primitive);
-      this.shapeStoryDescriptionNode.textContent = "";
-      this.shapeStoryFeatureNode.textContent = "";
-      this.shapeStoryDensityNode.textContent = "";
-      this.shapeStoryGeneratorNode.textContent = "—";
-      this.syncShapeReferences();
-      return;
-    }
-
-    this.shapeStoryTitleNode.textContent = info.title;
-    this.shapeStoryDescriptionNode.textContent = info.description;
-    this.shapeStoryFeatureNode.textContent = info.geometricFeature;
-    this.shapeStoryDensityNode.textContent = info.densityLabel;
-    this.shapeStoryGeneratorNode.textContent = info.generator;
-    this.syncShapeReferences(info.references);
-  }
-
-  // Opened in a new tab so the running animation is never torn down; noopener
-  // keeps the opened page from reaching back through window.opener.
-  private syncShapeReferences(references: ShapeReference[] = []) {
-    this.shapeStoryReferencesNode.replaceChildren();
-
-    references.forEach((reference) => {
-      const link = document.createElement("a");
-      link.className = "shape-story__link";
-      link.href = reference.url;
-      link.textContent = reference.label;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-
-      this.shapeStoryReferencesNode.appendChild(link);
-    });
+    this.shapeInfo.show(primitive, object3D, material);
+    this.shapeInfo.setOpacity(this.opacity);
+    this.shapeStory.show(primitive, shapeInfo[primitive]);
   }
 
   private animateShapeInfoPanel(primitive: string) {
-    if (this.shapeInfoPanelFadeTimeoutId !== null) {
-      window.clearTimeout(this.shapeInfoPanelFadeTimeoutId);
-      this.shapeInfoPanelFadeTimeoutId = null;
-    }
+    const repaint = () => this.repaintForPrimitive(primitive);
 
-    if (!this.currentPrimitiveName) {
-      this.shapeInfoPanelContent.classList.remove("panelFadeOut", "panelFadeIn");
-      this.syncShapeInfoPanel(primitive);
+    if (!this.shapes.current) {
+      this.shapeInfo.showImmediately(repaint);
       return;
     }
 
-    this.shapeInfoPanelContent.classList.remove("panelFadeIn");
-    // Restart the fade-out animation if changes happen quickly.
-    void this.shapeInfoPanelContent.offsetWidth;
-    this.shapeInfoPanelContent.classList.add("panelFadeOut");
-
-    this.shapeInfoPanelFadeTimeoutId = window.setTimeout(() => {
-      this.syncShapeInfoPanel(primitive);
-      this.shapeInfoPanelContent.classList.remove("panelFadeOut");
-      void this.shapeInfoPanelContent.offsetWidth;
-      this.shapeInfoPanelContent.classList.add("panelFadeIn");
-      this.shapeInfoPanelFadeTimeoutId = null;
-    }, SHAPE_INFO_PANEL_FADE_DURATION_MS);
+    this.shapeInfo.crossFade(repaint);
   }
 
-  private fpsCounter() {
-    const now = performance.now();
-    while (this.times.length > 0 && this.times[0] <= now - 1000) {
-      this.times.shift();
-    }
+  // The rate and the drawn count publish on the same tick, so the two numbers
+  // on screen always describe the same frame.
+  private publishFrameStats() {
+    const rate = this.fpsMeter.sample();
 
-    this.times.push(now);
-    this.fps = this.times.length;
-    this.smoothedFps =
-      this.smoothedFps === 0
-        ? this.fps
-        : this.smoothedFps +
-          (this.fps - this.smoothedFps) * FPS_SMOOTHING_FACTOR;
-
-    if (now - this.lastFpsDisplayUpdateAt < FPS_DISPLAY_UPDATE_INTERVAL_MS) {
+    if (rate === null) {
       return;
     }
 
-    this.lastFpsDisplayUpdateAt = now;
-    this.fields.write("fps", Math.round(this.smoothedFps));
+    this.fields.write("fps", rate);
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -434,7 +297,7 @@ class Main {
   }
 
   private applyCameraSettingsToActiveMeshes() {
-    this.transitionMachine
+    this.shapes
       .getActiveMeshes()
       .forEach((mesh) => this.applyCameraSettings(mesh));
   }
@@ -445,24 +308,7 @@ class Main {
       throw new Error(`Unknown primitive: ${primitive}`);
     }
 
-    const points = object3D.points.map(
-      (point) => new Point3D(point[0], point[1], point[2]),
-    );
-
-    const triangles = object3D.triangles.map(
-      (triangle) =>
-        new Triangle(
-          points[triangle[0]],
-          points[triangle[1]],
-          points[triangle[2]],
-          triangle[3],
-          triangle.length > 4 ? (triangle[4] as [number, number]) : undefined,
-          triangle.length > 5 ? (triangle[5] as [number, number]) : undefined,
-          triangle.length > 6 ? (triangle[6] as [number, number]) : undefined,
-        ),
-    );
-
-    const mesh = new Mesh(points, triangles);
+    const mesh = this.meshFactory.build(object3D);
     this.applyCameraSettings(mesh);
 
     return mesh;
@@ -472,65 +318,16 @@ class Main {
     this.camera.rotate(mesh);
   }
 
-  private startTransitionToPrimitive(primitive: string, now: number) {
-    // Selection returns to the mesh row on every shape change (D11):
-    // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
-    // the object the row describes changes underneath it.
-    uiState.setState({ sceneSelection: MESH_ROW_ID });
-    const mesh = this.buildMesh(primitive);
-    this.animateShapeInfoPanel(primitive);
 
-    if (!this.currentPrimitiveName && !this.transitionMachine.getActiveMeshes().length) {
-      this.transitionMachine.playInitialEntrance(mesh, now);
-    } else {
-      this.transitionMachine.switchTo(mesh, now);
-    }
 
-    this.targetPrimitiveName = primitive;
-  }
-
-  private requestPrimitiveChange = (primitive: string) => {
-    if (primitive === this.targetPrimitiveName) {
-      return;
-    }
-
-    if (this.transitionMachine.isAnimating()) {
-      this.queuedPrimitiveName = primitive;
-      return;
-    }
-
-    this.startTransitionToPrimitive(primitive, performance.now());
-  };
-
-  private syncTransitionQueue(now: number) {
-    if (this.transitionMachine.isAnimating()) {
-      return;
-    }
-
-    if (this.targetPrimitiveName) {
-      this.currentPrimitiveName = this.targetPrimitiveName;
-    }
-
-    if (
-      this.queuedPrimitiveName &&
-      this.queuedPrimitiveName !== this.currentPrimitiveName
-    ) {
-      const nextPrimitive = this.queuedPrimitiveName;
-      this.queuedPrimitiveName = null;
-      this.startTransitionToPrimitive(nextPrimitive, now);
-      return;
-    }
-
-    this.queuedPrimitiveName = null;
-  }
 
   private renderFrame(timestamp: number) {
-    if (!this.isPlaying) {
+    if (!this.loop.isPlaying) {
       return;
     }
 
-    this.transitionMachine.update(timestamp);
-    this.syncTransitionQueue(timestamp);
+    this.shapes.update(timestamp);
+    this.shapes.syncQueue(timestamp);
 
     const renderables = this.getCurrentRenderables();
     // Rotated even while hidden, so showing the mesh again resumes the spin
@@ -542,6 +339,7 @@ class Main {
     this.renderedTriangles = this.surface3D.render(
       this.visibleRenderables(renderables),
       {
+        textures: this.textures,
         wireframe: this.wireframeEnabled,
         cullBackfaces: this.backfaceCullingEnabled,
         opacity: this.opacity,
@@ -550,13 +348,14 @@ class Main {
   }
 
   private renderPausedFrame() {
-    if (this.isPlaying) {
+    if (this.loop.isPlaying) {
       return;
     }
 
     this.renderedTriangles = this.surface3D.render(
       this.visibleRenderables(this.getCurrentRenderables()),
       {
+        textures: this.textures,
         wireframe: this.wireframeEnabled,
         cullBackfaces: this.backfaceCullingEnabled,
         opacity: this.opacity,
@@ -566,14 +365,13 @@ class Main {
   }
 
   private togglePause = () => {
-    this.isPlaying ? this.stop() : this.start();
-    this.isPlaying = !this.isPlaying;
+    this.loop.toggle();
     this.syncTransportMounts();
   };
 
   private syncTransportMounts() {
-    this.statusBar.setRunState(this.isPlaying);
-    const label = this.isPlaying ? "PAUSE" : "RESUME";
+    this.statusBar.setRunState(this.loop.isPlaying);
+    const label = this.loop.isPlaying ? "PAUSE" : "RESUME";
     document
       .querySelectorAll<HTMLElement>("[data-transport='toggle']")
       .forEach((node) => {
@@ -584,7 +382,7 @@ class Main {
     // isn't one.
     document
       .querySelectorAll<HTMLElement>(".readout__dot")
-      .forEach((node) => node.classList.toggle("is-paused", !this.isPlaying));
+      .forEach((node) => node.classList.toggle("is-paused", !this.loop.isPlaying));
   }
 
   private syncToggleButtons() {
@@ -596,10 +394,7 @@ class Main {
     // ever having existed twice.
     this.statusBar.setMode(this.wireframeEnabled);
     this.viewportHud.setMode(this.wireframeEnabled);
-    this.setShapeInfoValue(
-      this.shapeInfoShadingNode,
-      modeLabel(this.wireframeEnabled),
-    );
+    this.shapeInfo.setShading(modeLabel(this.wireframeEnabled));
     // The segmented control paints both halves at all times and .is-on decides
     // which one lights, so the flag is the whole binding: no word to write, and
     // nothing for the row or the label to do. The old text wrote the action
@@ -631,32 +426,13 @@ class Main {
     this.renderPausedFrame();
   };
 
-  private step = (timestamp: number) => {
-    this.renderFrame(timestamp);
-    this.fpsCounter();
-    this.requestAnimationID = window.requestAnimationFrame(this.step);
-  };
-
-  private start = () => {
-    this.transitionMachine.syncClock(performance.now());
-    this.requestAnimationID = window.requestAnimationFrame(this.step);
-  };
-
-  private stop = () => {
-    cancelAnimationFrame(this.requestAnimationID);
-    this.lastFpsDisplayUpdateAt = 0;
-    this.smoothedFps = 0;
-    this.renderedTriangles = 0;
-    this.fields.write("fps", 0);
-    this.publishDrawnTriangles(0);
-  };
 
   private visibleRenderables(renderables: ReturnType<Main["getCurrentRenderables"]>) {
     return this.sceneGraph.isMeshHidden() ? [] : renderables;
   }
 
   private getCurrentRenderables() {
-    return this.transitionMachine.getRenderables();
+    return this.shapes.getRenderables();
   }
 
   private attachControlListeners() {
@@ -729,14 +505,14 @@ class Main {
   }
 
   public async init(primitive: string) {
-    await loadTextures({
+    await this.textures.load({
       dog: dogUrl,
       galaxy: galaxyUrl,
     });
 
     this.controls.createSelectButton(
-      this.primitivesName,
-      this.requestPrimitiveChange,
+      this.shapes.names,
+      this.shapes.request,
     );
     // Resolution and the four camera placeholders are written once: none of
     // them changes while the console is open.
@@ -744,13 +520,13 @@ class Main {
     this.applyDefaultControlValues();
     this.attachControlListeners();
     this.syncSettingsFromControls();
-    this.syncShapeInfoPanel(primitive);
+    this.repaintForPrimitive(primitive);
     // Pushed explicitly rather than relying on the markup's seed, so the bar has
     // one source of truth from the first paint.
-    this.statusBar.setRunState(this.isPlaying);
+    this.statusBar.setRunState(this.loop.isPlaying);
     this.syncOpacitySliderAvailability();
-    this.startTransitionToPrimitive(primitive, performance.now());
-    this.start();
+    this.shapes.request(primitive);
+    this.loop.start();
   }
 }
 
