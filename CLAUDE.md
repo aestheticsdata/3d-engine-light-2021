@@ -63,8 +63,25 @@ code.
 pnpm run typecheck
 ```
 
+```bash
+pnpm run lint
+```
+
+```bash
+pnpm test
+```
+
 `pnpm run build` only transpiles — esbuild does **not** type-check. `typecheck` is the
 one that catches a broken conversion, so run it before saying anything compiles.
+
+`lint` encodes the house style mechanically in `eslint.config.mjs` — nine `no-restricted-syntax`
+selectors plus two `typescript-eslint` rules, no preset. An **error** is a new violation; the
+**warnings** are the known ones a named ticket already owns, listed in the `PENDING` map.
+
+`test` is vitest over the four pure modules whose behaviour the OOP refonte must not change —
+the store, the shape transition machine and the two standalone derivations. It runs in the
+**node** environment: nothing under test owns a canvas or a DOM node, and a suite that needs an
+emulation layer to run has stopped testing the logic.
 
 ## Styles
 
