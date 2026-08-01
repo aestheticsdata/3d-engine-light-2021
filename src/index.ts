@@ -21,7 +21,8 @@ import {
   MESH_ROW_ID,
   SceneGraph,
 } from "@ui/sceneGraph";
-import { textureKeys } from "@ui/texLabel";
+import { textureKeys, texLabel } from "@ui/texLabel";
+import { modeLabel } from "@ui/modeLabel";
 import Controls from "./controls";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
@@ -97,10 +98,13 @@ class Main {
   private readonly shapeInfoTrianglesNode: HTMLElement;
   private readonly shapeInfoTexturesNode: HTMLElement;
   private readonly shapeInfoOpacityNode: HTMLElement;
+  private readonly shapeInfoShadingNode: HTMLElement;
+  private readonly shapeInfoMaterialNode: HTMLElement;
   private readonly shapeStoryTitleNode: HTMLElement;
   private readonly shapeStoryDescriptionNode: HTMLElement;
   private readonly shapeStoryFeatureNode: HTMLElement;
   private readonly shapeStoryDensityNode: HTMLElement;
+  private readonly shapeStoryGeneratorNode: HTMLElement;
   private readonly shapeStoryReferencesNode: HTMLElement;
   private readonly wireframeBtn: HTMLElement;
   private readonly backfaceCullingBtn: HTMLElement;
@@ -153,10 +157,13 @@ class Main {
     const shapeInfoTrianglesNode = document.getElementById("shapeInfoTriangles");
     const shapeInfoTexturesNode = document.getElementById("shapeInfoTextures");
     const shapeInfoOpacityNode = document.getElementById("shapeInfoOpacity");
+    const shapeInfoShadingNode = document.getElementById("shapeInfoShading");
+    const shapeInfoMaterialNode = document.getElementById("shapeInfoMaterial");
     const shapeStoryTitleNode = document.getElementById("shapeStoryTitle");
     const shapeStoryDescriptionNode = document.getElementById("shapeStoryDescription");
     const shapeStoryFeatureNode = document.getElementById("shapeStoryFeature");
     const shapeStoryDensityNode = document.getElementById("shapeStoryDensity");
+    const shapeStoryGeneratorNode = document.getElementById("shapeStoryGenerator");
     const shapeStoryReferencesNode = document.getElementById("shapeStoryReferences");
     const wireframeBtn = document.getElementById("toggleWireframe");
     const backfaceCullingBtn = document.getElementById("toggleBackfaceCulling");
@@ -170,10 +177,13 @@ class Main {
       !shapeInfoTrianglesNode ||
       !shapeInfoTexturesNode ||
       !shapeInfoOpacityNode ||
+      !shapeInfoShadingNode ||
+      !shapeInfoMaterialNode ||
       !shapeStoryTitleNode ||
       !shapeStoryDescriptionNode ||
       !shapeStoryFeatureNode ||
       !shapeStoryDensityNode ||
+      !shapeStoryGeneratorNode ||
       !shapeStoryReferencesNode ||
       !wireframeBtn ||
       !backfaceCullingBtn ||
@@ -220,10 +230,13 @@ class Main {
     this.shapeInfoTrianglesNode = shapeInfoTrianglesNode;
     this.shapeInfoTexturesNode = shapeInfoTexturesNode;
     this.shapeInfoOpacityNode = shapeInfoOpacityNode;
+    this.shapeInfoShadingNode = shapeInfoShadingNode;
+    this.shapeInfoMaterialNode = shapeInfoMaterialNode;
     this.shapeStoryTitleNode = shapeStoryTitleNode;
     this.shapeStoryDescriptionNode = shapeStoryDescriptionNode;
     this.shapeStoryFeatureNode = shapeStoryFeatureNode;
     this.shapeStoryDensityNode = shapeStoryDensityNode;
+    this.shapeStoryGeneratorNode = shapeStoryGeneratorNode;
     this.shapeStoryReferencesNode = shapeStoryReferencesNode;
     this.wireframeBtn = wireframeBtn;
     this.backfaceCullingBtn = backfaceCullingBtn;
@@ -303,33 +316,65 @@ class Main {
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
+  // Every value in the panel is clamped to a single line, so the full string has
+  // to stay reachable somewhere; title is that somewhere. Written together with
+  // the text so a truncated value and its tooltip can never disagree.
+  private setShapeInfoValue(node: HTMLElement, value: string) {
+    node.textContent = value;
+    node.title = value;
+  }
+
   private syncShapeInfoOpacity() {
-    this.shapeInfoOpacityNode.textContent = `${Math.round(this.opacity * 100)}%`;
+    this.setShapeInfoValue(
+      this.shapeInfoOpacityNode,
+      `${Math.round(this.opacity * 100)}%`,
+    );
   }
 
   private syncShapeInfoPanel(primitive: string) {
     const object3D = this.objects3D[primitive];
     const info = shapeInfo[primitive];
-    // Derived once, in @ui/texLabel — the panel needs the key list and the
-    // status bar needs the two-value label, and they must not disagree.
+    // Derived once, in @ui/texLabel — the panel needs the key list, the MATERIAL
+    // row and the status bar need the two-value label, and the three must not
+    // disagree.
     const texturedMaterials = textureKeys(object3D);
 
     this.sceneGraph.setMeshId(primitive);
     this.statusBar.setSelected(primitive);
     this.statusBar.setTexture(object3D);
 
-    this.shapeInfoNameNode.textContent = this.formatPrimitiveName(primitive);
-    this.shapeInfoPointsNode.textContent = String(object3D.points.length);
-    this.shapeInfoTrianglesNode.textContent = String(object3D.triangles.length);
-    this.shapeInfoTexturesNode.textContent =
-      texturedMaterials.length > 0 ? texturedMaterials.join(", ") : "none";
+    this.setShapeInfoValue(
+      this.shapeInfoNameNode,
+      this.formatPrimitiveName(primitive),
+    );
+    this.setShapeInfoValue(
+      this.shapeInfoPointsNode,
+      String(object3D.points.length),
+    );
+    // The registry count, not the drawn one: this row states what the shape is
+    // made of, and it must not move when culling hides half of it. The scene
+    // graph's mesh row is the one that follows the renderer.
+    this.setShapeInfoValue(
+      this.shapeInfoTrianglesNode,
+      String(object3D.triangles.length),
+    );
+    this.setShapeInfoValue(
+      this.shapeInfoTexturesNode,
+      texturedMaterials.length > 0 ? texturedMaterials.join(", ") : "none",
+    );
+    this.setShapeInfoValue(this.shapeInfoMaterialNode, texLabel(object3D));
     this.syncShapeInfoOpacity();
 
+    // Unreachable today — every primitive in data.ts has a shapeInfo entry — and
+    // kept for the one that eventually lands without a write-up. The generator
+    // row falls back to an em dash rather than an empty slot, so the label never
+    // stands over nothing.
     if (!info) {
       this.shapeStoryTitleNode.textContent = this.formatPrimitiveName(primitive);
       this.shapeStoryDescriptionNode.textContent = "";
       this.shapeStoryFeatureNode.textContent = "";
       this.shapeStoryDensityNode.textContent = "";
+      this.shapeStoryGeneratorNode.textContent = "—";
       this.syncShapeReferences();
       return;
     }
@@ -338,6 +383,7 @@ class Main {
     this.shapeStoryDescriptionNode.textContent = info.description;
     this.shapeStoryFeatureNode.textContent = info.geometricFeature;
     this.shapeStoryDensityNode.textContent = info.densityLabel;
+    this.shapeStoryGeneratorNode.textContent = info.generator;
     this.syncShapeReferences(info.references);
   }
 
@@ -348,7 +394,7 @@ class Main {
 
     references.forEach((reference) => {
       const link = document.createElement("a");
-      link.className = "storyLink";
+      link.className = "shape-story__link";
       link.href = reference.url;
       link.textContent = reference.label;
       link.target = "_blank";
@@ -589,10 +635,18 @@ class Main {
   }
 
   private syncToggleButtons() {
+    // One modeLabel() behind all three readouts: the status bar writes the word,
+    // the HUD writes the attribute that keys the canvas filter, and SHAPE INFO's
+    // SHADING row prints it. Passing the boolean is interim and is the whole
+    // reason the mapping is a shared function — the RENDER tab ticket publishes
+    // a shadingMode slice and the argument goes away, without the label table
+    // ever having existed twice.
     this.statusBar.setMode(this.wireframeEnabled);
-    // Same modeLabel() behind both: the bar writes the word, the HUD writes the
-    // attribute that keys the canvas filter.
     this.viewportHud.setMode(this.wireframeEnabled);
+    this.setShapeInfoValue(
+      this.shapeInfoShadingNode,
+      modeLabel(this.wireframeEnabled),
+    );
     // The segmented control paints both halves at all times and .is-on decides
     // which one lights, so the flag is the whole binding: no word to write, and
     // nothing for the row or the label to do. The old text wrote the action

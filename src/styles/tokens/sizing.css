@@ -39,6 +39,14 @@
   --size-telemetry-min-h: 176px;
   --size-card-min-w: 160px;
 
+  /* NEW — the platform touch-target floor. The design tokenises no such value
+     because it draws every mobile control at its own painted size (see the note
+     at the foot of this file); this is the minimum a *hit area* has to clear,
+     which is a different measure. Only the mobile branch spends it, and only on
+     controls whose painted size must not change — .tap-pad is the idiom where a
+     pseudo-element can do the job instead. */
+  --size-touch-min: 44px;
+
   /* panels */
   --size-panel-header: 24px;       /* sidebar panels */
   --size-panel-header-card: 22px;  /* telemetry cards */

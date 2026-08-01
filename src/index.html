@@ -156,56 +156,118 @@
             <span class="placeholder-hint" id="ph-scene-row">Not backed by a real scene object yet: the sky, floor and vignette are drawn per-pixel by BackgroundRenderer and there is no lighting model (de-mock E5 / E7).</span>
           </section>
 
-          <section class="panel shapeInfo" data-mpanel="scene">
-            <div class="panel__header">
-              <span class="panel__title">shape info</span>
-            </div>
-            <div id="shapeInfoPanelContent" class="panel__body">
-              <div class="info-list">
-                <div class="info-row">
-                  <span class="info-row__label">name</span>
-                  <span id="shapeInfoName" class="info-row__value"></span>
-                </div>
-                <div class="info-row">
-                  <span class="info-row__label">points</span>
-                  <span id="shapeInfoPoints" class="info-row__value"></span>
-                </div>
-                <div class="info-row">
-                  <span class="info-row__label">triangles</span>
-                  <span id="shapeInfoTriangles" class="info-row__value"></span>
-                </div>
-                <div class="info-row">
-                  <span class="info-row__label">textures</span>
-                  <span id="shapeInfoTextures" class="info-row__value"></span>
-                </div>
-                <div class="info-row">
-                  <span class="info-row__label">opacity</span>
-                  <span id="shapeInfoOpacity" class="info-row__value"></span>
-                </div>
-              </div>
-            </div>
-          </section>
+          <!-- SHAPE INFO and SHAPE STORY are two cards inside one fade box.
+               animateShapeInfoPanel swaps both readouts on a shape change and
+               fades them as a unit, exactly as it did when they were two
+               sections of one panel; the scene graph stays outside it so its
+               selected row does not blink every time the shape changes.
 
-          <section class="panel panel--fill shapeStory" data-mpanel="scene">
-            <div class="panel__header">
-              <span class="panel__title">shape story</span>
-            </div>
-            <!-- .panelSection carries the vertical rhythm between these blocks
-                 and is still styled in main.css; the shape story ticket replaces
-                 both when it rebuilds this panel. -->
-            <div class="panel__body panel__body--scroll">
-              <div class="panelSection">
-              <h2 id="shapeStoryTitle" class="storyTitle"></h2>
-              <p id="shapeStoryDescription" class="storyText"></p>
-              <p id="shapeStoryFeature" class="storyText"></p>
-              <span class="badge badge--info">
-                <span class="badge__label">DENSITY :</span>
-                <span id="shapeStoryDensity" class="badge__value"></span>
-              </span>
-              <div id="shapeStoryReferences" class="storyLinks"></div>
+               All three elements carry data-mpanel, and each for its own reason:
+               below 900px .colLeft dissolves and the wrapper becomes a direct
+               child of #app, so it is the element that needs the tab gate's
+               order and display, while the two cards need the gate's flex: none
+               so the mobile stack stays content-sized rather than letting the
+               story card's flex: 1 fight an auto-height box. -->
+          <div id="shapeInfoPanelContent" data-mpanel="scene">
+
+            <section class="panel shapeInfo" data-mpanel="scene">
+              <div class="panel__header">
+                <span class="panel__title">shape info</span>
+                <!-- Constant, and written here rather than pushed from JS: the
+                     design drives this note from the selected scene object and
+                     this engine has exactly one mesh, so a writer would only
+                     ever emit the same word. De-mock E7 takes the id over. -->
+                <span id="shapeInfoKind" class="panel__note">MESH</span>
               </div>
-            </div>
-          </section>
+              <!-- Labels are uppercase in the markup, not text-transformed: the
+                   row label is 9px tracked type and the design sets it as
+                   literal capitals. -->
+              <div class="panel__body">
+                <div class="info-list">
+                  <div class="info-row">
+                    <span class="info-row__label">NAME</span>
+                    <span id="shapeInfoName" class="info-row__value shape-info__value"></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-row__label">POINTS</span>
+                    <span id="shapeInfoPoints" class="info-row__value shape-info__value"></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-row__label">TRIANGLES</span>
+                    <span id="shapeInfoTriangles" class="info-row__value shape-info__value"></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-row__label">TEXTURES</span>
+                    <span id="shapeInfoTextures" class="info-row__value shape-info__value"></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-row__label">OPACITY</span>
+                    <span id="shapeInfoOpacity" class="info-row__value shape-info__value"></span>
+                  </div>
+                  <!-- A div and not a border on the next row: the list's 1px gap
+                       sits either side of it, which a border would swallow. -->
+                  <div class="divider divider--inset"></div>
+                  <div class="info-row">
+                    <span class="info-row__label">SHADING</span>
+                    <span id="shapeInfoShading" class="info-row__value info-row__value--ok shape-info__value"></span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-row__label">MATERIAL</span>
+                    <span id="shapeInfoMaterial" class="info-row__value info-row__value--ok shape-info__value"></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- The one card in the console that is prose rather than telemetry.
+                 .panel--fill lets it absorb whatever height the scene graph and
+                 SHAPE INFO leave in the column; its body is the scroller, so the
+                 sidebar itself never scrolls. -->
+            <section class="panel panel--fill shape-story" data-mpanel="scene">
+              <div class="panel__header">
+                <span class="panel__title">shape story</span>
+                <!-- Carries a second class only so the mobile branch can drop it:
+                     the design's mobile card is the title alone, and hiding it
+                     there beats shipping a second header. -->
+                <span class="panel__note shape-story__note">read</span>
+              </div>
+              <div class="panel__body panel__body--scroll shape-story__body">
+                <h2 id="shapeStoryTitle" class="shape-story__title"></h2>
+                <span class="shape-story__rule" aria-hidden="true"></span>
+                <p id="shapeStoryDescription" class="shape-story__text"></p>
+                <p id="shapeStoryFeature" class="shape-story__text shape-story__text--dim"></p>
+                <span class="badge badge--info">
+                  <span class="badge__label">DENSITY</span>
+                  <span id="shapeStoryDensity" class="badge__value"></span>
+                </span>
+                <div class="shape-story__footer">
+                  <div class="shape-story__row">
+                    <span class="shape-story__key">GENERATOR</span>
+                    <span id="shapeStoryGenerator" class="shape-story__value"></span>
+                  </div>
+                  <div class="shape-story__row">
+                    <span class="shape-story__key">WINDING</span>
+                    <!-- A literal, not a data field: every primitive in this
+                         engine emits counter-clockwise triangles, and commit
+                         2fab553 normalised the torus knot and the Menger sponge
+                         so backface culling works uniformly. If a primitive ever
+                         lands with the opposite winding this moves into
+                         ShapeInfo alongside `generator`. -->
+                    <span class="shape-story__value">counter-clockwise</span>
+                  </div>
+                  <!-- Not in the mockup: COS-212 shipped the reference links and
+                       this rebuild keeps them, as the value slot of a third row.
+                       syncShapeReferences fills the container; the row hides
+                       itself when a shape has none. -->
+                  <div class="shape-story__row shape-story__row--refs">
+                    <span class="shape-story__key">REFERENCES</span>
+                    <div id="shapeStoryReferences" class="shape-story__links"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
 
         </div>
 
