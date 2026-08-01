@@ -90,6 +90,7 @@ them.
 | `static` / `abstract` / `protected` / `implements` | `grep -rnE '\b(static\|abstract\|protected\|implements)\b' --include='*.ts' src/` | **0 code hits** | 0 — unchanged (D4) |
 | Module-scope `let` | `grep -rn '^let ' --include='*.ts' src/` | **3** — `torusKnot.ts:94,134`, `rhombicTriacontahedron.ts:105` | 0 |
 | `tsc --noEmit` | `pnpm run typecheck` | **exit 0, zero errors** | exit 0 |
+| behaviour harness | `pnpm test` | **18 tests, 3 files, green** (recorded at T03, the first ticket that could) | green, plus the fps meter suite T13 owes |
 
 The typecheck baseline is clean: `tsc --noEmit` reported no errors on its first run, so
 T01 fixed none and the gate starts green. Every later ticket inherits that as a hard

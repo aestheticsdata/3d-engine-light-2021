@@ -9,6 +9,7 @@
       "@rendering/*": ["src/rendering/*"],
       "@ui/*": ["src/ui/*"]
     },
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
