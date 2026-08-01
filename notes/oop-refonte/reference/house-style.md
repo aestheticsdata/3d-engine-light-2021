@@ -229,7 +229,7 @@ no preset, no stylistic pack. Everything not in this table is enforced by review
 | R1 — no `export default class` / `export class` | `no-restricted-syntax` | 0 | error |
 | R3 — no parameter properties | `@typescript-eslint/parameter-properties` (`prefer: class-property`) | 0 | error |
 | R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | `@typescript-eslint/explicit-member-accessibility` | 2 — `Point2D.ts:10,13` | warn → error at **COS-372** |
-| R15 — no module-level mutable state | `no-restricted-syntax` | 3 — `torusKnot.ts:94,134`, `rhombicTriacontahedron.ts:105` | warn → error at **COS-362 / COS-366** |
+| R15 — no module-level mutable state | `no-restricted-syntax` | 0 — cleared by **COS-362 / COS-366** | error |
 | I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 4 — `Mesh.ts:22,32,38,44` | warn → error at **COS-372** |
 | D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
 

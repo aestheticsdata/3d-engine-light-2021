@@ -43,6 +43,22 @@ The script bundles `@data/data` through Vite's own build, so it resolves the
 `vite.config.js`. It touches no DOM, imports nothing from `src/ui` or `src/app`,
 and adds no dependency — Vite is already a devDependency.
 
+### What it caught, once, so nobody has to learn it twice
+
+Extracting the shared vector math in COS-386 replaced `[v[0]/len, v[1]/len,
+v[2]/len]` with `scale(v, 1/len)`. The two disagree in the last bit. That was
+enough to flip two of the truncated cuboctahedron's octagons inside-out, because
+the winding test in `PolyhedronBuilder.orderFaceVertices` compares a dot product
+against zero and those faces sit near the threshold. Forty lines of the baseline
+moved; nothing else would have noticed.
+
+The rule that follows: **in this folder, do not rewrite an arithmetic expression
+into an equivalent one.** Reassociating a sum, folding a division into a
+reciprocal, or hoisting a common factor are all behaviour changes here, because
+several windings are decided by the sign of a near-zero float. The torus knot
+still normalises by reciprocal and `Vec3Math` still normalises by division, on
+purpose and with the reason written beside each.
+
 ### What the baseline does not cover
 
 The **drawn**-triangle count — what the readouts and the scene-graph mesh row

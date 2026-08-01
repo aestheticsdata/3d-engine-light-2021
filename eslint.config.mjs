@@ -88,10 +88,6 @@ const RESTRICTED = [
 // `off`, and never an inline disable comment. Each entry names the ticket that
 // deletes it. When this array is empty, delete it and the block below with it.
 const PENDING = {
-  // R15 — two module-scope `let` bindings at :94 and :134.
-  "src/data/shapes/torusKnot.ts": "COS-362",
-  // R15 — one module-scope `let` at :105.
-  "src/data/shapes/rhombicTriacontahedron.ts": "COS-366",
   // I4 — four `for…in` loops at :22, :32, :38, :44.
   "src/primitives/Mesh.ts": "COS-372",
 };
