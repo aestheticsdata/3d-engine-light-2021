@@ -44,6 +44,7 @@ import StatusBar from "@ui/StatusBar";
 import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
 import { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import TransportBar from "@ui/TransportBar";
+import FramerateWidget from "@ui/telemetry/FramerateWidget";
 import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
 
@@ -79,6 +80,7 @@ class Main {
   private readonly transport: TransportBar;
   private readonly sliders: SliderBank;
   private readonly picker: PrimitivePicker;
+  private readonly framerate: FramerateWidget;
   private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
@@ -147,6 +149,7 @@ class Main {
         this.animateShapeInfoPanel(primitive);
       },
     });
+    this.framerate = new FramerateWidget();
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -316,14 +319,21 @@ class Main {
 
   // The rate and the drawn count publish on the same tick, so the two numbers
   // on screen always describe the same frame.
+  //
+  // The framerate widget's history push is unconditional and runs every call:
+  // its 90-sample buffer is 90 rendered frames, not 90 publishes, which is
+  // what keeps the header's "90 frames" literal true. Its render() — the DOM
+  // writes and the canvas repaint — rides the same throttle as fps below.
   private publishFrameStats() {
     const rate = this.fpsMeter.sample();
+    this.framerate.pushSample(this.fpsMeter.rawFps);
 
     if (rate === null) {
       return;
     }
 
     this.fields.write("fps", rate);
+    this.framerate.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -413,6 +423,7 @@ class Main {
     this.pipeline.syncOpacityAvailability();
     this.uiState.resetAll();
     this.syncPipelineReadouts();
+    this.framerate.reset();
   };
 }
 

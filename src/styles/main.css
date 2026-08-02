@@ -28,6 +28,7 @@
 @import url(components/toolbar.css);
 @import url(components/viewport.css);
 @import url(components/status-bar.css);
+@import url(components/framerate.css);
 @import url(layout.css);
 
 /* Base rules. These replace the old grey-page body wholesale — the console is

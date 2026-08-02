@@ -31,6 +31,14 @@ class FPSMeter {
     this.lastDisplayUpdateAt = 0;
   }
 
+  // The unsmoothed, unthrottled per-call reading. sample() updates it on every
+  // call regardless of the publish throttle, so a caller that needs one point
+  // per rendered frame — the framerate widget's sparkline — reads this instead
+  // of sample()'s return value.
+  public get rawFps(): number {
+    return this.fps;
+  }
+
   // Returns the rounded smoothed rate when the throttle window has elapsed, and
   // null otherwise.
   public sample(): number | null {

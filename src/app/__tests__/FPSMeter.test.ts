@@ -64,6 +64,23 @@ describe("sample", () => {
   });
 });
 
+describe("rawFps", () => {
+  // The framerate widget's sparkline needs a value every rendered frame, not
+  // once per 90ms — reading the throttled sample() return would flatten the
+  // history to the publish cadence instead of one point per frame.
+  it("updates on every call even while the publish throttle returns null", () => {
+    const clock = { value: 1000 };
+    const meter = new FPSMeter(() => clock.value);
+
+    meter.sample();
+    expect(meter.rawFps).toBe(1);
+
+    clock.value = 1000 + WINDOW_MS - 1;
+    expect(meter.sample()).toBeNull();
+    expect(meter.rawFps).toBe(2);
+  });
+});
+
 describe("reset", () => {
   it("lets the next sample publish immediately", () => {
     const clock = { value: 1000 };
