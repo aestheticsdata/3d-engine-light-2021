@@ -3,7 +3,7 @@
 // The design offers six modes — POINTS / WIRE / FLAT / GOURAUD / DEPTH /
 // NORMALS — but the renderer only distinguishes wireframe from filled today, so
 // this collapses to two. The remaining four become real in de-mock E3, and the
-// RENDER tab takes ownership of a `shadingMode` slice in uiState at that point.
+// RENDER tab takes ownership of a `shadingMode` slice in the store at that point.
 //
 // Ownership: drafted here by the status-bar ticket, which was the first
 // consumer. The RENDER tab extends this function rather than declaring a second

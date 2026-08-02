@@ -93,19 +93,12 @@ class UiStateStore {
 
   // Iterating the live Set is deliberate: a listener that subscribes from
   // inside a notification is reached in that same pass, and a setState raised
-  // from inside one runs its pass immediately. The change detector at
-  // index.ts:276-283 is shaped around both. Spreading the Set into an array
-  // first looks like tidying and silently changes them.
+  // from inside one runs its pass immediately. Main's mesh-hidden change
+  // detector (src/app/Main.ts) is shaped around both. Spreading the Set into an
+  // array first looks like tidying and silently changes them.
   private notify() {
     this.listeners.forEach((listener) => listener(this.state));
   }
 }
-
-// Stage one of three, and the reason this file still holds a module-scope
-// binding. The scene graph registers its slice and reads the store from module
-// scope (sceneGraph.ts:47,53,208), so it cannot take an injected instance until
-// COS-361 rebuilds it as a class. COS-392 then deletes this line and moves the
-// construction into Main's constructor, where the instance belongs.
-export const uiState = new UiStateStore();
 
 export default UiStateStore;
