@@ -1,0 +1,12 @@
+language js(typescript)
+
+// I4 — the iteration-form ruling in the house style's inconsistencies table.
+//
+// The node form is deliberate: the equivalent snippet only matches the `for (const k in o)`
+// spelling and silently misses `for (k in o)`, which is the same bug this rule is about.
+JsForInStatement() as $loop where {
+    register_diagnostic(
+        span = $loop,
+        message = "I4: use `for…of`. `for…in` over an array yields string indices, not elements."
+    )
+}

@@ -1,18 +1,25 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    // No `baseUrl`: it is deprecated, and without it every `paths` target is resolved
+    // relative to this file — hence the leading `./`, which is load-bearing. Dropping it
+    // does not fail loudly, it just stops resolving the alias.
+    //
+    // The same aliases are declared again in vite.config.js, which resolves them itself
+    // with path.resolve and is unaffected by this. Add to both or the build breaks.
     "paths": {
-      "@animations/*": ["src/animations/*"],
-      "@app/*": ["src/app/*"],
-      "@primitives/*": ["src/primitives/*"],
-      "@data/*": ["src/data/*"],
-      "@img/*": ["src/img/*"],
-      "@textures/*": ["src/textures/*"],
-      "@rendering/*": ["src/rendering/*"],
-      "@ui/*": ["src/ui/*"]
+      "@animations/*": ["./src/animations/*"],
+      "@app/*": ["./src/app/*"],
+      "@primitives/*": ["./src/primitives/*"],
+      "@data/*": ["./src/data/*"],
+      "@img/*": ["./src/img/*"],
+      "@textures/*": ["./src/textures/*"],
+      "@rendering/*": ["./src/rendering/*"],
+      "@ui/*": ["./src/ui/*"]
     },
     "module": "ESNext",
-    "moduleResolution": "node",
+    // `node` is TypeScript's node10 algorithm, deprecated and removed in TS 7. Vite is a
+    // bundler, so `bundler` is the mode that actually describes how this project resolves.
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "target": "ESNext",

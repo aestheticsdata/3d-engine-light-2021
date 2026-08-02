@@ -1,0 +1,23 @@
+language js(typescript)
+
+// R1 — a bare `class X {}`, then `export default X;` as the last line.
+//
+// Node patterns, not backtick snippets. A snippet only matches a class whose
+// declaration reads literally `class NAME { … }`, so type parameters, `abstract`, a
+// decorator or any heritage clause each defeat it silently — and
+// `export default abstract class Thing {}` slipped past the entire plugin set that way.
+// `class StateMachine<C, S>` is a real shape in this repo, so this is not hypothetical.
+//
+// The two branches are genuinely different nodes: `export class X {}` is a JsExport
+// wrapping a JsClassDeclaration, while `export default class X {}` is a
+// JsClassExportDefaultDeclaration. The conformant `class X {}` + `export default X;`
+// matches neither, because there the export wraps an identifier rather than a class.
+or {
+    JsExport() where { $target <: contains JsClassDeclaration() },
+    JsClassExportDefaultDeclaration()
+} as $target where {
+    register_diagnostic(
+        span = $target,
+        message = "R1: declare a bare `class X {}` and `export default X;` on the last line."
+    )
+}

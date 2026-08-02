@@ -1,0 +1,27 @@
+language js(typescript)
+
+// R15 — no module-level mutable state.
+//
+// `not within JsFunctionBody()` is what makes this module-level rather than a blanket
+// ban: a `let` inside a method is the owning class's own business, and only a
+// top-level one is shared state. It is the half of the ESLint selector
+// (`Program > VariableDeclaration`) that a bare pattern cannot express.
+//
+// The regex is a full match against the statement's source text, so `const letter`
+// cannot trigger it. `[\s\S]` rather than `.` because a declaration may wrap.
+//
+// `declare let` is a separate node — a TsDeclareStatement, invisible to
+// JsVariableStatement — and it is in scope for the same reason ESLint's selector caught
+// it: it asserts an ambient mutable binding, which is the thing R15 exists to keep out
+// of module scope. The anchor is what confines it to `let`, leaving `declare const`
+// and `declare function` alone.
+or {
+    JsVariableStatement() as $plain where { $plain <: r"^let\b[\s\S]*" },
+    TsDeclareStatement() as $ambient where { $ambient <: r"^declare\s+let\b[\s\S]*" }
+} as $statement where {
+    $statement <: not within JsFunctionBody(),
+    register_diagnostic(
+        span = $statement,
+        message = "R15: no module-level mutable state. Make it `const`, or move it onto the class that owns it."
+    )
+}

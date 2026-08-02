@@ -71,13 +71,26 @@ pnpm run lint
 pnpm test
 ```
 
+```bash
+pnpm run lint:rules
+```
+
 `pnpm run build` only transpiles — esbuild does **not** type-check. `typecheck` is the
 one that catches a broken conversion, so run it before saying anything compiles.
 
-`lint` encodes the house style mechanically in `eslint.config.mjs` — ten `no-restricted-syntax`
-selectors plus three `typescript-eslint` rules, no preset. Every rule is an **error** across all
-of `src/`, with no per-file downgrade and no inline disable anywhere in the repo, so any
-violation the run reports is a new one.
+`lint` is **Biome** (`biome.json`) — formatter, linter and import organiser in one, and
+`lint:fix` writes the fixes. It encodes the house style mechanically: two native rules
+plus eight Grit plugins in `biome-plugins/`, with the rule preset set to `none` so
+nothing but the house style is reported. Every rule is an **error** across all of `src/`,
+with no per-file downgrade and no inline suppression anywhere in the repo, so any
+violation the run reports is a new one. Biome also covers CSS, HTML and SVG, which ESLint
+did not.
+
+`lint:rules` is the one you must not skip after touching a plugin or bumping Biome. A Grit
+plugin that matches nothing reports nothing, so a broken rule looks exactly like a clean
+codebase — `lint` passing proves nothing about whether the rules still work. `lint:rules`
+runs them against `scripts/lint-fixtures/` and fails if any rule stops firing, or starts
+over-firing. Both directions are checked.
 
 `test` is vitest over the four pure modules whose behaviour the OOP refonte must not change —
 the store, the shape transition machine and the two standalone derivations. It runs in the

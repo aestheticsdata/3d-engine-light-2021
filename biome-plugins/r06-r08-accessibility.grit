@@ -1,0 +1,41 @@
+language js(typescript)
+
+// R6 + R8 — every field and method carries an explicit modifier.
+//
+// Constructors are exempt, and that is the house form rather than an oversight: not
+// one of the eleven owner-written classes writes `public constructor`. COS-360 proved
+// what enforcing it costs — nine errors, every one in a file the house style was
+// recovered from.
+//
+// The exemption is free here. `JsConstructorClassMember` is its own node type, so
+// naming the other four member kinds is what excludes it. Biome's native
+// `useConsistentMemberAccessibility` has no equivalent escape hatch — its only option
+// is `accessibility`, so switching it on would flag all eleven constructors and
+// re-open the ruling COS-360 closed. That is why this rule is a plugin.
+//
+// The check is bound to `modifiers` rather than to the member as a whole. `contains`
+// walks the entire subtree, so testing the member itself meant a `private` on some
+// class declared *inside* a method body satisfied the check and suppressed the real
+// violation on the method — a rule that silently exempts exactly the largest members.
+//
+// `$name <: not JsPrivateClassMemberName()` excludes `#field`. TypeScript rejects
+// `private #x` outright (TS18010), so demanding a modifier there asks for something
+// unwritable, and with no inline suppressions in this repo the first `#field` anyone
+// added would make lint unpassable. The ESLint rule skipped them for the same reason.
+// The two signature nodes cover `declare` fields and bare method overload signatures,
+// which are their own node types and were invisible to the four concrete ones.
+or {
+    JsPropertyClassMember(modifiers = $modifiers, name = $name),
+    JsMethodClassMember(modifiers = $modifiers, name = $name),
+    JsGetterClassMember(modifiers = $modifiers, name = $name),
+    JsSetterClassMember(modifiers = $modifiers, name = $name),
+    TsPropertySignatureClassMember(modifiers = $modifiers, name = $name),
+    TsMethodSignatureClassMember(modifiers = $modifiers, name = $name)
+} as $member where {
+    $modifiers <: not contains TsAccessibilityModifier(),
+    $name <: not JsPrivateClassMemberName(),
+    register_diagnostic(
+        span = $member,
+        message = "R6/R8: every field and method carries an explicit accessibility modifier."
+    )
+}

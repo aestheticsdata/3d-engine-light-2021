@@ -295,25 +295,58 @@ the conflict was read off in the original tree, not where anything is today.
 
 ## What is enforced mechanically
 
-`pnpm run lint` (`eslint.config.mjs`) encodes the rules below and **nothing else** —
-no preset, no stylistic pack. Everything not in this table is enforced by review.
+`pnpm run lint` (`biome.json`) encodes the rules below and **nothing else** — the
+`recommended` preset is off, so there is no stylistic pack and no imported baseline.
+Everything not in this table is enforced by review.
 
-| Rule | Lint rule | Baseline | Severity |
+Two of the eight are native Biome rules. The other six are Grit plugins in `biome-plugins/`
+— eight files, because D4 needs three — since Biome has no `no-restricted-syntax`: a custom
+rule is a plugin or it does not exist. COS-397 moved them over from ESLint.
+
+| Rule | Mechanism | Baseline | Severity |
 | -- | -- | -- | -- |
-| R1 — no `export default class` / `export class` | `no-restricted-syntax` | 0 | error |
-| R3 — no parameter properties | `@typescript-eslint/parameter-properties` (`prefer: class-property`) | 0 | error |
-| R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | `@typescript-eslint/explicit-member-accessibility` | 0 — cleared by **COS-372** | error |
-| R15 — no module-level mutable state | `no-restricted-syntax` | 0 — cleared by **COS-362 / COS-366** | error |
-| I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 0 — cleared by **COS-372** | error |
-| D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
-| R19 — `import type` for type-only bindings | `@typescript-eslint/consistent-type-imports` (`fixStyle: separate-type-imports`) | 0 — cleared by **COS-395** | error |
-| R20 — acronyms keep their capitals in a type name | `no-restricted-syntax` | 0 — cleared by **COS-396** | error |
+| R1 — no `export default class` / `export class` | plugin `r01-export-class.grit` | 0 | error |
+| R3 — no parameter properties | native `noParameterProperties` | 0 | error |
+| R6 + R8 — explicit modifier on fields, accessors and methods (**not** constructors) | plugin `r06-r08-accessibility.grit` | 0 — cleared by **COS-372** | error |
+| R15 — no module-level mutable state | plugin `r15-no-module-let.grit` | 0 — cleared by **COS-362 / COS-366** | error |
+| I4 — `for…of`, never `for…in` | plugin `i04-for-of.grit` | 0 — cleared by **COS-372** | error |
+| D4 — no `implements`, `abstract`, `protected` or inheritance | plugins `d04-no-inheritance.grit`, `d04-no-abstract.grit`, `d04-no-protected.grit` | 0 | error |
+| R19 — `import type` for type-only bindings | native `useImportType` (`style: separatedType`) | 0 — cleared by **COS-395** | error |
+| R20 — acronyms keep their capitals in a type name | plugin `r20-acronym-case.grit` | 0 — cleared by **COS-396** | error |
 
-A rule with a non-zero baseline is `warn`, never `off`, and never silenced with an
-inline disable — the file is downgraded whole and the config names the ticket that
-raises it. **No baseline is non-zero any more.** Every rule is an error across all of
-`src/`, the per-file downgrade blocks are gone from `eslint.config.mjs`, and there is
-not one inline disable comment in the repo. Total today: **0 errors, 0 warnings.**
+R6 + R8 is a plugin rather than the native `useConsistentMemberAccessibility` for one
+reason: the native rule's only option is `accessibility`, so it has no way to exempt
+constructors and would fire on all eleven owner-written classes — the nine-error
+inversion COS-360 hit and ruled against. The plugin gets the exemption for free, since
+`JsConstructorClassMember` is its own node type and the rule simply does not name it.
+
+Every rule is an error across all of `src/`, with no per-file downgrade and no inline
+disable comment anywhere in the repo. Total today: **0 errors, 0 warnings.**
+
+### Why `pnpm run lint` passing is not enough
+
+A Grit plugin whose pattern matches nothing reports nothing, and Biome does not treat
+that as an error. A typo in a node name — or a grammar change in a Biome upgrade, which
+the Biome docs warn about explicitly — switches a rule off **silently**, and a silently
+disabled rule is indistinguishable from a clean codebase.
+
+`pnpm run lint:rules` is what tells the two apart. It runs the plugins against
+`scripts/lint-fixtures/`, where `violations.ts` breaks every rule a known number of times
+and `conformant.ts` must stay clean, and it fails if any count moves. Run it after
+touching a plugin or bumping Biome. The count matters as much as the presence: R6 + R8
+must not claim the exempt constructor, and R20 must not claim `UIStateStore` or `dogUrl`.
+
+**Write the awkward shape into the fixture, not the easy one.** An adversarial pass over
+the first version of these plugins found four rules with silent holes, and `lint:rules`
+was green throughout — because every hole was a shape the fixture did not contain. A
+backtick snippet matches only a class written literally `class NAME { … }`, so a type
+parameter, a decorator, `abstract` or a heritage clause each defeated R1 in silence, and
+`export default abstract class` was invisible to every plugin at once. R20 missed any
+acronym in the *middle* of a name because Grit anchors a top-level `|` as `^ARM1|ARM2$`,
+anchoring each arm at one end only. R6 + R8 exempted any member whose body happened to
+declare a class with a modifier, because `contains` walks the whole subtree. None of that
+was visible from a passing run; all of it was visible the moment the fixture grew a
+generic class and a nested one.
 
 Deliberately **not** linted: R17 (file length) — line-count linting produces noise; and
 R18 (comments) — a judgement call no rule can make.
