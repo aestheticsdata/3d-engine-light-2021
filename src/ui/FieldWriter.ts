@@ -17,7 +17,7 @@
 //   shell        buildDesktop, buildMobile, fps, trisDrawn
 //   status bar   statusLabel, selectedId, shadingMode, texLabel
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
-//   frame time   frameMs
+//   frame time   frameMs, frameTimeNote
 //   system       uptime
 
 class FieldWriter {

@@ -544,11 +544,143 @@
                   </div>
                 </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- No data-mpanel: mobile shows the BUDGETS card and the
+                   FRAME TIME stat card below instead of this content, not a
+                   restyle of it (COS-224). -->
+              <section class="panel panel--fill frame-time">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">frame time</span>
+                  <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 frame-time__body">
+                  <div class="frame-time__bar">
+                    <span
+                      class="frame-time__segment"
+                      data-state="unattributed"
+                      data-placeholder="true"
+                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                      aria-describedby="ph-frame-time"
+                    ></span>
+                  </div>
+                  <div class="frame-time__legend">
+                    <div class="frame-time__legendRow">
+                      <span class="frame-time__swatch frame-time__swatch--transform"></span>
+                      <span class="frame-time__legendLabel">TRANSFORM</span>
+                      <span
+                        class="frame-time__legendValue"
+                        data-placeholder="true"
+                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash;</span>
+                    </div>
+                    <div class="frame-time__legendRow">
+                      <span class="frame-time__swatch frame-time__swatch--clip"></span>
+                      <span class="frame-time__legendLabel">CLIP / CULL</span>
+                      <span
+                        class="frame-time__legendValue"
+                        data-placeholder="true"
+                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash;</span>
+                    </div>
+                    <div class="frame-time__legendRow">
+                      <span class="frame-time__swatch frame-time__swatch--raster"></span>
+                      <span class="frame-time__legendLabel">RASTERIZE</span>
+                      <span
+                        class="frame-time__legendValue"
+                        data-placeholder="true"
+                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash;</span>
+                    </div>
+                    <div class="frame-time__legendRow">
+                      <span class="frame-time__swatch frame-time__swatch--present"></span>
+                      <span class="frame-time__legendLabel">PRESENT</span>
+                      <span
+                        class="frame-time__legendValue"
+                        data-placeholder="true"
+                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash;</span>
+                    </div>
+                  </div>
+                  <div class="frame-time__footer">
+                    <span class="frame-time__footerLabel">FILL RATE</span>
+                    <span
+                      class="frame-time__footerValue"
+                      data-placeholder="true"
+                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                      aria-describedby="ph-frame-time"
+                    >&mdash; px/f</span>
+                  </div>
+                </div>
+              </section>
+              <span class="placeholder-hint" id="ph-frame-time">Per-phase frame timing is not instrumented yet (de-mock E6).</span>
+
+              <!-- Mobile-only: BUDGETS' shell and its first block. The
+                   geometry ticket appends a POLY BUDGET block inside
+                   .budgets__body below the frame-time block. -->
+              <section class="panel budgets" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">budgets</span>
+                  <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
+                </div>
+                <div class="panel__body budgets__body">
+                  <div class="budgets__frameTime">
+                    <div class="budgets__frameTimeLabelRow">
+                      <span class="budgets__frameTimeLabel">FRAME TIME</span>
+                      <span class="budgets__frameTimeSub">transform &middot; clip &middot; raster &middot; present</span>
+                    </div>
+                    <div class="frame-time__bar">
+                      <span
+                        class="frame-time__segment"
+                        data-state="unattributed"
+                        data-placeholder="true"
+                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      ></span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
+                   primitives bar its own rows. -->
+              <section
+                class="panel frame-time-stats"
+                data-mpanel="stats"
+                data-placeholder="true"
+                title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                aria-describedby="ph-frame-time"
+              >
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">frame time</span>
+                  <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
+                </div>
+                <div class="panel__body panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">TRANSFORM</span>
+                      <span class="stat-row__value stat-row__value--dim stat-row__value--transform">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">CLIP / CULL</span>
+                      <span class="stat-row__value stat-row__value--dim stat-row__value--clip">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">RASTERIZE</span>
+                      <span class="stat-row__value stat-row__value--dim stat-row__value--raster">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">PRESENT</span>
+                      <span class="stat-row__value stat-row__value--dim stat-row__value--present-text">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">FILL RATE</span>
+                      <span class="stat-row__value stat-row__value--dim">&mdash; px</span>
+                    </div>
+                  </div>
+                </div>
               </section>
               <section class="panel panel--fill" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
