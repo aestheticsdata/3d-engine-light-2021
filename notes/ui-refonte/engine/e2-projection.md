@@ -65,7 +65,7 @@ Reject-per-triangle, not clip-per-triangle: a triangle straddling the near plane
 
 ### The widgets
 
-`projection` joins `uiState`; the PERSPECTIVE / ORTHOGRAPHIC pair, the HUD chip and the status-bar segment all read it and drop their placeholder markers. The CAMERA card's FOV / ASPECT row becomes live on the FOV slider (aspect stays constant at 1.60). DISTANCE stays `fl / k` in both modes — the rig's eye distance is still defined in orthographic, it just stops governing apparent size; note that in the widget so nobody "fixes" it to read `∞`.
+`projection` joins `UIStateStore`; the PERSPECTIVE / ORTHOGRAPHIC pair, the HUD chip and the status-bar segment all read it and drop their placeholder markers. The CAMERA card's FOV / ASPECT row becomes live on the FOV slider (aspect stays constant at 1.60). DISTANCE stays `fl / k` in both modes — the rig's eye distance is still defined in orthographic, it just stops governing apparent size; note that in the widget so nobody "fixes" it to read `∞`.
 
 ## Constraints and risks
 
@@ -87,9 +87,9 @@ Reject-per-triangle, not clip-per-triangle: a triangle straddling the near plane
 - `src/primitives/Mesh.ts` — `setCamera(record)` replaces `changeFocal` / `changeOffsetZ`
 - `src/index.ts` — own the camera record; `changeZoom` writes `k`; new `changeFov` and `changeProjection` mirroring it, both calling `renderPausedFrame`; `applyCameraSettings` collapses to one assignment
 - `src/ui/inspector/worldTab.ts` — the projection pair becomes stateful and real; the FOV slider drops its clamp and its placeholder marker
-- `src/ui/uiState.ts` — `projection` and `fov` become engine-backed
-- `src/ui/viewportHud.ts` — projection chip reads `uiState.projection`
-- `src/ui/statusBar.ts` — projection segment reads the same value
+- `src/ui/UIStateStore.ts` — `projection` and `fov` become engine-backed
+- `src/ui/ViewportHUD.ts` — projection chip reads `store.projection`
+- `src/ui/StatusBar.ts` — projection segment reads the same value
 - `src/ui/telemetry/CameraWidget.ts` — NEAR / FAR restored, FOV / ASPECT live on the slider
 
 ## Done when

@@ -32,14 +32,14 @@ The mockup's `STATIC_INFO` has no repo equivalent, so build one: `SceneObjectInf
 
 Every value must be derived from an engine constant, with the constant named in a code comment. Nothing invented:
 
-- Mesh — exactly what `syncShapeInfoPanel` computes today (`src/index.ts` L283–L315): NAME, POINTS, TRIANGLES (registry count), TEXTURES via `textureNames()`, OPACITY, plus SHADING and MATERIAL; story from `shapeInfo[key]`.
+- Mesh — exactly what `syncShapeInfoPanel` computes today (`src/index.ts` L283–L315): NAME, POINTS, TRIANGLES (registry count), TEXTURES via `MaterialSummary.textureKeys`, OPACITY, plus SHADING and MATERIAL; story from `shapeInfo[key]`.
 - Floor — cell size `3.4 × 4.2` (BackgroundRenderer L81–L82), `COLUMNS 144` (L86 `halfColumns = 72`, doubled), `HORIZON 0.57 h` (L77), `FOCAL 0.95 w` (L79), `CAMERA 1.75` (L80). Export those constants from `BackgroundRenderer` rather than retyping them. **Every one of them is deleted or re-derived by E5a**, which puts the floor under the scene camera: the horizon moves to `vpY`, the focal becomes the camera's, the centre moves from `0.6 w` to the canvas centre, and the cell size becomes the grid step in metres. If E5a is in, write the record against the new constants; if it is not, write it against these and expect E5a to update it. Do not let the record become the only surviving reference to a hand-tuned constant nobody uses any more.
 - Sky — gradient stop count and the four stops (L30–L33), bitmap coverage `0.62 h` (L41), `ALPHA 0.90` (L52).
 - Light — `MODEL none`, `CONTRIBUTION none`, and a story paragraph saying the renderer is unlit until E3. A truthful empty record beats a plausible fake one.
 
 ### Selection drives the panels
 
-`uiState.sceneSelection` already exists (shell, D2; the scene-graph ticket writes it). SHAPE INFO and SHAPE STORY currently ignore it and stay bound to the active primitive. Subscribe both to the selection and render the selected object's record. Three things this must not break:
+`store.sceneSelection` already exists (shell, D2; the scene-graph ticket writes it). SHAPE INFO and SHAPE STORY currently ignore it and stay bound to the active primitive. Subscribe both to the selection and render the selected object's record. Three things this must not break:
 
 1. **The fade.** `animateShapeInfoPanel` (`src/index.ts` L334–L358) runs a 180ms fade-out, swaps the text, then fades in, on `#shapeInfoPanelContent` which the shape-info ticket kept wrapping both cards. Selection change must reuse that same path, not a second animation.
 2. **The element-id contract.** `Main`'s constructor resolves **22** ids via `getElementById` and throws `"UI controls are missing."` if any is absent (`src/index.ts` L130–L177; D2 and the shell ticket both say 21 and are off by one — the 22nd is `opacitySlider`, which is additionally narrowed to `HTMLInputElement`). They include `shapeInfoName`, `shapeInfoPoints`, `shapeInfoTriangles`, `shapeInfoTextures`, `shapeInfoOpacity` and the shape-info ticket's `shapeInfoKind` / `shapeInfoShading` / `shapeInfoMaterial`. Making the row list data-driven means the labels stop being literal markup — the shape-info ticket writes them literally on purpose. Preferred path: render `.info-row` pairs from the record into `.info-list`, keep the legacy ids on the mesh template's value spans, and migrate those five constructor lookups out of the constructor in the same change. It touches D2's contract, so coordinate it explicitly in the PR; the fallback is keeping the ids and accepting a mesh-shaped template.
@@ -47,7 +47,7 @@ Every value must be derived from an engine constant, with the constant named in 
 
 Two rules survive from the UI epic: picking a primitive returns selection to the mesh row (D11), and the mesh row keeps one id and one row through the 1250ms transition even though `getRenderables()` returns two meshes (`shapeTransitionMachine.ts` L96–L126) — the id flips when `currentPrimitiveName` does (`src/index.ts` L468–L488) and the count is the sum.
 
-The status bar reads the same selection through `setField` rather than the active primitive.
+The status bar reads the same selection through `FieldWriter.write` rather than the active primitive.
 
 ### Screen-space bounding box
 
@@ -90,10 +90,10 @@ Non-mesh objects: `FLOOR_01` brackets the region below the horizon (`top = 0.57 
 - `src/primitives/Point3D.ts` — `project(out)` with the denominator guard; `convert3D2D()` delegates to it
 - `src/rendering/BackgroundRenderer.ts` — export the floor and sky constants; `setLayers({sky, floor})` if world-tab has not shipped it
 - `src/index.ts` — construct the `Scene`, render `scene.renderables()` at L500 and L512, publish selection and bounds, route the opacity write through the selected record, reset selection on primitive change
-- `src/ui/sceneGraph.ts` — rows built from `Scene` instead of the hardcoded four; remove the row 2–3 placeholder markers
-- `src/ui/uiState.ts` — selection and per-object visibility slices
-- `src/ui/viewportHud.ts` — bracket rect and label from the selection; delete the placeholder constants
-- `src/ui/statusBar.ts` — selected id from the selection
+- `src/ui/scene/SceneGraphPanel.ts` — rows built from `Scene` instead of the hardcoded four; remove the row 2–3 placeholder markers
+- `src/ui/UIStateStore.ts` — selection and per-object visibility slices
+- `src/ui/ViewportHUD.ts` — bracket rect and label from the selection; delete the placeholder constants
+- `src/ui/StatusBar.ts` — selected id from the selection
 - `src/styles/components/viewport.css` — bracket consumes `--sel-*`; delete the hardcoded percentages and the 190px square in both branches
 - `src/index.html` — SHAPE INFO row template becomes the record's render target
 

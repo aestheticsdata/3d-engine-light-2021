@@ -104,7 +104,7 @@ Presets write the three angles and zero `spinAccum`. The mockup's pairs (yaw `[0
 
 Attach to `canvas#canvasID`. `viewport-hud` already made `.viewportHud` `pointer-events: none` for exactly this, so nothing is in the way. Use Pointer Events so mouse, pen and touch share one path, with `setPointerCapture` on down so a drag that leaves the canvas keeps tracking.
 
-- **Drag orbit.** `yaw += dx * 0.4`, `pitch -= dy * 0.4`, clamped, written back to the sliders and `uiState` in the same frame. 0.4 °/px is a full turn across a 900px sweep; the stage is 848 CSS px at the design frame, so one drag across the viewport is one revolution. The canvas backing store is 1024 wide against an 848 CSS box, but a rotation *delta* is degrees per CSS pixel — no backing-store conversion, and say so in a comment so nobody adds one.
+- **Drag orbit.** `yaw += dx * 0.4`, `pitch -= dy * 0.4`, clamped, written back to the sliders and `UIStateStore` in the same frame. 0.4 °/px is a full turn across a 900px sweep; the stage is 848 CSS px at the design frame, so one drag across the viewport is one revolution. The canvas backing store is 1024 wide against an 848 CSS box, but a rotation *delta* is degrees per CSS pixel — no backing-store conversion, and say so in a comment so nobody adds one.
 - **Wheel zoom.** Normalise `deltaMode` (Firefox reports lines: multiply by 16), then `zoomSlider += -deltaY * 0.05` clamped 0..100 and pushed through the existing `changeZoom`. Register with `{ passive: false }` and `preventDefault()`, or the page scrolls under the cursor. macOS trackpad pinch arrives as a wheel event with `ctrlKey: true` — treat it as zoom and `preventDefault` it too, otherwise the browser page-zooms.
 - **Pinch.** Track active pointers in a `Map`; with two down, `slider = startSlider + 30 * Math.log2(dist / startDist)` clamped — spreading the fingers to twice the separation moves the slider 30 points, and the log makes the gesture symmetric in and out.
 - **Double-tap reset.** Two `pointerup` events of `pointerType === "touch"` within 300 ms and 24 CSS px reset the rig (angles, `spinAccum`, zoom) and nothing else. It deliberately does *not* run the toolbar RESET — nuking shading, materials and toggles on a stray double tap is worse than useless. RESET (D7) continues to restore these values as part of restoring everything.
@@ -132,8 +132,8 @@ Attach to `canvas#canvasID`. `viewport-hud` already made `.viewportHud` `pointer
 - `src/index.ts` — delete `rotateMesh`, the two rotation divisors, `centerX` / `centerY` and the UI-space rate mapping; own the rig, the frame clock and `requestRender`; apply the matrix in `renderFrame`, `renderPausedFrame` and `buildMesh`; rebase the clock in `start()`
 - `src/ui/inspector/shapeTab.ts` — TRANSFORM rows become degrees, ranges and formats per the table
 - `src/ui/inspector/worldTab.ts` — the five preset chips call `applyPreset`
-- `src/ui/uiState.ts` — rotation slices become absolute degrees; spin becomes °/s
-- `src/ui/viewportHud.ts` — `cam.pos` / `cam.rot` / `target` / `dist` and the gizmo transforms; drop their placeholder markers and the hint strip's
+- `src/ui/UIStateStore.ts` — rotation slices become absolute degrees; spin becomes °/s
+- `src/ui/ViewportHUD.ts` — `cam.pos` / `cam.rot` / `target` / `dist` and the gizmo transforms; drop their placeholder markers and the hint strip's
 - `src/ui/telemetry/CameraWidget.ts` — POSITION from `eyePosition()`, ROTATION reverted from SPIN RATE to Euler degrees
 - `src/ui/shortcutsPanel.ts` — drop the GESTURES card's pending note (E1b)
 - `src/styles/components/viewport.css` — `cursor: grab` / `grabbing`, `touch-action: none` on the canvas
@@ -149,7 +149,7 @@ Attach to `canvas#canvasID`. `viewport-hud` already made `.viewportHud` `pointer
 - [ ] `cam.pos` equals `target + Rᵀ·[0,0,-d]` — verify at rest (`0.0 0.0 -320.0` at the default zoom) and after a 90° yaw, where it must move onto the X axis
 - [ ] `dist` stays positive across the whole zoom slider (560 → 80) and `cam.rot` stays inside (−180, 180]
 - [ ] The gizmo tracks the drag every frame; the numeric readouts stay on the 90 ms gate
-- [ ] Dragging the viewport orbits, and does so while paused; the TRANSFORM sliders and `uiState` follow the drag in the same frame
+- [ ] Dragging the viewport orbits, and does so while paused; the TRANSFORM sliders and `UIStateStore` follow the drag in the same frame
 - [ ] Wheel zoom moves the zoom slider, never scrolls the page, works with `deltaMode: 1`, and treats `ctrlKey` wheel as zoom
 - [ ] On touch: one-finger drag orbits, two-finger pinch zooms symmetrically in and out, double-tap resets angles, spin and zoom only — not shading, materials or toggles
 - [ ] The toolbar RESET still restores every rig value (D7)

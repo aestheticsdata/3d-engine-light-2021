@@ -81,7 +81,7 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 | Canvas filter | `saturate(.5) contrast(1.2)` / `saturate(1.05) contrast(1.05)` | placeholder — a cosmetic CSS filter keyed off the same `modeLabel()`, not shading; de-mock `Shading modes` deletes the rules |
 | Projection chip | `PERSPECTIVE` | placeholder — engine is perspective-only (`DEFAULT_FOCAL_LENGTH = 300`); de-mock `Perspective / orthographic` |
 | Resolution chip | `1024 × 640` | real — `canvasID.width` × `canvasID.height`. The design's `848 × 530` is the CSS box, not the backing store; show the backing store, since that is what the rasterizer works at |
-| Texture chip | `TEXTURED` / `SOLID` | real — `texLabel(primitive)` from `src/ui/texLabel.ts`, owned and exported by the shape-info ticket (D5) and rendered verbatim by the SHAPE INFO MATERIAL row. Import it; do not re-derive it and never print `NO TEXTURE`. De-mock `Texture picker` owns the CHECKER / SOLID / UV GRID / NO TEXTURE set |
+| Texture chip | `TEXTURED` / `SOLID` | real — `MaterialSummary.label` from `src/ui/MaterialSummary.ts`, owned by the shape-info ticket (D5) and rendered verbatim by the SHAPE INFO MATERIAL row. Take the same instance; do not re-derive it and never print `NO TEXTURE`. De-mock `Texture picker` owns the CHECKER / SOLID / UV GRID / NO TEXTURE set |
 | `cam.pos` | `0.0 1.2 12.0` | placeholder — the engine rotates the mesh; there is no camera transform; de-mock `Orbit camera` |
 | `cam.rot` | `0.0° 0.0° 0.0°` | placeholder — the pitch/yaw/roll sliders are rotation-rate inputs, not camera Euler angles: pitch and yaw are 0–800 offset by `centerY` / `centerX` and divided by `PITCH_YAW_ROTATION_DIVISOR = 110`, roll is −1000–1200 divided by `ROLL_ROTATION_DIVISOR = 500` (`src/index.ts` L18–L19, L426–L439). The epic keeps those rate semantics (D9), so there is no angle to print. Do not render them as degrees; de-mock `Orbit camera` |
 | `target` | `0.0 1.2 0.0` | placeholder — hardcoded in the design too (L203); de-mock `Orbit camera` |
@@ -93,7 +93,7 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 | `zoom` | `<n>%` | real — `#zoomSlider.value` |
 | `status` | `RUNNING` / `PAUSED` | real — `isPlaying` |
 | tris drawn | `<n>` | real, drawn count — the number `Surface3D.render(renderables, options)` returns, not the registry count (D6) |
-| frame ms (mobile) | `<n> ms` | real — a `data-field="frameMs"` node fed by `setField`. The frame-time ticket owns the single measured value (`performance.now()` around the `Surface3D.render` call, smoothed on the 90ms display gate); do not compute a second value from smoothed fps. Frame-time lands after this ticket, so the chip shows an em dash until it does |
+| frame ms (mobile) | `<n> ms` | real — a `data-field="frameMs"` node fed by `FieldWriter.write`. The frame-time ticket owns the single measured value (`performance.now()` around the `Surface3D.render` call, smoothed on the 90ms display gate); do not compute a second value from smoothed fps. Frame-time lands after this ticket, so the chip shows an em dash until it does |
 | Hint strip text (desktop only) | `drag orbit · scroll zoom` | placeholder — the canvas has no pointer handlers; de-mock `Orbit camera` |
 
 ## Files
@@ -101,7 +101,7 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 - `src/index.html` — insert `.viewportStage > canvas#canvasID` plus the `.viewportHud` layer elements into the viewport card the shell skeleton provides. The shell ticket deletes the legacy `#canvasWrapper` and `canvas` CSS (D2); this ticket only changes markup.
 - `src/styles/components/viewport.css` (new) — stage, letterbox, layer anchors, the crosshair, selection bracket and gizmo, the local `backdrop-filter: none` overrides, and the six `[data-shading-mode]` filter rules. Both branches.
 - `src/styles/main.css` — add the component import after the token imports.
-- `src/ui/viewportHud.ts` (new) — builds the layer DOM once and exposes `update(state)`; owns the placeholder constants and their de-mock annotations. Imports `sceneObjectId` from `src/ui/sceneObjectId.ts` and `setField` from `src/ui/fields.ts` (shell), `modeLabel()` from the render-tab module, and `texLabel` from `src/ui/texLabel.ts` (shape-info).
+- `src/ui/ViewportHUD.ts` (new) — `class ViewportHUD`, constructed with the canvas and the shared `FieldWriter`; builds the layer DOM once and exposes `seed()`, `setMode(wireframeEnabled)` and `setZoom(sliderValue, distance)`; owns the placeholder constants and their de-mock annotations. Imports `sceneObjectId` from `src/ui/sceneObjectId.ts` and `modeLabel()` from `src/ui/modeLabel.ts`, and is handed the `MaterialSummary` from `src/ui/MaterialSummary.ts` (shape-info) rather than deriving the label itself.
 - `src/index.ts` — construct `ViewportHUD` and call `update()` from `fpsCounter()` and after `renderPausedFrame()`, writing through shell's field writer so the HUD and the telemetry cards cannot show different triangle counts.
 
 ## Done when

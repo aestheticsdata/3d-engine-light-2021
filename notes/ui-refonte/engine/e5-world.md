@@ -124,7 +124,7 @@ E5b depends on E5a for the projector and the fog curve's home.
 - `src/primitives/Point3D.ts` — `xValue` and `yValue` accessors
 - `src/primitives/Triangle.ts` — `TriangleRenderOptions.fog` and the fog overlay fill
 - `src/index.ts` — world state on `Main`; `changeFog` / `changeGridStep` / layer setters mirroring `changeZoom` (apply, then `renderPausedFrame()`); pass `focal` and `zOffset` into the render call
-- `src/ui/uiState.ts` — `grid`, `shadow`, `fog`, `gridStep` stop being inert
+- `src/ui/UIStateStore.ts` — `grid`, `shadow`, `fog`, `gridStep` stop being inert
 - `src/ui/shortcuts.ts` — the `G` binding moves to `pendingHandler`
 - `src/ui/inspector/worldTab.ts`, `src/ui/quickToggles.ts`, `src/index.html` — remove the placeholder affordance from GRID OVERLAY, GROUND SHADOW, FOG, GRID STEP, the GRID pill and the `units: metres` segment
 - Amended tickets: `world-tab.md` (FOG default 0), `quick-toggles.md` and `shortcuts.md` (GRID is no longer a placeholder)

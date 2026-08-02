@@ -40,19 +40,22 @@ All five top rows are already computed by `syncShapeInfoPanel(primitive)` in `sr
 | NAME | e.g. `Torus Knot` | `this.formatPrimitiveName(primitive)` (index.ts L294, helper at L272–L277) |
 | POINTS | e.g. `288` | `String(object3D.points.length)` (index.ts L295) |
 | TRIANGLES | e.g. `576` | `String(object3D.triangles.length)` (index.ts L296) — the **registry** count (D6), static per shape. Deliberately not the drawn count the scene graph and the toolbar show |
-| TEXTURES | `dog, galaxy` or `none` | `textureNames(primitive)`, see below |
+| TEXTURES | `dog, galaxy` or `none` | `MaterialSummary.textureKeys`, see below |
 | OPACITY | e.g. `100%` | `` `${Math.round(this.opacity * 100)}%` `` via `syncShapeInfoOpacity()` (index.ts L279–L281), re-run from `changeOpacity` on every slider input |
 | SHADING | `WIRE` or `FLAT` | `modeLabel()`, owned by the render-tab ticket (D5), see below |
-| MATERIAL | `TEXTURED` or `SOLID` | `texLabel(primitive)`, owned here, see below |
+| MATERIAL | `TEXTURED` or `SOLID` | `MaterialSummary.label`, owned here, see below |
 
-**`texLabel` is this ticket's export (D5).** New `src/ui/texLabel.ts`, keyed by primitive key, holding the derivation that is currently inline at index.ts L286–L298:
+**The texture derivation is this ticket's export (D5).** It shipped as the class `MaterialSummary` in `src/ui/MaterialSummary.ts` — constructed from the `Object3D`, not keyed by primitive key — holding the derivation that was inline in the old `Main`:
 
-- `textureNames(key): string[]` — dedup of the triangle material slot, `Array.from(new Set(objects3D[key].triangles.map(t => t[3]).filter(m => typeof m === "string" && !m.startsWith("rgba"))))`. The TEXTURES row joins it with `", "` and falls back to `"none"`.
-- `texLabel(key): "TEXTURED" | "SOLID"` — non-empty list → `TEXTURED`, otherwise `SOLID`. The MATERIAL row renders it verbatim.
+- `new MaterialSummary(object3D)` — dedups the triangle material slot once in the constructor, `Array.from(new Set(object3D.triangles.map(t => t[3]).filter(isTextureKey)))`, frozen.
+- `get textureKeys(): readonly string[]` — the deduped list. The TEXTURES row joins it with `", "` and falls back to `"none"`.
+- `get label(): "TEXTURED" | "SOLID"` — non-empty list → `TEXTURED`, otherwise `SOLID`. The MATERIAL row renders it verbatim.
 
-`TEXTURED` / `SOLID` are the only two strings. The viewport-hud texture chip and the status-bar texture segment import `texLabel` and must not produce `NO TEXTURE` or an uppercased material list. The row is still `placeholder` in the sense that there is no material picker — the mockup's `TEX` map (CHECKER / SOLID / UV GRID / NO TEXTURE) belongs to de-mock E4.
+One instance per shape change, shared by all three surfaces: that is the point of the class, and why the two getters read one field instead of each re-running the pipeline.
 
-**`modeLabel` is render-tab's export (D5), consumed here.** Until render-tab lands, SHADING carries the interim derivation `this.wireframeEnabled ? "WIRE" : "FLAT"`, pushed from `toggleWireframe` and `resetControls`. When render-tab ships `shadingMode` in `uiState` and exports `modeLabel()`, this row switches to the import and the interim derivation is deleted — there must never be two copies of the mapping. The other four modes in the mockup's `MODES` map (POINTS, GOURAUD, DEPTH, NORMALS) are de-mock E3.
+`TEXTURED` / `SOLID` are the only two strings. The viewport-hud texture chip and the status-bar texture segment take the same `MaterialSummary` and must not produce `NO TEXTURE` or an uppercased material list. The row is still `placeholder` in the sense that there is no material picker — the mockup's `TEX` map (CHECKER / SOLID / UV GRID / NO TEXTURE) belongs to de-mock E4.
+
+**`modeLabel` is render-tab's export (D5), consumed here.** Until render-tab lands, SHADING carries the interim derivation `this.wireframeEnabled ? "WIRE" : "FLAT"`, pushed from `toggleWireframe` and `resetControls`. When render-tab ships `shadingMode` in `UIStateStore` and exports `modeLabel()`, this row switches to the import and the interim derivation is deleted — there must never be two copies of the mapping. The other four modes in the mockup's `MODES` map (POINTS, GOURAUD, DEPTH, NORMALS) are de-mock E3.
 
 `ShapeInfo.textureSummary` in `src/data/shapeInfo.ts` stays unused by this panel — the derived material list is real data and the hand-written summary is not. Do not swap to it; removing the field is out of scope.
 
@@ -70,10 +73,10 @@ Shell has already replaced `src/index.html` wholesale and re-provided every id `
 ## Files
 
 - `src/index.html` — the SHAPE INFO card; keep `#shapeInfoPanelContent` as the fade wrapper around both this card and the story card.
-- `src/ui/texLabel.ts` (new) — `textureNames()` and `texLabel()`, exported for viewport-hud and status.
+- `src/ui/MaterialSummary.ts` (new) — the `textureKeys` / `label` getters, consumed by viewport-hud and status.
 - `src/styles/components/shapeInfo.css` (new) — the value clamp, the fade wrapper (`#shapeInfoPanelContent` box + `will-change`) and the relocated fade classes and keyframes. No panel, header, info-row or divider rules; those are primitives'.
 - `src/styles/main.css` — import the new component stylesheet; delete the superseded `.panelSection` / `.infoRow` / `.infoLabel` / `.infoValue` rules (L102–L128), `.panelHeader` (L41–L43) and `#shapeInfoPanel` (L58–L60). Leave `.panelTitle` / `.panelSubTitle` (L45–L56) to the shape-story ticket, which removes their last user, and leave `.panelContent` (L62–L64) to shell (D2).
-- `src/index.ts` — add the three new node lookups; call `textureNames` / `texLabel` instead of the inline dedup; extend `syncShapeInfoPanel` to write MATERIAL; push SHADING from `toggleWireframe` and `resetControls`.
+- `src/index.ts` — add the three new node lookups; build one `MaterialSummary` per shape change instead of the inline dedup; extend `syncShapeInfoPanel` to write MATERIAL; push SHADING from `toggleWireframe` and `resetControls`.
 
 ## Done when
 
@@ -83,8 +86,8 @@ Shell has already replaced `src/index.html` wholesale and re-provided every id `
 - [ ] TRIANGLES shows the registry count and does **not** move when culling is toggled; the scene-graph mesh row does.
 - [ ] OPACITY updates while dragging the opacity slider and resets to `100%` when backface culling is switched on.
 - [ ] SHADING flips between `FLAT` and `WIRE` when the wireframe toggle changes, and resets with `resetControls`.
-- [ ] MATERIAL reads `TEXTURED` on the cube and `SOLID` on every other primitive, sourced from `texLabel()`.
-- [ ] `src/ui/texLabel.ts` is the only place the `rgba(` material filter appears; `grep -rn "startsWith(\"rgba\")" src` returns exactly one hit.
+- [ ] MATERIAL reads `TEXTURED` on the cube and `SOLID` on every other primitive, sourced from `MaterialSummary.label`.
+- [ ] `src/ui/MaterialSummary.ts` is the only place the `rgba(` material filter appears; `grep -rn "startsWith(\"rgba\")" src` returns exactly one hit.
 - [ ] Changing shape still plays the 180ms fade-out / fade-in on the info and story cards together, with no flicker on the scene graph, an unchanged 8px gap between the two cards, and the story card still absorbing the leftover column height.
 - [ ] The fade classes and keyframes live in `shapeInfo.css` and are byte-identical in timing and transform to the `main.css` originals.
 - [ ] A long value (`dog, galaxy`) ellipsises instead of wrapping or overflowing the 264px column, and exposes the full text via `title`.

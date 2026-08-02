@@ -1,6 +1,6 @@
 # Quick toggles: SKY / FLOOR / GRID / WIRE / CULL
 
-Five one-tap toggles for the most-used scene switches. One component, two mounts: on desktop they float over the viewport as translucent blurred pills, on mobile they drop out of the viewport into a five-column grid of large buttons underneath it. Four of the five drive the renderer — WIRE and CULL through the RENDER tab's booleans, SKY and FLOOR through the `BackgroundRenderer.setLayers` call the WORLD tab ships. Only GRID is a placeholder. This ticket owns no state, no colour table and no engine call: it is a second surface on `src/ui/uiState.ts`, and it lands after the SHAPE, RENDER and WORLD tab tickets that create the slices it reads.
+Five one-tap toggles for the most-used scene switches. One component, two mounts: on desktop they float over the viewport as translucent blurred pills, on mobile they drop out of the viewport into a five-column grid of large buttons underneath it. Four of the five drive the renderer — WIRE and CULL through the RENDER tab's booleans, SKY and FLOOR through the `BackgroundRenderer.setLayers` call the WORLD tab ships. Only GRID is a placeholder. This ticket owns no state, no colour table and no engine call: it is a second surface on `src/ui/UIStateStore.ts`, and it lands after the SHAPE, RENDER and WORLD tab tickets that create the slices it reads.
 
 **Design source** — `3D Engine UI.dc.html` desktop L186–L190, mobile L740–L744. Shared state factory `quick(label, key)` at L1333–L1341, list order at L1409.
 
@@ -30,18 +30,18 @@ Both branch mounts exist in the DOM simultaneously and the inactive one is hidde
 
 | Field | Value shown | Source today |
 | --- | --- | --- |
-| SKY | pill active / inactive | real — `uiState.sky`, applied through `BackgroundRenderer.setLayers({ sky, floor })`, which the WORLD tab ticket adds. Defaults **ON**: `renderSky` and `renderAtmosphere` run unconditionally today (`src/rendering/BackgroundRenderer.ts` L16–L26). |
-| FLOOR | pill active / inactive | real — `uiState.floor`, same `setLayers` call; skipping it skips `renderFloor`. Defaults **ON** for the same reason. |
-| GRID | pill active / inactive | `placeholder` — `uiState.grid`, defaults **OFF**. Nothing in the renderer draws a grid at all; owned by de-mock E5 "World layers". Default OFF so the pill never claims something the canvas is not showing, and the WORLD tab's GRID OVERLAY row defaults OFF with it — one boolean, one default. |
-| WIRE | pill active while wireframe on | real — `uiState.wireframe`, backing `Main.wireframeEnabled`, passed as `wireframe` in `TriangleRenderOptions` to `Surface3D.render`. Engine default is `false` (`src/index.ts` L197); keep the engine default, not the design's `wire: true`. |
-| CULL | pill active while culling on | real — `uiState.cull`, backing `Main.backfaceCullingEnabled`, passed as `cullBackfaces`. Engine default is `true` (`src/index.ts` L198); keep it, not the design's `cull: false`. |
+| SKY | pill active / inactive | real — `store.sky`, applied through `BackgroundRenderer.setLayers({ sky, floor })`, which the WORLD tab ticket adds. Defaults **ON**: `renderSky` and `renderAtmosphere` run unconditionally today (`src/rendering/BackgroundRenderer.ts` L16–L26). |
+| FLOOR | pill active / inactive | real — `store.floor`, same `setLayers` call; skipping it skips `renderFloor`. Defaults **ON** for the same reason. |
+| GRID | pill active / inactive | `placeholder` — `store.grid`, defaults **OFF**. Nothing in the renderer draws a grid at all; owned by de-mock E5 "World layers". Default OFF so the pill never claims something the canvas is not showing, and the WORLD tab's GRID OVERLAY row defaults OFF with it — one boolean, one default. |
+| WIRE | pill active while wireframe on | real — `store.wireframe`, backing `Main.wireframeEnabled`, passed as `wireframe` in `TriangleRenderOptions` to `Surface3D.render`. Engine default is `false` (`src/index.ts` L197); keep the engine default, not the design's `wire: true`. |
+| CULL | pill active while culling on | real — `store.cull`, backing `Main.backfaceCullingEnabled`, passed as `cullBackfaces`. Engine default is `true` (`src/index.ts` L198); keep it, not the design's `cull: false`. |
 | Pill order | SKY, FLOOR, GRID, WIRE, CULL | static, L1409 |
 
 The design's own defaults (`sky/floor/grid: true`, `wire: true`, `cull: false`, L1179–L1180) contradict the engine's on three of the five. State the rule in a code comment: defaults mirror what the renderer actually draws today.
 
 Wiring rules:
 
-- **No store here.** All five booleans live in `src/ui/uiState.ts`, shipped by the shell ticket and sliced by shape-tab, render-tab and world-tab. This component subscribes, writes, and repaints; it must not open a private store and must not call the renderer directly.
+- **No store here.** All five booleans live in `src/ui/UIStateStore.ts`, shipped by the shell ticket and sliced by shape-tab, render-tab and world-tab. This component subscribes, writes, and repaints; it must not open a private store and must not call the renderer directly.
 - WIRE and CULL go through the shared path the RENDER tab ticket owns. CULL's coupled behaviour is owned there and on the SHAPE tab and must not regress when the flip comes from a pill: turning culling on sets `#opacitySlider` to 100, calls `changeOpacity(100)`, then `syncOpacitySliderAvailability()`, which disables the slider and hides its follow-cursor tooltip. Flipping CULL from a pill has to reproduce that exactly.
 - SKY and FLOOR go through the WORLD tab ticket's `BackgroundRenderer.setLayers`.
 - Every flip ends in `renderPausedFrame()` so the pills stay honest while the loop is stopped.
@@ -53,7 +53,7 @@ Out of scope: the design's keyboard handler binds `s` `f` `g` `w` `c` to these f
 
 ## Files
 
-- `src/ui/quickToggles.ts` — new; builds the five buttons, exposes `mount(container)`, subscribes to `src/ui/uiState.ts` and repaints on change. No local state.
+- `src/ui/quickToggles.ts` — new; builds the five buttons, exposes `mount(container)`, subscribes to `src/ui/UIStateStore.ts` and repaints on change. No local state.
 - `src/styles/components/quick-toggles.css` — new; the two container placements only (the absolute HUD row and the mobile grid), not the pill recipe
 - `src/index.html` — the desktop mount point inside the reserved `.viewportHud` band, and the mobile grid container between the viewport card and the FRAMERATE card
 - `src/index.ts` — mount both containers at boot

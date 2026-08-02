@@ -12,6 +12,14 @@ The eleven files this was read off: `Point2D.ts`, `Point3D.ts`, `Matrix3D.ts`,
 
 > Citations verified line by line against the working tree on 2026-08-01: 187 checked,
 > 7 corrected. Re-verify before trusting a line number after a large refactor.
+>
+> COS-356 landed after that date and was exactly such a refactor, so treat the line
+> numbers as approximate. Citations into the **eleven recovered files** are kept as
+> written even where the epic has since moved them: they are the evidence the rules were
+> read off, not a claim about today's tree. One of the eleven, the root-level
+> `controls.ts`, no longer exists at all — COS-373 split it into `SliderBank` and
+> `PrimitivePicker` (see decisions.md D3). Where a rule's only live example was in a file
+> the epic deleted, it has been repointed at a current one.
 
 ---
 
@@ -92,11 +100,13 @@ Never a bare `foo() {}`. `BackgroundRenderer.ts:16` then `:28,57,76,141`;
 
 ### R9 — an arrow class property **only** when the method is handed to `addEventListener` and needs a bound `this`
 
-The only two occurrences in the repo are `tooltip.ts:37`
-(`public hide = () => {}`) and `tooltip.ts:41` (`private onMouseMove = …`), both
-registered at `tooltip.ts:32-34`. `controls.ts:9,46` attaches inline arrows instead
-because nothing needs re-binding — that is fine, but a *named* handler must be an
-arrow property.
+The two original occurrences are `tooltip.ts:37` (`public hide = () => {}`) and
+`tooltip.ts:41` (`private onMouseMove = …`), both registered at `tooltip.ts:32-34`. The
+epic added two more on the same pattern: `PrimitivePicker.ts:54`
+(`private onSelectionChange = …`, handed to `addEventListener`) and
+`scene/SceneGraphPanel.ts:68` (`private paint = …`, handed to the store's `subscribe`).
+An *inline* arrow at the registration site needs no re-binding and stays inline — that
+is fine; it is the *named* handler that must be an arrow property.
 
 **This is the rule most likely to break silently.** A regular method passed as a
 listener loses `this` and fails at runtime, not at compile time.
@@ -129,11 +139,11 @@ constructor. The majority form wins.
 `Point3D.ts`, `Matrix3D.ts`, `Mesh.ts`, `Surface3D.ts`, `Triangle.ts`,
 `StateMachine.ts`, `BackgroundRenderer.ts`.
 
-Three legacy exceptions keep their camelCase names: `controls.ts` (class `Controls`,
-`:1`), `shapeTransitionMachine.ts` (class `ShapeTransitionMachine`, `:138`) and
-`tooltip.ts` (class `FollowCursorTooltip`, `:9` — which does not even share the class's
-stem). Do not rename them opportunistically; `index.ts:1,11,26` imports all three by
-specifier.
+Two legacy exceptions keep their camelCase names: `shapeTransitionMachine.ts` (class
+`ShapeTransitionMachine`) and `tooltip.ts` (class `FollowCursorTooltip`, `:9` — which
+does not even share the class's stem). Do not rename them opportunistically; each is
+imported by specifier, `tooltip` at `RenderPipelinePanel.ts:20`. There was a third,
+`controls.ts`, but COS-373 deleted the file rather than renaming it.
 
 ### R14 — camelCase members, verb-led; booleans read as predicates
 
@@ -150,18 +160,21 @@ Allowed:
   (`:36`), the `states` table (`:44-136`). They are `const` arrows, never `function`,
   and never exported.
 
-Module-level **mutable** state: none in the recovered set. Do not introduce it.
-`src/ui/uiState.ts:40-41` (`const state`, `const listeners`) is the one place the repo
-already breaks this, and COS-367 is the ticket that fixes it.
+Module-level **mutable** state: none in the recovered set, and none in the tree today.
+Do not introduce it. The one file that broke this held the UI store's `state` and
+`listeners` containers at module scope; it is now the class
+[`src/ui/UIStateStore.ts`](../../../src/ui/UIStateStore.ts), which holds both as
+private fields, and COS-392 removed the last module-scope binding by making `Main`
+construct the store and inject it.
 
 ### R16 — import through the path alias, always, including within the same directory
 
 `Point3D.ts:1` imports `@primitives/Point2D`; `Mesh.ts:1-2` and `Triangle.ts:55-57`
-likewise. The six aliases — `@animations`, `@primitives`, `@data`, `@textures`,
-`@rendering`, `@ui` — are declared in **both** `tsconfig.json:4-11` and
-`vite.config.js:17-25`. **Add to both or the build breaks.** There is no alias for the
-`src/` root, which is why `controls.ts` is imported relatively; a new class belongs in
-an aliased folder, not at the root.
+likewise. The eight aliases — `@animations`, `@app`, `@primitives`, `@data`, `@img`,
+`@textures`, `@rendering`, `@ui` — are declared in **both** `tsconfig.json:9-18` and
+`vite.config.js:18-27`. **Add to both or the build breaks.** There is deliberately no
+alias for the `src/` root: `src/index.ts` is the only file left there and it is the
+ignition line, so a new class belongs in an aliased folder rather than beside it.
 
 ### R17 — one class per file, split past roughly 160 lines of code
 
@@ -176,7 +189,7 @@ lines after COS-383. `shapeTransitionMachine.ts` was 205 raw and **174 code** wi
 comment lines, so it genuinely breached, and the state table that made up 45% of it is
 exactly what COS-388 moved out — it is 69 code lines now.
 
-The one live exemption is `src/app/Main.ts`, at 282 code lines, and it is exempt by
+The one live exemption is `src/app/Main.ts`, at 286 code lines, and it is exempt by
 ownership rather than by length: see **D7** in `decisions.md`.
 
 ### R18 — comments explain *why*, never *what*, in full sentences
@@ -184,18 +197,18 @@ ownership rather than by length: see **D7** in `decisions.md`.
 Two forms, both `//`:
 - **File-header block** on algorithmically non-obvious modules — `Triangle.ts:1-53`
   (two `-----` ruled section titles, the affine matrix drawn in ASCII, a "Why UVs are
-  optional" rationale). Same shape at `data/builder.ts:1-69`.
+  optional" rationale). Same shape at `data/builders/MeshBuilder.ts:1-29`.
 - **Short inline rationale** at the decision point, two to four lines, stating the
-  constraint that forced the code — `tooltip.ts:20-22`, `index.ts:82-85,90-92,286-288`
-  — plus one-line labels for algorithm phases
+  constraint that forced the code — `tooltip.ts:20-22`, `app/Main.ts:61-65,67-69` —
+  plus one-line labels for algorithm phases
   (`Triangle.ts:120,148,161,176,184,211,219`).
 
 Density is deliberately uneven: self-evident classes carry **zero** comments —
-`Point2D`, `Point3D`, `Mesh`, `Surface3D`, `StateMachine`, `controls` and
-`BackgroundRenderer` have none at all. Do not narrate plain code.
+`Point2D`, `Point3D`, `Mesh`, `Surface3D`, `StateMachine` and `BackgroundRenderer` have
+none at all. Do not narrate plain code.
 
 No JSDoc in new code. The only `/** */` in the tree is on three `SceneRow` interface
-fields (`sceneGraph.ts:26,29,31`); it is not the house form and is not a precedent.
+fields (`scene/sceneRows.ts:11,14,16`); it is not the house form and is not a precedent.
 
 ### R19 — a binding used only in a type position is imported with `import type`
 
@@ -270,7 +283,7 @@ it while letting it through.
   (`:14-15,18-21`) compile. New code must not lean on it: annotate nullable
   collaborators explicitly as the owner does at `Surface3D.ts:13`
   (`BackgroundRenderer | null`) and `BackgroundRenderer.ts:4`, and guard with `?.` or an
-  early return (`Surface3D.ts:27`, `controls.ts:5,17,26,37`).
+  early return (`Surface3D.ts:27`, `PrimitivePicker.ts:36,45`, `SliderBank.ts:67`).
 - **No `experimentalDecorators`** — decorators are unavailable; do not propose them.
 - `resolveJsonModule`, `esModuleInterop`, `moduleResolution: node`
   (`tsconfig.json:12-14`).
@@ -285,7 +298,7 @@ it while letting it through.
 | I2 | Getter among the fields vs after the constructor | `Point3D.ts:8` vs `Triangle.ts:102`, `StateMachine.ts:58` | After the constructor (R12) |
 | I3 | Public mutable field vs getter | `Matrix3D.ts:2-4` vs `Point2D.ts:10` | Getter, unless an outside class legitimately writes it — `Point3D.ts:11-12` (R7) |
 | I4 | Iteration form | `for (const i in …)` over arrays at `Mesh.ts:22,32,38,44` vs `for (const … of …)` at `Surface3D.ts:38` | `for…of` — `for…in` yields string indices |
-| I5 | File name casing | `BackgroundRenderer.ts` vs `tooltip.ts`, `shapeTransitionMachine.ts`, `controls.ts` | New class files match the class name exactly (R13) |
+| I5 | File name casing | `BackgroundRenderer.ts` vs `tooltip.ts`, `shapeTransitionMachine.ts` | New class files match the class name exactly (R13) |
 | I6 | Stray `;` after a method body | `Matrix3D.ts:29,37` | No terminator after a method body |
 
 I2, I3, I4 and I6 no longer have a live counter-example anywhere in `src/`: COS-372 and
@@ -372,14 +385,19 @@ through the alias). R9 is the one that breaks at runtime rather than at review.
 
 ## Where the codebase stands against these rules
 
-The engine — `src/primitives/`, `src/rendering/`, `src/animations/` — holds them. The
-UI layer does not: `sceneGraph.ts:69,210`, `tabs.ts:21,106`, `statusBar.ts:18,40` and
-`viewportHud.ts:50,90` are `export const createX = () => ({…})` factory closures each
-followed by a redundant `export default`; `fields.ts:18,28` is a plain exported helper
-with the same redundant default; `uiState.ts` is a module-scope singleton store with
-five named exports and module-level mutable state (`:40-41`).
+The whole tree holds them. **COS-356 is complete.** Its thirty-four tickets converted
+the UI layer, decomposed the catch-all `index.ts` into `src/app/`, and brought the
+geometry and engine layers up to the footing `src/primitives/`, `src/rendering/` and
+`src/animations/` already had.
 
-**That is not an open question.** Converting the UI layer is decided and scoped as
-Linear epic **COS-356**. Until a COS-356 ticket covers a given module, leave its current
-form alone rather than converting it as a side effect of touching the file — and when a
-ticket does cover it, hold every rule above.
+The factory-closure form the rules above were written against is gone.
+`grep -rc 'export const create' src` returns zero, and the modules that carried it are
+now the classes `SceneGraphPanel`, `TabGroup`, `StatusBar`, `ViewportHUD`,
+`FieldWriter` and `UIStateStore`. The last module-scope mutable binding went with
+COS-392, which deleted the store singleton and made `Main` construct and inject it.
+
+What is left is upkeep, not conversion. Every rule above is an error in `biome.json`
+across all of `src/`, with no per-file downgrade and no inline suppression; the
+baseline is 0; and the rules themselves are re-proved against `scripts/lint-fixtures/`
+by `pnpm run lint:rules`. A new module holds every rule from its first commit — there
+is no grandfathered set left to leave alone.

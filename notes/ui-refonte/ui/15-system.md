@@ -29,7 +29,7 @@ Card sits last in the second telemetry row at `flex:1`.
 | UPTIME | `m:ss` — minutes unpadded, seconds padded: `mm + ':' + String(ss).padStart(2, '0')` (design L1452) | Real — `performance.now() - bootTime`. **Driven by a dedicated `setInterval(…, 1000)` owned by this widget**, not by the 90ms fps gate. The design keeps counting while paused (`tick()` advances `secs` in the paused branch, L1223), and this engine cancels rAF on pause: `togglePause` calls `stop()` (src/index.ts L520–L524), `stop()` runs `cancelAnimationFrame` and resets `lastFpsDisplayUpdateAt` (L577–L584), and `fpsCounter()` — which owns the 90ms gate (L374) — is only called from `step()`, the rAF callback (L566–L570). A rAF-driven clock would freeze on pause. |
 | Header note | `software raster` | Real, static — accurate description of this renderer. |
 
-The uptime clock and its formatter live here and are exported once. The status bar consumes the formatted string via `setField`; it must not start a second interval. Clear the interval on teardown.
+The uptime clock and its formatter live here and are exported once. The status bar consumes the formatted string via `FieldWriter.write`; it must not start a second interval. Clear the interval on teardown.
 
 This card carries no triangle number and must not grow one. The **drawn count** (what `Surface3D.render` returns) belongs to the viewport and the toolbar; the **registry count** belongs to SHAPE INFO and GEOMETRY.
 

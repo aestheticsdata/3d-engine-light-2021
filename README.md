@@ -251,6 +251,26 @@ With that separation, you can add new canvas animations without coupling them to
 
 ---
 
+## Code conventions
+
+This codebase is 100% OOP TypeScript. Behaviour lives in a class: one class per file,
+the file basename identical to the class name, fields declared at the top and assigned
+in the constructor, visibility always explicit, and a bare `export default X;` as the
+last line — never `export default class`, never `export const createX = () => ({…})`.
+Inert data tables and single pure derivations stay plain `const`s, because the line is
+behaviour rather than file type. The full ruleset is twenty rules (R1–R20), each cited
+to a real `file:line` in this repo, in
+**[notes/oop-refonte/reference/house-style.md](notes/oop-refonte/reference/house-style.md)**
+— read it before adding a module. The rulings behind it, including what makes a file
+exempt, are in
+[notes/oop-refonte/reference/decisions.md](notes/oop-refonte/reference/decisions.md).
+The style is enforced mechanically: `pnpm run lint` is Biome with two native rules plus
+eight Grit plugins in `biome-plugins/`, every one an error across `src/` with no inline
+suppression, and `pnpm run lint:rules` re-proves the plugins against fixtures so a rule
+that silently stops matching fails the build.
+
+---
+
 ## Styles
 
 Styling is split into a **token layer** and everything that consumes it. Every colour,

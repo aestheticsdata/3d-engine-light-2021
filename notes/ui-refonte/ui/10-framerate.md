@@ -57,13 +57,13 @@ Redraw cadence: reuse the existing `FPS_DISPLAY_UPDATE_INTERVAL_MS` (90ms) gate 
 
 Feed the chart the raw `this.fps`, not `this.smoothedFps`: the EMA (`FPS_SMOOTHING_FACTOR = 0.2`) already flattens exactly the spikes the sparkline exists to show. `smoothedFps` stays the source for the toolbar's single FPS number.
 
-This card carries no triangle number. The **drawn count** (what `Surface3D.render` returns) belongs to the GEOMETRY card and the toolbar, and the single fps number belongs to the toolbar. The shell ticket has already retired both legacy ids: `#fpsCounterNb` and `#trianglesRenderedNb` no longer exist, their `getElementById` lookups and guard clauses are gone from `Main`'s constructor, and both values reach the DOM through `setField('fps', …)` / `setField('trisDrawn', …)` into `[data-field]` nodes (D2). This ticket adds no `data-field` node of its own.
+This card carries no triangle number. The **drawn count** (what `Surface3D.render` returns) belongs to the GEOMETRY card and the toolbar, and the single fps number belongs to the toolbar. The shell ticket has already retired both legacy ids: `#fpsCounterNb` and `#trianglesRenderedNb` no longer exist, their `getElementById` lookups and guard clauses are gone from `Main`'s constructor, and both values reach the DOM through `fields.write('fps', …)` / `fields.write('trisDrawn', …)` into `[data-field]` nodes (D2). This ticket adds no `data-field` node of its own.
 
 RESET, owned by the toolbar ticket, must restore DROPPED to 0 along with every other new state slice. This ticket is not Done until DROPPED is in that enumerated set.
 
 ## Files
 
-- `src/index.html` — fill the shell skeleton's FRAMERATE slot with the card markup, `<canvas id="fpsChart">` and the four tiles. The shell ticket has already deleted the legacy `.fpsRow` block and migrated `#fpsCounterNb` / `#trianglesRenderedNb` to `setField`-driven `[data-field]` nodes (D2), so there is no id here for this card to preserve or break.
+- `src/index.html` — fill the shell skeleton's FRAMERATE slot with the card markup, `<canvas id="fpsChart">` and the four tiles. The shell ticket has already deleted the legacy `.fpsRow` block and migrated `#fpsCounterNb` / `#trianglesRenderedNb` to `FieldWriter.write`-driven `[data-field]` nodes (D2), so there is no id here for this card to preserve or break.
 - `src/ui/telemetry/FramerateWidget.ts` — new; owns the ring buffer, min/avg/max/dropped and the canvas draw
 - `src/index.ts` — push samples from `fpsCounter()`, drive the widget from the existing 90ms gate, reset DROPPED in `resetControls()` (L635)
 - `src/styles/components/framerate.css` — new; the canvas box, the body gap and the `DROP` caption swap only. No card shell, no header, no tile rules.

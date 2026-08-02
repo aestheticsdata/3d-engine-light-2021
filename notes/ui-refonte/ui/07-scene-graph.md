@@ -65,7 +65,7 @@ Four rows, fixed order (design L1346–L1351). Only the first is backed by the e
 
 Rows 2–4 and their visibility buttons carry the placeholder affordance defined in the primitives ticket (D4): `data-placeholder="true"` plus a `title` and `aria-describedby` saying the row is not yet backed by a real scene object.
 
-**State lives in the shared store, not here.** Selection and mesh visibility are slices of `src/ui/uiState.ts`, which the shell ticket ships (D2); this ticket adds the slices and subscribes to them. It must not open a private store in `sceneGraph.ts`.
+**State lives in the shared store, not here.** Selection and mesh visibility are slices of `src/ui/UIStateStore.ts`, which the shell ticket ships (D2); this ticket adds the slices and subscribes to them. It must not open a private store in `SceneGraphPanel.ts`.
 
 **Picking a primitive resets selection to the mesh row** (D11, design L1491 `pick: () => this.setState({ shape: k, selected: 'SPHERE_01' })`). Without this, selecting KEY_LIGHT and then choosing a new shape leaves a light row highlighted while the mesh changes underneath it.
 
@@ -79,16 +79,16 @@ Known quirk to preserve, not fix here: `stop()` (index.ts L577–L584) zeroes `r
 
 - `src/index.html` — the scene graph card, in the SHAPE INFO / SCENE GRAPH slot of the shell skeleton. One markup instance; the mobile branch is a media query, not a second tree.
 - `src/styles/components/sceneGraph.css` (new) — body padding, row, columns and row states. No panel, header, title or note rules and no hit-area helper; those are primitives'.
-- `src/ui/sceneGraph.ts` (new) — builds the four rows, subscribes to the selection / visibility / drawn-count slices of `uiState`, exposes `setMeshId(id)`.
-- `src/ui/uiState.ts` — add the `sceneSelection`, `sceneHidden` and `drawnTriangles` slices if an earlier ticket has not.
-- `src/index.ts` — instantiate `SceneGraph`; push the mesh id via `sceneObjectId(...)` from `syncShapeInfoPanel`; reset selection to the mesh row on primitive change; publish the drawn count from `fpsCounter()`, `renderPausedFrame()` and `stop()`; gate the renderables array on mesh visibility.
+- `src/ui/scene/SceneGraphPanel.ts` (new) — builds the four rows, subscribes to the selection / visibility / drawn-count slices of `UIStateStore`, exposes `setMeshId(id)`.
+- `src/ui/UIStateStore.ts` — add the `sceneSelection`, `sceneHidden` and `drawnTriangles` slices if an earlier ticket has not.
+- `src/index.ts` — instantiate `SceneGraphPanel`; push the mesh id via `sceneObjectId(...)` from `syncShapeInfoPanel`; reset selection to the mesh row on primitive change; publish the drawn count from `fpsCounter()`, `renderPausedFrame()` and `stop()`; gate the renderables array on mesh visibility.
 - `src/styles/main.css` — import the new component stylesheet.
 
 ## Done when
 
 - [ ] Desktop card renders at 264px wide with a 24px header, 4px body padding and four 26px rows matching the design line-for-line.
 - [ ] Row 1 shows the active primitive as `<UPPER_SNAKE>_01` produced by the shared `sceneObjectId()` — `TORUS_KNOT_01`, not `TORUSKNOT_01` — and updates on every shape change, including through the 1250ms transition.
-- [ ] `grep -n "toUpperCase" src/ui/sceneGraph.ts` returns nothing: the id rule exists only in `src/ui/sceneObjectId.ts`.
+- [ ] `grep -n "toUpperCase" src/ui/scene/SceneGraphPanel.ts` returns nothing: the id rule exists only in `src/ui/sceneObjectId.ts`.
 - [ ] Row 1's triangle count is the drawn count and matches the toolbar readout exactly, updated on the existing 90ms throttle, never per-frame.
 - [ ] Rows 2–4 render the placeholder values `2 △`, `—`, `—` with the correct kind tags and carry `data-placeholder="true"` with a title.
 - [ ] Clicking a row selects it: highlighted background, 2px yellow left mark, white id. Only one row can be selected.
@@ -97,7 +97,7 @@ Known quirk to preserve, not fix here: `stop()` (index.ts L577–L584) zeroes `r
 - [ ] Hiding row 1 removes the mesh from the canvas while the sky, floor and vignette keep rendering; showing it restores the mesh; the drawn count reads 0 while hidden.
 - [ ] Hidden rows use `var(--color-text-disabled)` for both the id and the `○` glyph.
 - [ ] Hover highlight only fires under `@media (hover: hover)`.
-- [ ] Selection and visibility are readable from `uiState`; `sceneGraph.ts` declares no module-level state of its own.
+- [ ] Selection and visibility are readable from `UIStateStore`; `SceneGraphPanel.ts` declares no module-level state of its own.
 - [ ] Mobile: card is the first SCENE-tab card with a 26px header, 5px body padding and 44px rows; the visibility button paints 30×30 but has a 44×44 hit area through primitives' `.tap-pad`, verified in device emulation at 320px.
 - [ ] Both row and visibility button are focusable, operable with Enter/Space, and expose an accessible name.
 - [ ] `sceneGraph.css` contains no `.panel*` selector and no raw hex or px literals outside the documented hit-area pad.

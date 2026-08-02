@@ -73,7 +73,7 @@ GRID OVERLAY, GROUND SHADOW, FOG and GRID STEP have nothing behind them at all a
 
 ## Shared state with the viewport quick toggles
 
-SKY, FLOOR and GRID appear both here as full ON/OFF rows and in the viewport HUD as quick-toggle chips (`quickToggles`, L1409, built from `quick()` L1333–L1341). They are the same three booleans in `src/ui/uiState.ts`, not two parallel sets; both surfaces subscribe. Flipping the HUD chip repaints this tab's toggle in the same frame, and vice versa. The same rule already applies to WIRE and CULL between the HUD and the RENDER tab.
+SKY, FLOOR and GRID appear both here as full ON/OFF rows and in the viewport HUD as quick-toggle chips (`quickToggles`, L1409, built from `quick()` L1333–L1341). They are the same three booleans in `src/ui/UIStateStore.ts`, not two parallel sets; both surfaces subscribe. Flipping the HUD chip repaints this tab's toggle in the same frame, and vice versa. The same rule already applies to WIRE and CULL between the HUD and the RENDER tab.
 
 GRID defaults **OFF** in both surfaces. Nothing in the renderer draws a grid, and a pill or a toggle showing ON would claim something the canvas is not doing.
 
@@ -86,14 +86,14 @@ GRID defaults **OFF** in both surfaces. Nothing in the renderer draws a grid, an
 | ORTHOGRAPHIC | not selected | `placeholder` — owned by de-mock E2 |
 | FOV | `v + "°"` | real — `focal = 320 / tan(fov/2)`, clamped to ≥ 260, default 94 (focal 298.4, ~0.5% off the current 300) |
 | ZOOM | `v + "%"` | real — `sliderToZoomOffset` (`src/index.ts` L47), 0..100 → `zOffset` 260 down to −220, default 50 |
-| SKY DOME | ON / OFF | real — `uiState.sky` through `BackgroundRenderer.setLayers`, shipped in this ticket; default ON |
-| CHECKER FLOOR | ON / OFF | real — `uiState.floor` through the same call; default ON |
-| GRID OVERLAY | ON / OFF | `placeholder` — `uiState.grid`, default **OFF**; owned by de-mock E5 |
+| SKY DOME | ON / OFF | real — `store.sky` through `BackgroundRenderer.setLayers`, shipped in this ticket; default ON |
+| CHECKER FLOOR | ON / OFF | real — `store.floor` through the same call; default ON |
+| GRID OVERLAY | ON / OFF | `placeholder` — `store.grid`, default **OFF**; owned by de-mock E5 |
 | GROUND SHADOW | ON / OFF | `placeholder` — default OFF; de-mock E5 |
 | FOG | `v + "%"` | `placeholder` — default 18; de-mock E5 |
 | GRID STEP | `v + "m"` | `placeholder` — default 4; de-mock E5 |
 
-Every placeholder control carries the primitives placeholder affordance (`data-placeholder="true"` + `title` + `aria-describedby`) and writes its slice of `src/ui/uiState.ts`.
+Every placeholder control carries the primitives placeholder affordance (`data-placeholder="true"` + `title` + `aria-describedby`) and writes its slice of `src/ui/UIStateStore.ts`.
 
 ## Files
 
@@ -104,7 +104,7 @@ Every placeholder control carries the primitives placeholder affordance (`data-p
 - `src/rendering/BackgroundRenderer.ts` — add `setLayers({ sky, floor })` and honour it in `render()`; flat-fill the frame when the sky is off
 - `src/ui/chartTokens.ts` — add `bgApp` (`#05091A`) alongside the existing chart colours
 - `src/index.ts` — add `changeFov` mirroring `changeZoom` with the ≥ 260 focal clamp; hand the background renderer to the world tab so the toggles can reach it; move the zoom slider wiring into the tab
-- `src/ui/uiState.ts` — extended with `projection`, `fov`, `sky`, `floor`, `grid`, `shadow`, `fog`, `gridStep`
+- `src/ui/UIStateStore.ts` — extended with `projection`, `fov`, `sky`, `floor`, `grid`, `shadow`, `fog`, `gridStep`
 - `src/index.html` — mount the tab into the WORLD slot the shell created; the parked zoom range input is consumed here
 
 No new stylesheet: every rule this tab needs already exists in `src/styles/components/`.
@@ -118,7 +118,7 @@ No new stylesheet: every rule this tab needs already exists in `src/styles/compo
 - [ ] SKY, FLOOR and GRID are single booleans shared with the viewport quick toggles; flipping either surface updates both in the same frame, and GRID reads OFF on first paint in both surfaces
 - [ ] View preset chips are momentary, never render an active state, carry the placeholder affordance, and change nothing
 - [ ] PERSPECTIVE is selected by default and ORTHOGRAPHIC selects visually while changing nothing on the canvas
-- [ ] Placeholder controls (GRID OVERLAY, GROUND SHADOW, FOG, GRID STEP, ORTHOGRAPHIC, view presets) persist in `src/ui/uiState.ts` and change nothing on the canvas
+- [ ] Placeholder controls (GRID OVERLAY, GROUND SHADOW, FOG, GRID STEP, ORTHOGRAPHIC, view presets) persist in `src/ui/UIStateStore.ts` and change nothing on the canvas
 - [ ] The toolbar's RESET path restores every slice this ticket adds — projection, FOV, zoom, sky on, floor on, grid off, shadow off, fog, grid step
 - [ ] At `max-width: 899px`: the ENVIRONMENT card renders above CAMERA, 26px card headers, 48px toggle rows with bottom rules and a full-row 48px hit area, FOG and GRID STEP using the tight-bottom slider padding, 40px view and projection chips, 26px slider tracks with the label/value row above
 - [ ] This ticket declares no chip, toggle or range colour table and ships no new stylesheet

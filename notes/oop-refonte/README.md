@@ -7,9 +7,10 @@ directory holds only what a ticket cannot.
   (R1–R20), each cited to a real `file:line` in this repo. Read it before adding
   a module.
 - **[reference/decisions.md](reference/decisions.md)** — the binding decisions
-  (D1–D6): what makes a file exempt, the ten files not converted, the recorded
-  baselines. Read it before arguing that something should or should not become a
-  class.
+  (D1–D8): what makes a file exempt, the ten files not converted, the recorded
+  baselines, why the composition root is measured by ownership rather than by
+  length (D7), and the four readings taken against the engine batch (D8). Read it
+  before arguing that something should or should not become a class.
 - **[reference/geometry-baseline.json](reference/geometry-baseline.json)** — every
   point and every triangle of all fourteen shapes, in registry order.
 - **[reference/geometry-counts.md](reference/geometry-counts.md)** — the same

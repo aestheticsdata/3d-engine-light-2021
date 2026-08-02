@@ -1,4 +1,4 @@
-// The six path aliases are read out of vite.config.js rather than restated here.
+// The eight path aliases are read out of vite.config.js rather than restated here.
 // They are already declared twice — once for the bundler, once for tsc — and a
 // third copy is a third place to forget when one of them moves.
 
