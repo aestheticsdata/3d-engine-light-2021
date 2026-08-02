@@ -6,8 +6,8 @@
 // the horizontal travel and which the vertical. Here there are two ways to fill
 // the list and no third.
 
-import Mesh from "@primitives/Mesh";
-import { MeshRenderRequest } from "@primitives/Surface3D";
+import type Mesh from "@primitives/Mesh";
+import type { MeshRenderRequest } from "@primitives/Surface3D";
 
 export interface ShapeTransitionContextOptions {
   duration: number;

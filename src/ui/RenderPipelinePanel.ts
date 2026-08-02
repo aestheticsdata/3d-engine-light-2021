@@ -17,7 +17,8 @@
 import DomScope from "@ui/DomScope";
 import FollowCursorTooltip from "@ui/tooltip";
 import { OPACITY_SLIDER } from "@ui/SliderBank";
-import { ShadingMode, modeLabel } from "@ui/modeLabel";
+import type { ShadingMode } from "@ui/modeLabel";
+import { modeLabel } from "@ui/modeLabel";
 
 const OPACITY_SLIDER_MIN = 0;
 const OPACITY_SLIDER_MAX = 100;

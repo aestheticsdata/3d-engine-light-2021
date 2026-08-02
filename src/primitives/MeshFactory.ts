@@ -10,8 +10,8 @@
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
 import Triangle from "@primitives/Triangle";
-import Viewport from "@primitives/Viewport";
-import { Object3D } from "@data/types";
+import type Viewport from "@primitives/Viewport";
+import type { Object3D } from "@data/types";
 
 class MeshFactory {
   private readonly viewport: Viewport;

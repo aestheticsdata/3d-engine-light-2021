@@ -7,7 +7,7 @@
 // original made and this conversion keeps.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const DEFAULT_RADIUS = 100;
 const DEFAULT_LAT_SEGMENTS = 10;

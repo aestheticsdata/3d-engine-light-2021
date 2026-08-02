@@ -6,7 +6,7 @@
 // reach it is, not to module scope beside a rasteriser.
 
 import Matrix3D from "@primitives/Matrix3D";
-import Mesh from "@primitives/Mesh";
+import type Mesh from "@primitives/Mesh";
 
 const PITCH_YAW_ROTATION_DIVISOR = 110;
 const ROLL_ROTATION_DIVISOR = 500;

@@ -9,8 +9,8 @@
 // `uptime`; the render loop cannot drive it anyway, since Main.stop() cancels
 // rAF on pause while the clock has to keep counting.
 
-import FieldWriter from "@ui/FieldWriter";
-import MaterialSummary from "@ui/MaterialSummary";
+import type FieldWriter from "@ui/FieldWriter";
+import type MaterialSummary from "@ui/MaterialSummary";
 import { modeLabel } from "@ui/modeLabel";
 import { sceneObjectId } from "@ui/sceneObjectId";
 

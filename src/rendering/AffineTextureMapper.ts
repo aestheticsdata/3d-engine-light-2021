@@ -28,8 +28,8 @@
 // - uvDet == 0 means the UV triangle is degenerate, so we skip rendering.
 // -----------------------------------------------------------------------------
 
-import Point2D from "@primitives/Point2D";
-import { UV } from "@data/types";
+import type Point2D from "@primitives/Point2D";
+import type { UV } from "@data/types";
 
 // Flat rather than two nested triples: this literal is built once per textured
 // triangle per frame, and one object costs less than one object holding two

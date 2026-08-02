@@ -5,7 +5,7 @@
 
 import DomScope from "@ui/DomScope";
 import { primitiveLabel } from "@ui/primitiveLabel";
-import { ShapeReference, ShapeInfo } from "@data/shapeInfo";
+import type { ShapeReference, ShapeInfo } from "@data/shapeInfo";
 
 class ShapeStoryPanel {
   private readonly title: HTMLElement;

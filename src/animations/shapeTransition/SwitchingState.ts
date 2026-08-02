@@ -1,7 +1,7 @@
-import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
+import type ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 import { easeInOutCubic, lerp } from "@animations/shapeTransition/easing";
-import { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
-import { StateMachineUpdate } from "@animations/StateMachine";
+import type { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
+import type { StateMachineUpdate } from "@animations/StateMachine";
 
 // Two meshes on screen at once: the one being replaced leaves sideways while
 // its replacement drops in from above, so the two are never confused for one

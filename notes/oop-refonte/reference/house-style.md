@@ -195,6 +195,33 @@ Density is deliberately uneven: self-evident classes carry **zero** comments —
 No JSDoc in new code. The only `/** */` in the tree is on three `SceneRow` interface
 fields (`sceneGraph.ts:26,29,31`); it is not the house form and is not a precedent.
 
+### R19 — a binding used only in a type position is imported with `import type`
+
+R16's sibling: R16 says which specifier to import through, this says which *form*.
+
+`data.ts:1` imports `Data3D` as a type beside fourteen value imports of the shape
+modules. `Mesh.ts:1-3` is the clearest case — all three of its imports are types, so
+the emitted module imports nothing at all at runtime.
+
+When one module supplies both, the declaration splits rather than using the inline
+`{ type X, Y }` form: `SceneRowView.ts:8-9` takes `SceneRow` as a type and `HINT_ID` /
+`PLACEHOLDER_NOTE` as values from the same module, on two lines. This is also forced
+rather than chosen when the type is a default export — TypeScript rejects an
+`import type` carrying both a default and named bindings, which is why `Mesh.ts:1-2`
+reads as two lines against one module.
+
+Not cosmetic. A value import of a type keeps the module in the emitted graph, so a
+type-only edge becomes a real runtime dependency and a cycle TypeScript would have
+erased survives into the bundle. It also cost the geometry snapshot a workaround: the
+script could not use Node's type stripping while `data.ts:1` was a type import written
+in value syntax, and `scripts/snapshot-geometry.mjs:1-27` records that this reason has
+now lapsed.
+
+**COS-395** converted 79 declarations across 52 files in one autofix pass. Two of them
+needed hand-formatting afterwards — the fixer emits `{ ShadingMode}` and breaks a long
+declaration across lines with the brace stranded — so re-read the diff rather than
+trusting `--fix` alone.
+
 ---
 
 ## Compiler settings that constrain classes
@@ -246,6 +273,7 @@ no preset, no stylistic pack. Everything not in this table is enforced by review
 | R15 — no module-level mutable state | `no-restricted-syntax` | 0 — cleared by **COS-362 / COS-366** | error |
 | I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 0 — cleared by **COS-372** | error |
 | D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
+| R19 — `import type` for type-only bindings | `@typescript-eslint/consistent-type-imports` (`fixStyle: separate-type-imports`) | 0 — cleared by **COS-395** | error |
 
 A rule with a non-zero baseline is `warn`, never `off`, and never silenced with an
 inline disable — the file is downgraded whole and the config names the ticket that

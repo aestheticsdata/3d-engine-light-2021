@@ -14,10 +14,10 @@
 // timeout, fade out, repaint once, fade in — belongs here.
 
 import DomScope from "@ui/DomScope";
-import MaterialSummary from "@ui/MaterialSummary";
-import { ShadingMode } from "@ui/modeLabel";
+import type MaterialSummary from "@ui/MaterialSummary";
+import type { ShadingMode } from "@ui/modeLabel";
 import { primitiveLabel } from "@ui/primitiveLabel";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 // Twinned with `animation: panelFadeOut 180ms` in
 // src/styles/components/shape-info.css:56. Change one and the repaint either

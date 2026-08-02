@@ -5,8 +5,9 @@
 // repaint in a second loop somewhere else. Naming it is the reason the panel
 // splits, not the line count.
 
-import { HINT_ID, PLACEHOLDER_NOTE, SceneRow } from "@ui/scene/sceneRows";
-import UiStateStore from "@ui/UiStateStore";
+import type { SceneRow } from "@ui/scene/sceneRows";
+import { HINT_ID, PLACEHOLDER_NOTE } from "@ui/scene/sceneRows";
+import type UiStateStore from "@ui/UiStateStore";
 
 export interface SceneRowState {
   label: string;

@@ -4,7 +4,7 @@
 // the states need the state names, so declaring the names on the façade would
 // make the two files import each other.
 
-import Mesh from "@primitives/Mesh";
+import type Mesh from "@primitives/Mesh";
 
 export type ShapeTransitionState = "idle" | "entering" | "switching";
 

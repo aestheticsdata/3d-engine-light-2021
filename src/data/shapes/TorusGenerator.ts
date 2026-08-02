@@ -9,7 +9,7 @@
 // nothing in the repo would notice a shape rendering inside-out.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const DEFAULT_TORUS_RADIUS = 80;
 const DEFAULT_TUBE_RADIUS = 30;

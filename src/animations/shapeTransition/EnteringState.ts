@@ -1,7 +1,7 @@
-import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
+import type ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 import { easeInOutCubic, lerp } from "@animations/shapeTransition/easing";
-import { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
-import { StateMachineUpdate } from "@animations/StateMachine";
+import type { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
+import type { StateMachineUpdate } from "@animations/StateMachine";
 
 // The first shape of the session drops in from above with nothing to replace.
 

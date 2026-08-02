@@ -16,7 +16,7 @@
 // first consumer to need the label; the shape info ticket extends this class
 // rather than starting a second copy.
 
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 export type MaterialLabel = "TEXTURED" | "SOLID";
 

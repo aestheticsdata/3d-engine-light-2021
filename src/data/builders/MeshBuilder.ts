@@ -29,7 +29,7 @@
 // inside-out.
 
 import PolyhedronBuilder from "@data/builders/PolyhedronBuilder";
-import { Object3D, Triangle3D, UV } from "@data/types";
+import type { Object3D, Triangle3D, UV } from "@data/types";
 
 const DEFAULT_SUBDIVISION_GRID = 12;
 const DEFAULT_CIRCUMRADIUS = 100;

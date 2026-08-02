@@ -7,7 +7,7 @@
 // after them or every colour lands on the wrong face.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
-import { Object3D, Triangle3D } from "@data/types";
+import type { Object3D, Triangle3D } from "@data/types";
 
 const CORNERS: number[][] = [
   [-100, -100, -100],

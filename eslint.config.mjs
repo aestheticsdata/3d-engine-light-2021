@@ -117,6 +117,23 @@ export default tseslint.config(
         "error",
         { accessibility: "explicit", overrides: { constructors: "off" } },
       ],
+
+      // R19 — a binding used only in a type position is imported with
+      // `import type`. Not cosmetic: a value import of a type keeps the module
+      // in the emitted graph, so a type-only edge becomes a real runtime
+      // dependency and a cycle TypeScript would have erased survives into the
+      // bundle. The three modules that pass an interface both ways — Triangle
+      // and AffineTextureMapper, Surface3D and Mesh — are exactly the shape
+      // that turns into one.
+      //
+      // Unlike everything above, this cannot be a no-restricted-syntax
+      // selector: whether an identifier lands in a type position is scope
+      // analysis, not syntax. It is the one rule here the parser has to answer
+      // rather than the AST.
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { fixStyle: "separate-type-imports" },
+      ],
     },
   },
 

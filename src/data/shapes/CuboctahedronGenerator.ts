@@ -12,7 +12,7 @@
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 // Not exposed through an options interface: the circumradius is what puts every
 // solid in this family on screen at the same size as its siblings, and a caller

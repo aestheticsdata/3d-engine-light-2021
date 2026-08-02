@@ -17,7 +17,7 @@
 import Icosahedron from "@data/builders/Icosahedron";
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES } from "@data/builders/symmetry";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
 
