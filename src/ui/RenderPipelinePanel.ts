@@ -14,7 +14,7 @@
 // charge. The slider ELEMENT is shared with the slider bank, which owns its
 // value and its listener while this class owns `disabled` and the tooltip.
 
-import DomScope from "@ui/DomScope";
+import DOMScope from "@ui/DOMScope";
 import FollowCursorTooltip from "@ui/tooltip";
 import { OPACITY_SLIDER } from "@ui/SliderBank";
 import type { ShadingMode } from "@ui/modeLabel";
@@ -44,7 +44,7 @@ class RenderPipelinePanel {
   private opacityFraction: number;
 
   constructor() {
-    const scope = new DomScope(document);
+    const scope = new DOMScope(document);
     const missing = "RENDER control is missing.";
 
     this.wireframeBtn = scope.require<HTMLElement>("#toggleWireframe", missing);

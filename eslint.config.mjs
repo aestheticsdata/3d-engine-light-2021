@@ -70,6 +70,50 @@ const I4_FOR_IN = {
     "I4: use `for…of`. `for…in` over an array yields string indices, not elements.",
 };
 
+// R20 — an acronym keeps its capitals in a type name: UIStateStore, never
+// UiStateStore. Half-capitalising one is what autocomplete produces, and it
+// makes the same acronym read two ways in one tree — this repo had UiStateStore,
+// DomScope, FpsMeter and ViewportHud beside an already-correct UV.
+//
+// Type names only. camelCase members keep the conventional treatment, so
+// `dogUrl` and `viewportHud` are deliberately untouched: full-capping there
+// gives `skyURL` and `syncFromDOM`, a different and far more contested
+// convention than the one this rule encodes. `id.name` and `local.name` are
+// what scope it to declarations and import bindings rather than every mention.
+// Extended forms are listed separately — `Rgba` as well as `Rgb` — because the
+// acronym has to match to its full length: in `RgbaColor` the trailing `a`
+// defeats the "followed by a capital" test, so a list holding only `Rgb` reads
+// as covering it while actually letting it through.
+const ACRONYMS =
+  "Ui|Ux|Fps|Hud|Dom|Uv|Fov|Url|Uri|Api|Css|Html|Xml|Json|Svg|Rgba|Rgb|Gpu|Cpu|Http|Uuid";
+
+// The acronym may sit anywhere in the name: at the front (UiState), at the back
+// (ViewportHud), in the middle (ShapeUiPanel), or be the whole of it (Ui). What
+// marks it as a word rather than a coincidence is PascalCase itself — it either
+// opens the name or follows a lowercase letter, and it is either followed by a
+// capital or ends the name.
+//
+// The leading `(?=[A-Z])` is what confines the rule to type names, and it is the
+// only thing standing between it and `dogUrl` — the camelCase members this
+// deliberately leaves alone all start lowercase. A fully capitalised acronym
+// never matches a half-capitalised pattern, which is why `UV`, `DOMScope` and
+// `FPSMeter` stay silent without needing an exception.
+const HALF_CAPS = `/^(?=[A-Z])(?:[A-Za-z0-9]*?[a-z0-9])?(${ACRONYMS})(?=[A-Z]|$)/`;
+
+const R20_ACRONYM_CASE = {
+  selector: [
+    `ClassDeclaration[id.name=${HALF_CAPS}]`,
+    `TSInterfaceDeclaration[id.name=${HALF_CAPS}]`,
+    `TSTypeAliasDeclaration[id.name=${HALF_CAPS}]`,
+    `TSEnumDeclaration[id.name=${HALF_CAPS}]`,
+    `ImportDefaultSpecifier[local.name=${HALF_CAPS}]`,
+    `ImportSpecifier[local.name=${HALF_CAPS}]`,
+    `ImportNamespaceSpecifier[local.name=${HALF_CAPS}]`,
+  ].join(", "),
+  message:
+    "R20: an acronym keeps its capitals in a type name — UIStateStore, not UiStateStore. R13 then forces the filename to follow.",
+};
+
 const RESTRICTED = [
   R1_EXPORT_DEFAULT_CLASS,
   R1_EXPORT_NAMED_CLASS,
@@ -80,6 +124,7 @@ const RESTRICTED = [
   D4_PROTECTED,
   R15_MODULE_LET,
   I4_FOR_IN,
+  R20_ACRONYM_CASE,
 ];
 
 // Nothing is pending. Every rule above is an error everywhere in src/, with no

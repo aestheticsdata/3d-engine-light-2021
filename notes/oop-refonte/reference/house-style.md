@@ -1,8 +1,10 @@
 # The OOP house style — `3d-engine-light-2021`
 
-Eighteen rules, **recovered from the owner-written class files, not invented.** Every
-rule cites at least one real `file:line`; where the existing code contradicts itself,
-the conflict is named and one rule is chosen.
+Twenty rules. R1–R18 were **recovered from the owner-written class files, not
+invented**; R19 and R20 came later, from the owner's own corrections during COS-395 and
+COS-396, and are held to the same standard. Every rule cites at least one real
+`file:line`; where the existing code contradicts itself, the conflict is named and one
+rule is chosen.
 
 The eleven files this was read off: `Point2D.ts`, `Point3D.ts`, `Matrix3D.ts`,
 `Mesh.ts`, `Surface3D.ts`, `Triangle.ts`, `StateMachine.ts`,
@@ -222,6 +224,37 @@ needed hand-formatting afterwards — the fixer emits `{ ShadingMode}` and break
 declaration across lines with the brace stranded — so re-read the diff rather than
 trusting `--fix` alone.
 
+### R20 — an acronym keeps its capitals in a type name
+
+`UIStateStore.ts:48`, `DOMScope.ts:15`, `FPSMeter.ts:19`, `ViewportHUD.ts:51`, and the
+type `UIState` at `UIStateStore.ts:23`. The already-correct precedent this repo had all
+along is `types.ts:9` — `export type UV`, never `Uv`.
+
+R13 does the rest: the class name binds the file basename, so every rename here forced
+its file. `git mv` needs the two-step through a temporary name on macOS's
+case-insensitive filesystem, or git records a delete plus an add instead of a rename.
+
+**Type names only — camelCase members are deliberately exempt.** `dogUrl`,
+`viewportHud`, `smoothedFps` and `syncFromDom` are untouched, because full-capping a
+camelCase tail gives `skyURL` and `syncFromDOM`, a different and far more contested
+convention than the one this rule encodes. The lint selector is anchored to a leading
+capital for exactly this reason; without that anchor it matches `dogUrl`, which is how
+the first draft of the rule failed.
+
+The acronym is caught wherever it sits — opening the name (`UiState`), closing it
+(`ViewportHud`), in the middle (`ShapeUiPanel`), or being the whole of it (`Ui`) — and
+across class, interface, type-alias and enum declarations plus all three import-binding
+forms. The first draft caught only the first two positions and missed
+`import * as UiThing` entirely; an adversarial probe pass found all four gaps, and the
+probes are worth re-running against any edit to the pattern. Extended forms need listing
+in their own right: `Rgba` sits beside `Rgb`, because in `RgbaColor` the trailing `a`
+defeats the "followed by a capital" test and a list holding only `Rgb` reads as covering
+it while letting it through.
+
+**COS-396** renamed six identifiers over 33 + 19 + 13 + 11 + 6 + 2 references, and
+`fpsMeter.test.ts` with them — a test file named in camelCase beside a sibling named
+`UIStateStore.test.ts` was the same drift one level down.
+
 ---
 
 ## Compiler settings that constrain classes
@@ -274,6 +307,7 @@ no preset, no stylistic pack. Everything not in this table is enforced by review
 | I4 — `for…of`, never `for…in` | `no-restricted-syntax` | 0 — cleared by **COS-372** | error |
 | D4 — no `implements`, `abstract`, `protected` or inheritance | `no-restricted-syntax` | 0 | error |
 | R19 — `import type` for type-only bindings | `@typescript-eslint/consistent-type-imports` (`fixStyle: separate-type-imports`) | 0 — cleared by **COS-395** | error |
+| R20 — acronyms keep their capitals in a type name | `no-restricted-syntax` | 0 — cleared by **COS-396** | error |
 
 A rule with a non-zero baseline is `warn`, never `off`, and never silenced with an
 inline disable — the file is downgraded whole and the config names the ticket that

@@ -102,7 +102,7 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 - `src/styles/components/viewport.css` (new) — stage, letterbox, layer anchors, the crosshair, selection bracket and gizmo, the local `backdrop-filter: none` overrides, and the six `[data-shading-mode]` filter rules. Both branches.
 - `src/styles/main.css` — add the component import after the token imports.
 - `src/ui/viewportHud.ts` (new) — builds the layer DOM once and exposes `update(state)`; owns the placeholder constants and their de-mock annotations. Imports `sceneObjectId` from `src/ui/sceneObjectId.ts` and `setField` from `src/ui/fields.ts` (shell), `modeLabel()` from the render-tab module, and `texLabel` from `src/ui/texLabel.ts` (shape-info).
-- `src/index.ts` — construct `ViewportHud` and call `update()` from `fpsCounter()` and after `renderPausedFrame()`, writing through shell's field writer so the HUD and the telemetry cards cannot show different triangle counts.
+- `src/index.ts` — construct `ViewportHUD` and call `update()` from `fpsCounter()` and after `renderPausedFrame()`, writing through shell's field writer so the HUD and the telemetry cards cannot show different triangle counts.
 
 ## Done when
 

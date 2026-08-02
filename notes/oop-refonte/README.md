@@ -3,8 +3,8 @@
 The rules and the rulings behind **COS-356**. Ticket bodies live in Linear; this
 directory holds only what a ticket cannot.
 
-- **[reference/house-style.md](reference/house-style.md)** — the eighteen rules
-  (R1–R18), each cited to a real `file:line` in this repo. Read it before adding
+- **[reference/house-style.md](reference/house-style.md)** — the twenty rules
+  (R1–R20), each cited to a real `file:line` in this repo. Read it before adding
   a module.
 - **[reference/decisions.md](reference/decisions.md)** — the binding decisions
   (D1–D6): what makes a file exempt, the ten files not converted, the recorded

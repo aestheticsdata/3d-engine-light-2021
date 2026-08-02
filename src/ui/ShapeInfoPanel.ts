@@ -13,7 +13,7 @@
 // belongs to whoever owns them, while the choreography — clear the pending
 // timeout, fade out, repaint once, fade in — belongs here.
 
-import DomScope from "@ui/DomScope";
+import DOMScope from "@ui/DOMScope";
 import type MaterialSummary from "@ui/MaterialSummary";
 import type { ShadingMode } from "@ui/modeLabel";
 import { primitiveLabel } from "@ui/primitiveLabel";
@@ -37,7 +37,7 @@ class ShapeInfoPanel {
   private fadeTimeoutId: number | null;
 
   constructor() {
-    const scope = new DomScope(document);
+    const scope = new DOMScope(document);
     const missing = "SHAPE INFO node is missing.";
 
     this.content = scope.require<HTMLElement>("#shapeInfoPanelContent", missing);

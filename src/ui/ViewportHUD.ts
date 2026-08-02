@@ -48,7 +48,7 @@ const FOV = "60°";
 // COS-246 (E5a) is what introduces world units.
 const DISTANCE_UNIT = "u";
 
-class ViewportHud {
+class ViewportHUD {
   private readonly card: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly fields: FieldWriter;
@@ -98,4 +98,4 @@ class ViewportHud {
   }
 }
 
-export default ViewportHud;
+export default ViewportHUD;

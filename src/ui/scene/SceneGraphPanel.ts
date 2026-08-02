@@ -1,18 +1,18 @@
 // The scene graph panel: the only place that knows what the frame is composed of.
 //
 // The panel holds no scene state. Selection, per-row visibility and the drawn
-// count all live in UiStateStore, which is what lets the quick toggles and the
+// count all live in UIStateStore, which is what lets the quick toggles and the
 // inspector read the same booleans later without a second copy. Everything here
 // is either derived from that store or pushed in by Main.
 
-import DomScope from "@ui/DomScope";
+import DOMScope from "@ui/DOMScope";
 import ROWS, { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import SceneRowView from "@ui/scene/SceneRowView";
-import type UiStateStore from "@ui/UiStateStore";
+import type UIStateStore from "@ui/UIStateStore";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
 class SceneGraphPanel {
-  private readonly store: UiStateStore;
+  private readonly store: UIStateStore;
   private readonly body: HTMLElement;
   private readonly note: HTMLElement | null;
   private readonly rowViews: Map<string, SceneRowView>;
@@ -20,12 +20,12 @@ class SceneGraphPanel {
   // read back when the row repaints; it is display state, not scene state.
   private meshId: string;
 
-  constructor(store: UiStateStore) {
-    const card = new DomScope(document).require<HTMLElement>(
+  constructor(store: UIStateStore) {
+    const card = new DOMScope(document).require<HTMLElement>(
       ".sceneGraph",
       "Scene graph card is missing.",
     );
-    const scope = new DomScope(card);
+    const scope = new DOMScope(card);
 
     this.store = store;
     this.body = scope.require<HTMLElement>(

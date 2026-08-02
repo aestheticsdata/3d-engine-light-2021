@@ -1,20 +1,20 @@
 // The 90ms publish throttle, which T03 could not cover because there was no
 // module to point it at — the logic was a private method on Main reading
 // performance.now() and writing through setField in the same breath. Extracting
-// FpsMeter is what makes it testable, so the suite lands with the extraction.
+// FPSMeter is what makes it testable, so the suite lands with the extraction.
 //
 // The clock is a plain counter. Nothing here waits on real time.
 
 import { describe, expect, it } from "vitest";
 
-import FpsMeter from "@app/FpsMeter";
+import FPSMeter from "@app/FPSMeter";
 
 const WINDOW_MS = 90;
 
 describe("sample", () => {
   it("publishes at most once per throttle window and returns null in between", () => {
     const clock = { value: 1000 };
-    const meter = new FpsMeter(() => clock.value);
+    const meter = new FPSMeter(() => clock.value);
 
     // The first call publishes: nothing has been published yet, so the whole
     // elapsed time counts as the window.
@@ -32,7 +32,7 @@ describe("sample", () => {
   // exists.
   it("publishes roughly eleven times per second at 60fps, not sixty", () => {
     const clock = { value: 1000 };
-    const meter = new FpsMeter(() => clock.value);
+    const meter = new FPSMeter(() => clock.value);
     const published: number[] = [];
 
     for (let frame = 0; frame < 60; frame += 1) {
@@ -50,7 +50,7 @@ describe("sample", () => {
 
   it("reports the count of frames inside the trailing one-second window", () => {
     const clock = { value: 0 };
-    const meter = new FpsMeter(() => clock.value);
+    const meter = new FPSMeter(() => clock.value);
 
     // Ten frames 100ms apart, then a sample far enough ahead to publish. The
     // window is wall-clock, so entries older than a second fall out on their
@@ -68,7 +68,7 @@ describe("sample", () => {
 describe("reset", () => {
   it("lets the next sample publish immediately", () => {
     const clock = { value: 1000 };
-    const meter = new FpsMeter(() => clock.value);
+    const meter = new FPSMeter(() => clock.value);
 
     meter.sample();
     clock.value = 1010;

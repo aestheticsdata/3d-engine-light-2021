@@ -3,7 +3,7 @@
 // It owns no state and reads nothing — the catalogue entry is pushed in on every
 // shape change, together with the primitive key it belongs to.
 
-import DomScope from "@ui/DomScope";
+import DOMScope from "@ui/DOMScope";
 import { primitiveLabel } from "@ui/primitiveLabel";
 import type { ShapeReference, ShapeInfo } from "@data/shapeInfo";
 
@@ -16,7 +16,7 @@ class ShapeStoryPanel {
   private readonly references: HTMLElement;
 
   constructor() {
-    const scope = new DomScope(document);
+    const scope = new DOMScope(document);
     const missing = "SHAPE STORY node is missing.";
 
     this.title = scope.require<HTMLElement>("#shapeStoryTitle", missing);

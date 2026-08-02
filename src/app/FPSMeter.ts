@@ -16,7 +16,7 @@
 const DISPLAY_UPDATE_INTERVAL_MS = 90;
 const SMOOTHING_FACTOR = 0.2;
 
-class FpsMeter {
+class FPSMeter {
   private readonly now: () => number;
   private readonly times: number[];
   private fps: number;
@@ -66,4 +66,4 @@ class FpsMeter {
   }
 }
 
-export default FpsMeter;
+export default FPSMeter;

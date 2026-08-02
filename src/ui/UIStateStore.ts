@@ -3,7 +3,7 @@
 // Shipped deliberately empty. Each widget ticket adds one slice for the values
 // it owns — shading mode, texture, base colour, UV scale, scale, the four
 // lighting values, fog, grid step, projection, sky / floor / grid / shadow,
-// dropped frames — by extending UiState and registering its defaults.
+// dropped frames — by extending UIState and registering its defaults.
 //
 // THE CONTRACT: a slice is only complete when the toolbar's RESET path restores
 // it. Adding a value here without adding it to RESET leaves the console with a
@@ -18,9 +18,9 @@
 // writes the slice into BOTH defaults and state before notifying, which is what
 // makes RESET coverage automatic. resetAll notifies ONCE for the whole console
 // rather than once per slice, so the panels repaint in a single pass. Both are
-// pinned by src/ui/__tests__/UiStateStore.test.ts.
+// pinned by src/ui/__tests__/UIStateStore.test.ts.
 
-export interface UiState {
+export interface UIState {
   // Slices are added here by the ticket that owns each value.
 
   // --- scene graph ---------------------------------------------------------
@@ -43,12 +43,12 @@ export interface UiState {
 
 // Exported because subscribe's callers have to be able to name the shape they
 // must satisfy; the module form kept this private and left them guessing.
-export type Listener = (state: Readonly<UiState>) => void;
+export type Listener = (state: Readonly<UIState>) => void;
 
-class UiStateStore {
-  private readonly state: UiState;
+class UIStateStore {
+  private readonly state: UIState;
   private readonly listeners: Set<Listener>;
-  private readonly defaults: Partial<UiState>;
+  private readonly defaults: Partial<UIState>;
 
   constructor() {
     this.state = {};
@@ -56,11 +56,11 @@ class UiStateStore {
     this.defaults = {};
   }
 
-  public getState(): Readonly<UiState> {
+  public getState(): Readonly<UIState> {
     return this.state;
   }
 
-  public setState(patch: Partial<UiState>) {
+  public setState(patch: Partial<UIState>) {
     Object.assign(this.state, patch);
     this.notify();
   }
@@ -69,7 +69,7 @@ class UiStateStore {
   // this at the declaration site is what makes RESET coverage automatic: a
   // ticket that adds a slice gets it restored without anyone editing the reset
   // handler, which is the failure mode this registry exists to prevent.
-  public registerSlice(slice: Partial<UiState>) {
+  public registerSlice(slice: Partial<UIState>) {
     Object.assign(this.defaults, slice);
     Object.assign(this.state, slice);
     this.notify();
@@ -101,4 +101,4 @@ class UiStateStore {
   }
 }
 
-export default UiStateStore;
+export default UIStateStore;
