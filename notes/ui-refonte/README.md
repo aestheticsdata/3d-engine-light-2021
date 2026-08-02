@@ -4,6 +4,28 @@ Two epics and 29 tickets covering the rebuild of the engine console from the [Cl
 
 These live here rather than in Linear because the workspace has hit its free issue limit (COS-1 → COS-212). Each file is a ready-to-paste Linear description; the first line is the issue title, everything below is the body.
 
+## Read this before trusting a `file:line` below
+
+These tickets were written against the tree as it stood **before COS-356**, the OOP refonte. That epic renamed or dissolved most of the modules they cite. Every `src/…` *path* in these files has been rewritten to its current one (COS-389), but the **line numbers were not**, and neither were the many citations into the old `src/index.ts` — which was a 856-line catch-all and is now twelve lines of ignition. Treat every `L###` as "roughly here, before the refonte" and re-locate the symbol by name.
+
+Where the behaviour went:
+
+| Cited as | Where it lives now |
+| -- | -- |
+| `src/index.ts` L### — the catch-all `Main` | [`src/app/Main.ts`](../../src/app/Main.ts), the composition root, plus the collaborators it now delegates to: [`Bootstrapper`](../../src/app/Bootstrapper.ts), [`CameraController`](../../src/app/CameraController.ts), [`RenderLoop`](../../src/app/RenderLoop.ts), [`FPSMeter`](../../src/app/FPSMeter.ts), [`ShapeSwitcher`](../../src/app/ShapeSwitcher.ts), [`MeshFactory`](../../src/primitives/MeshFactory.ts) |
+| `uiState.ts` — module-scope store | [`src/ui/UIStateStore.ts`](../../src/ui/UIStateStore.ts) — a class. `Main` constructs one and injects it; there is no ambient store to import |
+| `fields.ts` — ambient `setField` | [`src/ui/FieldWriter.ts`](../../src/ui/FieldWriter.ts) — injected; the call is `fields.write(name, value)` |
+| `texLabel.ts` — two free functions | [`src/ui/MaterialSummary.ts`](../../src/ui/MaterialSummary.ts) — a class over one `Object3D` |
+| `tabs.ts` | [`src/ui/TabGroup.ts`](../../src/ui/TabGroup.ts) |
+| `statusBar.ts` | [`src/ui/StatusBar.ts`](../../src/ui/StatusBar.ts) |
+| `viewportHud.ts` | [`src/ui/ViewportHUD.ts`](../../src/ui/ViewportHUD.ts) |
+| `sceneGraph.ts` | [`src/ui/scene/SceneGraphPanel.ts`](../../src/ui/scene/SceneGraphPanel.ts) |
+| root-level `controls.ts` | [`src/ui/SliderBank.ts`](../../src/ui/SliderBank.ts) + [`src/ui/PrimitivePicker.ts`](../../src/ui/PrimitivePicker.ts) |
+| `data/builder.ts` | [`src/data/builders/`](../../src/data/builders/) — `MeshBuilder`, `PolyhedronBuilder`, `Icosahedron`, `Vec3Math` |
+| `textures/textures.ts` | [`src/textures/TextureRegistry.ts`](../../src/textures/TextureRegistry.ts) |
+
+The house style these tickets must now be built to is [notes/oop-refonte/reference/house-style.md](../oop-refonte/reference/house-style.md): behaviour goes in a class, and a new widget is a class from its first commit, not a `createX` factory.
+
 ## Epics
 
 | File | Issue |

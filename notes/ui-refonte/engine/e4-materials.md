@@ -8,15 +8,15 @@ Today a triangle's surface is a single string baked into the shape data — eith
 - The five BASE swatches — shape-tab ("BASE swatch")
 - UV SCALE slider — shape-tab ("UV SCALE")
 - SCALE slider in the TRANSFORM section — shape-tab ("SCALE")
-- SHAPE INFO's MATERIAL row, and its TEXTURES row, which switch from registry-derived to runtime-derived — shape-info (`src/ui/texLabel.ts`)
-- The viewport HUD texture chip — viewport-hud (imports `texLabel`)
-- The status bar texture segment — status (imports the same `texLabel`)
+- SHAPE INFO's MATERIAL row, and its TEXTURES row, which switch from registry-derived to runtime-derived — shape-info (`src/ui/MaterialSummary.ts`)
+- The viewport HUD texture chip — viewport-hud (takes the same `MaterialSummary`)
+- The status bar texture segment — status (takes the same instance)
 
 ## Approach
 
 ### The authored slot stays; no shape-file migration
 
-Every shape file writes its colours per triangle — `sphere` alternates two `rgba(...)` strings by `(lat + lon) % 2` (`src/data/shapes/sphere.ts` L33–L37), `menger` picks six checkered face colours per cell (L79–L86), `cuboctahedron` colours by face arity through `colorForFace` (`src/data/builder.ts` L227). Rewriting those into per-mesh materials would destroy the thing that makes the registry worth looking at. **The authored slot `triangle[3]` is not migrated.** It is reclassified once, at mesh build time, into an `AuthoredMaterial`:
+Every shape file writes its colours per triangle — `sphere` alternates two `rgba(...)` strings by `(lat + lon) % 2` (`src/data/shapes/sphere.ts` L33–L37), `menger` picks six checkered face colours per cell (L79–L86), `cuboctahedron` colours by face arity through the `colorForFace` callback each generator hands to `MeshBuilder.addConvexPolyhedron` (`src/data/shapes/CuboctahedronGenerator.ts:41`, applied at `src/data/builders/MeshBuilder.ts:177`). Rewriting those into per-mesh materials would destroy the thing that makes the registry worth looking at. **The authored slot `triangle[3]` is not migrated.** It is reclassified once, at mesh build time, into an `AuthoredMaterial`:
 
 ```
 type AuthoredMaterial =
@@ -24,7 +24,7 @@ type AuthoredMaterial =
   | { kind: "texture"; key: string; uv: [UV, UV, UV] };
 ```
 
-Classification must not sniff the string. `src/ui/texLabel.ts` currently tests `material.startsWith("rgba")` and shape-info's acceptance criteria pin that to exactly one occurrence in the tree; a second copy inside `Triangle` would break it, and the test is wrong anyway the moment a shape author writes `#rrggbb`. Instead `src/textures/textures.ts` gains the declared key set that already drives `loadTextures` at boot (`dog`, `galaxy`, plus the procedural keys below) and an `isTextureKey(slot)` predicate. Classification is membership in that set. The `startsWith("rgba")` test is then deleted, and shape-info's criterion "`grep -rn "startsWith(\"rgba\")" src` returns exactly one hit" becomes "returns zero hits" — amend that ticket in the same PR.
+Classification must not sniff the string. `src/ui/MaterialSummary.ts` currently tests `material.startsWith("rgba")` and shape-info's acceptance criteria pin that to exactly one occurrence in the tree; a second copy inside `Triangle` would break it, and the test is wrong anyway the moment a shape author writes `#rrggbb`. Instead `src/textures/TextureRegistry.ts` gains the declared key set that already drives `loadTextures` at boot (`dog`, `galaxy`, plus the procedural keys below) and an `isTextureKey(slot)` predicate. Classification is membership in that set. The `startsWith("rgba")` test is then deleted, and shape-info's criterion "`grep -rn "startsWith(\"rgba\")" src` returns exactly one hit" becomes "returns zero hits" — amend that ticket in the same PR.
 
 ### The runtime material
 
@@ -56,7 +56,7 @@ In `checker` and `uvGrid` the base colour is the ink the texture is generated wi
 
 ### Procedural textures and the UVs they need
 
-`checker` and `uvGrid` are generated into a 64×64 `HTMLCanvasElement` and registered under reserved keys. `TextureMap` is `Record<string, HTMLImageElement>` today (`src/textures/textures.ts` L1); widen it to `HTMLImageElement | HTMLCanvasElement`. `Triangle` only reads `img.width` / `img.height` and passes the source to a canvas draw, so both satisfy it. Regenerate on a base-colour change — two fills and a dozen strokes, not a per-frame cost.
+`checker` and `uvGrid` are generated into a 64×64 `HTMLCanvasElement` and registered under reserved keys. `TextureMap` is `Record<string, HTMLImageElement>` today (`src/textures/TextureRegistry.ts` L1); widen it to `HTMLImageElement | HTMLCanvasElement`. `Triangle` only reads `img.width` / `img.height` and passes the source to a canvas draw, so both satisfy it. Regenerate on a base-colour change — two fills and a dozen strokes, not a per-frame cost.
 
 The harder half: **only the cube has UVs.** Every other primitive pushes 4-tuples, so a texture mode would have nothing to sample against. Generate UVs at mesh build time from the registry coordinates in `src/data/data.ts` (never from the live `Point3D`s — `transformMesh` mutates those in place every frame), by spherical projection:
 
@@ -66,16 +66,16 @@ u = 0.5 + atan2(p.z, p.x) / (2π)
 v = 0.5 − asin(clamp(p.y / r, −1, 1)) / π
 ```
 
-with two guards. Seam: a triangle straddling `u = 0/1` gets `max(u) − min(u) > 0.5`, and the affine map would smear the whole texture across it — add 1 to every `u < 0.5` in that triangle. Pole: `r < 1e-6` falls back to `[0, 0]`. Authored UVs always win, so the cube's two subdivided faces keep the mapping `addTexturedQuadSubdiv` gave them (`src/data/builder.ts` L121–L143).
+with two guards. Seam: a triangle straddling `u = 0/1` gets `max(u) − min(u) > 0.5`, and the affine map would smear the whole texture across it — add 1 to every `u < 0.5` in that triangle. Pole: `r < 1e-6` falls back to `[0, 0]`. Authored UVs always win, so the cube's two subdivided faces keep the mapping `addTexturedQuadSubdiv` gave them (`src/data/builders/MeshBuilder.ts:119-166`, called from `src/data/shapes/CubeGenerator.ts:67`).
 
 ### UV SCALE forces the texture path off `clip` + `drawImage`
 
-`Triangle.render` solves the UV→screen affine and then clips to the triangle and draws the image once through it (L209–L224). UVs outside `[0..1]` map the triangle outside the image, so it draws blank — the current path cannot tile, and UV SCALE 1..16 is exactly tiling. Replace the clip/draw pair with a repeating pattern:
+`AffineTextureMapper.draw` — split out of `Triangle` by COS-383, `src/rendering/AffineTextureMapper.ts` — solves the UV→screen affine and then clips to the triangle and draws the image once through it. UVs outside `[0..1]` map the triangle outside the image, so it draws blank — the current path cannot tile, and UV SCALE 1..16 is exactly tiling. Replace the clip/draw pair with a repeating pattern:
 
-- keep the existing affine solve unchanged (L184–L207), but convert UVs to pixels as `u × uvScale × w`;
+- keep the existing affine solve unchanged, but convert UVs to pixels as `u × uvScale × w`;
 - cache one `CanvasPattern` per texture per context (`ctx.createPattern(img, "repeat")`), call `pattern.setTransform(new DOMMatrix([m11, m12, m21, m22, dx, dy]))` per triangle, set it as `fillStyle` and fill the triangle path.
 
-This is fewer canvas state changes than today (one `save`/`restore` pair disappears), it honours `globalAlpha` so the opacity slider still works, and it makes tiling free. Note the affine is still not perspective-correct — the subdivision rationale in `builder.ts` L11–L21 is unchanged.
+This is fewer canvas state changes than today (one `save`/`restore` pair disappears), it honours `globalAlpha` so the opacity slider still works, and it makes tiling free. Note the affine is still not perspective-correct — the subdivision rationale in `builders/MeshBuilder.ts` is unchanged.
 
 ### Mesh scale
 
@@ -87,14 +87,16 @@ Do not scale through the mesh transform. `Mesh.transformMesh` mutates the shared
 
 UI 10..300 maps to 0.1..3.0. At the near end of the zoom slider (`zOffset = −220`) a scaled-up mesh drives `fl + z·s + zOffset` through zero and the projection inverts — a latent bug today, not one this ticket creates (world-tab records focal 300, `zOffset` −220, `z` −173 giving −93). **Do not add a guard to the projection here**: E2 owns the near plane and rejects those triangles, and E7 consolidates the projection expression into `Point3D.project`. Until E2 lands, cap the *applied* scale so the mesh's own bounding radius stays in front of the eye — `s ≤ (fl + zOffset − 40) / R` with `R` the shape's authored radius — and show the cap in the value readout rather than silently ignoring the slider. When E2 lands, delete the cap and let the near plane do it.
 
-### `texLabel` becomes runtime-derived
+### `MaterialSummary` becomes runtime-derived
 
-`src/ui/texLabel.ts` keys off the primitive today. After this ticket the material is scene state, not shape state, so both exports lose their `key` argument and read the resolved material:
+`src/ui/MaterialSummary.ts` is a class built from the shape's `Object3D`. After this ticket the material is scene state, not shape state, so it is constructed from the **resolved** material instead:
 
-- `texLabel(): "TEXTURED" | "CHECKER" | "UV GRID" | "SOLID"` — the mode's label, except `authored` mode which yields `TEXTURED` when the shape has any texture-authored triangle and `SOLID` when it does not.
-- `textureNames(): string[]` — the texture keys actually sampled this frame; `authored` mode returns the authored keys, the procedural modes return the generated key, `solid` returns empty.
+- `get label(): "TEXTURED" | "CHECKER" | "UV GRID" | "SOLID"` — the mode's label, except `authored` mode which yields `TEXTURED` when the shape has any texture-authored triangle and `SOLID` when it does not. Its return type widens from the current two-value `MaterialLabel` union.
+- `get textureKeys(): readonly string[]` — the texture keys actually sampled this frame; `authored` mode returns the authored keys, the procedural modes return the generated key, `solid` returns empty.
 
-Shape-info's criterion "`TEXTURED` / `SOLID` are the only two strings" widens to the four above; amend it. All three consumers (SHAPE INFO MATERIAL, the HUD chip, the status segment) keep importing the one function, so they cannot disagree (D5).
+Both stay getters over one field computed in the constructor — that is the invariant the class exists to hold, and it must survive the widening.
+
+Shape-info's criterion "`TEXTURED` / `SOLID` are the only two strings" widens to the four above; amend it. All three consumers (SHAPE INFO MATERIAL, the HUD chip, the status segment) keep taking the one instance, so they cannot disagree (D5).
 
 ### Chip labels: `NO TEXTURE` is renamed
 
@@ -126,15 +128,15 @@ E4b depends on E4a and on nothing else.
 - `src/rendering/material.ts` — new; `AuthoredMaterial`, `MeshMaterial`, `TextureMode`, `resolveMaterial`, the multiply blend and the canvas-normalised colour parse
 - `src/rendering/uvProjection.ts` — new; spherical UV generation with the seam and pole guards (E4b)
 - `src/textures/procedural.ts` — new; the checker and UV-grid canvas generators (E4b)
-- `src/textures/textures.ts` — widen `TextureMap` to `HTMLImageElement | HTMLCanvasElement`; add the declared key set, `isTextureKey` and `registerTexture`
+- `src/textures/TextureRegistry.ts` — widen `TextureMap` to `HTMLImageElement | HTMLCanvasElement`; add the declared key set, `isTextureKey` and `registerTexture`
 - `src/primitives/Triangle.ts` — authored material + shared `MeshMaterial` reference, resolved-fill cache, `setMaterial`, `changeScale`, the pattern-based texture fill with `uvScale`
 - `src/primitives/Mesh.ts` — `setMaterial`, `changeScale`
 - `src/primitives/Point3D.ts` — `modelScale` and the scaled projection line in `convert3D2D`. This is the same line E2 (two projection branches), E7 (`project(out)`) and E9 (post-divide viewport scale) all rewrite; whichever lands last folds the others in, and the scale factor stays a model property wherever the camera state ends up living
 - `src/index.ts` — hold the `MeshMaterial` and the mesh scale on `Main`; `changeTexture` / `changeBaseColor` / `changeUvScale` / `changeScale` mirroring `changeZoom` (apply to active meshes, then `renderPausedFrame()`); pass the material and the generated UVs into `buildMesh`
-- `src/ui/texLabel.ts` — runtime derivation; the `startsWith("rgba")` test is deleted
-- `src/ui/uiState.ts` — `texture`, `baseColor`, `uvScale`, `scale` stop being inert
+- `src/ui/MaterialSummary.ts` — runtime derivation; the `startsWith("rgba")` test is deleted
+- `src/ui/UIStateStore.ts` — `texture`, `baseColor`, `uvScale`, `scale` stop being inert
 - `src/ui/inspector/shapeTab.ts`, `src/index.html` — remove the placeholder affordance from the four chips, the five swatches, UV SCALE and SCALE; relabel `NO TEXTURE` to `AUTHORED`
-- Amended tickets: `shape-tab.md` (chip label, chip default, swatch default), `shape-info.md` (`texLabel` value set, the `rgba` grep criterion)
+- Amended tickets: `shape-tab.md` (chip label, chip default, swatch default), `shape-info.md` (`MaterialSummary.label` value set, the `rgba` grep criterion)
 
 ## Done when
 
@@ -147,7 +149,7 @@ E4b depends on E4a and on nothing else.
 - [ ] SCALE 10..300 uniformly scales the mesh about its rotation centre and does not compound across frames
 - [ ] At SCALE 300 with the zoom slider at 100 no shape inverts: before E2, because the applied scale is capped and the readout says so; after E2, because the near plane rejects the triangles. No guard is added inside `convert3D2D` by this ticket
 - [ ] Scale is applied at projection time only: no scale matrix is added to `Matrix3D`, and the mesh transform (`transformMesh` before E1, `setTransform` after) is untouched by this ticket
-- [ ] `texLabel()` takes no primitive key, and SHAPE INFO MATERIAL, the HUD texture chip and the status bar texture segment show the same string in every mode
+- [ ] `MaterialSummary` is built from the resolved material, not the primitive key, and SHAPE INFO MATERIAL, the HUD texture chip and the status bar texture segment show the same string in every mode
 - [ ] `grep -rn 'startsWith("rgba")' src` returns zero hits and texture classification goes through `isTextureKey`
 - [ ] No file under `src/data/shapes/` is modified
 - [ ] Material and scale changes re-render while paused, through `renderPausedFrame()`

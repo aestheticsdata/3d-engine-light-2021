@@ -72,7 +72,7 @@ These are not oversights in the design; they are decisions each sub-issue has to
 
 - Markup in `src/index.html`, styling in `src/styles/`, behaviour in `src/ui/`. Vanilla TypeScript and plain CSS — no framework, no new runtime dependency.
 - **One owner per recipe.** The panel card, header strip, info row, stat row, stat tile, chip, ON/OFF toggle, slider row, range skin, swatch, badge, HUD chip, divider, scrollbar and the placeholder affordance are declared once, in ticket 02. Every other ticket consumes them and never restates a colour table.
-- **One derivation per shared value.** `sceneObjectId`, `modeLabel`, `texLabel`, the measured `frameMs` and the uptime clock each have exactly one owner that exports them.
+- **One derivation per shared value.** `sceneObjectId`, `modeLabel`, `MaterialSummary`, the measured `frameMs` and the uptime clock each have exactly one owner that exports them.
 - **One token name, two values.** A token keeps a single name and changes value inside `@media (max-width: 899px)`. There are no `*-mobile` token names. The breakpoint is exclusive: desktop `min-width: 900px`, mobile `max-width: 899px`.
 - **Three different triangle counts**, and each ticket says which it means: the static registry count, the drawn count returned by `Surface3D.render`, and culled as the difference while culling is on.
 - **RESET restores everything.** A control added by any sub-issue is only Done when RESET restores it too, on both desktop and mobile.

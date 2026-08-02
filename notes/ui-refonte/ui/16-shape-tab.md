@@ -1,6 +1,6 @@
 # SHAPE tab: primitive picker, transform, material
 
-The SHAPE tab is the first tab of the right-hand inspector and holds the three controls a visitor touches most: which primitive is on screen, how it is oriented and spun, and how its surface is painted. It takes over the `#primitives` select and the range inputs the shell ticket parked in the inspector body as bare unstyled elements, and replaces them with real controls. Every widget is built now; the ones with no engine behind them render live, store their value in `src/ui/uiState.ts`, and are picked up by the de-mock epic later.
+The SHAPE tab is the first tab of the right-hand inspector and holds the three controls a visitor touches most: which primitive is on screen, how it is oriented and spun, and how its surface is painted. It takes over the `#primitives` select and the range inputs the shell ticket parked in the inspector body as bare unstyled elements, and replaces them with real controls. Every widget is built now; the ones with no engine behind them render live, store their value in `src/ui/UIStateStore.ts`, and are picked up by the de-mock epic later.
 
 **Design source** — `3D Engine UI.dc.html` desktop L459–L534, mobile L867–L928.
 
@@ -18,6 +18,8 @@ Grid: `.chip-grid` with `--chip-cols: 4`; chips are `.chip--shape`, two stacked 
 **The mockup's 8 shapes are not this repo's shapes.** `SHAPES` at L1123–L1148 hardcodes SPHERE CUBE TORUS ICOSA CYLIND CONE TEAPOT TERRA. Ignore that list entirely. The grid is generated from `Object.keys(data)` (`src/data/data.ts`: sphere, cube, pyramid, cross, donut, torusKnot, menger, cuboctahedron) and must survive COS-201 adding roughly ten more polyhedra without any edit to this component.
 
 Labels come from a new `src/ui/primitiveLabels.ts`: an explicit `Record<string, string>` for the current keys — `sphere: SPHERE, cube: CUBE, pyramid: PYRAMID, cross: CROSS, donut: DONUT, torusKnot: TKNOT, menger: MENGER, cuboctahedron: CUBOCT` — plus a derived fallback for any key not in the map: strip non-alphanumerics, uppercase, truncate to 8 characters. A 296px panel minus 2px border, minus `var(--space-4)` padding on both sides, minus three `var(--space-1-5)` gaps leaves ~66px per chip, so 8 characters at `--text-xs` mono fit with room to spare. A missing map entry is a lint-visible fallback, never a crash.
+
+**Note added by COS-389.** `src/ui/primitiveLabel.ts` already exists and is a different derivation — it title-cases a key for SHAPE INFO's NAME row and SHAPE STORY's fallback (`torusKnot` → `Torus Knot`), not a short uppercase chip label. The two are not interchangeable, but this ticket must not add a *second* key-splitting regex: build the fallback on top of `primitiveLabel(key)` and uppercase/truncate its output. One derivation per shared value is an epic rule, and the near-identical filenames make this the easiest place in the set to break it.
 
 **Overflow.** The grid stays 4 columns at every count. The PRIMITIVE section body gets `max-height: calc(6 * var(--size-chip-shape) + 5 * var(--space-1-5))` (284px = six rows) and `overflow-y: auto`, so TRANSFORM and MATERIAL stay reachable no matter how many primitives land; the scrollbar skin comes from the primitives ticket. This cap is the only tab-specific CSS rule the ticket writes. The header count always shows the true total.
 
@@ -95,7 +97,7 @@ The disabled visual itself is painted by primitives' `slider.css` (`cursor: not-
 | OPACITY | `v + "%"` | real — `changeOpacity`, `src/index.ts` L261; disabled while `backfaceCullingEnabled` |
 | UV SCALE | `v + "×"` | `placeholder` — range 1..16 (L1415), default 8; owned by de-mock E4 |
 
-Every placeholder control carries the primitives placeholder affordance and writes its slice of `src/ui/uiState.ts` (created empty by the shell ticket, sliced here).
+Every placeholder control carries the primitives placeholder affordance and writes its slice of `src/ui/UIStateStore.ts` (created empty by the shell ticket, sliced here).
 
 ## Files
 
@@ -103,9 +105,9 @@ Every placeholder control carries the primitives placeholder affordance and writ
 - `src/ui/inspector/controls/chipGrid.ts` — new; the shared N-column chip grid factory used by all three tabs (sets `--chip-cols`, applies the `.chip--*` modifier, manages `.is-active`, keyboard and focus). Emits classes only; declares no colours
 - `src/ui/inspector/controls/sliderRow.ts` — new; the shared slider row factory, one markup shape for both branches, with a `format(value): string` hook and a disabled state
 - `src/ui/primitiveLabels.ts` — new; short-label map plus derived fallback
-- `src/ui/uiState.ts` — extended (created by the shell ticket) with `scale`, `texture`, `baseColor`, `uvScale`, and the UI-space rotation values
+- `src/ui/UIStateStore.ts` — extended (created by the shell ticket) with `scale`, `texture`, `baseColor`, `uvScale`, and the UI-space rotation values
 - `src/styles/inspector.css` — new; tab-specific layout only (the PRIMITIVE scroll cap and its mobile disable). Every other rule comes from `src/styles/components/`
-- `src/controls.ts` — delete `createSelectButton`; keep `attachListener` / `getNumericValue` / `setNumericValue`
+- `src/ui/PrimitivePicker.ts` — the `#primitives` select wiring, to be replaced by this ticket's chip grid; `src/ui/SliderBank.ts` keeps the numeric binding (`attach` / `applyDefaults` / `syncFromDom`). Both came out of the old root-level `controls.ts`, which COS-373 deleted.
 - `src/index.ts` — drop the `createSelectButton` call in `init()` (L656–L659); expose `requestPrimitiveChange` and an active-primitive change notification to the tab; add the rate-slider mapping constants and re-point `applyDefaultControlValues` / `syncSettingsFromControls` / `resetControls` at UI-space values
 - `src/index.html` — mount the tab into the SHAPE slot the shell created; the parked `#primitives` select and the unstyled range inputs are consumed here
 
@@ -121,7 +123,7 @@ The legacy `main.css` blocks (`.sliderGroup`, `.sliderRow`, `.sliderText`, `inpu
 - [ ] Rotation sliders have a real zero at UI value 0, SPIN reads `1.0/s` at the engine default, no rotation label carries a `°`, and `rotateMesh` is unchanged
 - [ ] `syncSettingsFromControls` and `resetControls` read UI-space values through the mapping layer; no engine-space slider id survives on a visible control except `#opacitySlider`
 - [ ] OPACITY still drives the rasterizer, still disables when backface culling is on, still resets to 100 when culling is turned on — including when the flip comes from the RENDER tab or a quick toggle — and the existing follow-cursor tooltip still appears near the thumb while disabled
-- [ ] Placeholder controls (SCALE, texture chips, BASE, UV SCALE) accept input, carry `data-placeholder="true"` with a `title` and `aria-describedby`, persist in `src/ui/uiState.ts`, and change nothing on the canvas
+- [ ] Placeholder controls (SCALE, texture chips, BASE, UV SCALE) accept input, carry `data-placeholder="true"` with a `title` and `aria-describedby`, persist in `src/ui/UIStateStore.ts`, and change nothing on the canvas
 - [ ] The toolbar's RESET path restores every slice this ticket adds — rotation rates, spin, scale, texture, base colour, opacity, UV scale — not just the engine values
 - [ ] At `max-width: 899px`: three separate cards with 26px headers, 56px shape chips, 40px texture chips, stacked sliders with a 26px track and the label/value row above, the six-row scroll cap disabled, and the 38 × 32 swatch padded to 44px through `.tap-pad`
 - [ ] This ticket declares no chip, toggle or range colour table and no range-input skin; `src/styles/inspector.css` contains only the scroll cap

@@ -1,6 +1,6 @@
 # RENDER tab: shading mode, pipeline, lighting
 
-The RENDER tab is the second inspector tab: how faces are shaded, which pipeline stages are on, and where the light is. Two of its controls are the real engine flags that the shell ticket parked in this tab body as the two bare text-button rows from `src/index.html` L62–L69; the rest are built now and wired by the de-mock epic. This tab must be scrupulous about the difference, because it is the one place where a visitor could reasonably believe the renderer does something it does not. It also owns the `shadingMode` slice of `src/ui/uiState.ts` and the exported `modeLabel()` that four other widgets read.
+The RENDER tab is the second inspector tab: how faces are shaded, which pipeline stages are on, and where the light is. Two of its controls are the real engine flags that the shell ticket parked in this tab body as the two bare text-button rows from `src/index.html` L62–L69; the rest are built now and wired by the de-mock epic. This tab must be scrupulous about the difference, because it is the one place where a visitor could reasonably believe the renderer does something it does not. It also owns the `shadingMode` slice of `src/ui/UIStateStore.ts` and the exported `modeLabel()` that four other widgets read.
 
 **Design source** — `3D Engine UI.dc.html` desktop L536–L586, mobile L930–L977.
 
@@ -36,13 +36,13 @@ The painted toggle is 32px tall inside a 48px row. `toggleRow.ts` binds the clic
 The mockup sells its six shading modes with a CSS filter over a static viewport image (`FILTERS`, L1163–L1170: `grayscale(1) contrast(1.35) brightness(.9)` for DEPTH, `hue-rotate(155deg) saturate(1.6)` for NORMALS, and so on). **This repo renders for real, and a CSS filter laid over a real render is a lie about the rasterizer.** Do not port `FILTERS`. Do not apply any filter to `#canvasID`.
 
 What to do instead:
-- All six chips render, are selectable, are keyboard reachable, and write `shadingMode` in `src/ui/uiState.ts`.
+- All six chips render, are selectable, are keyboard reachable, and write `shadingMode` in `src/ui/UIStateStore.ts`.
 - WIRE is the only chip with an engine behind it. Selecting it turns wireframe on; the canvas visibly changes.
 - The other five change the chip's selected state and nothing else. The engine ignores `shadingMode` until de-mock E3 (shading pipeline).
 - Mark the section rather than each chip, reusing an idiom the design already has: the SHADING MODE header becomes a `space-between` row with a right-aligned `.panel__note` reading `PREVIEW` — identical typography and placement to the PRIMITIVE header's count on the SHAPE tab. Each unbacked chip additionally carries the primitives placeholder affordance: `data-placeholder="true"` + a `title` stating the mode is not implemented yet + `aria-describedby`. No new colours, no new shapes, no badge invented from nothing.
 
 ### One flag, three controls
-WIREFRAME appears as the WIRE shading chip, as the PIPELINE WIREFRAME toggle, and as the WIRE viewport quick toggle. There is one boolean (`wireframeEnabled`, `src/index.ts` L546–L550), exposed as `uiState.wireframe`, and all three read and write it. Rules:
+WIREFRAME appears as the WIRE shading chip, as the PIPELINE WIREFRAME toggle, and as the WIRE viewport quick toggle. There is one boolean (`wireframeEnabled`, `src/index.ts` L546–L550), exposed as `store.wireframe`, and all three read and write it. Rules:
 - Selecting the WIRE chip sets wireframe on.
 - Selecting any other shading chip sets wireframe off.
 - Turning the WIREFRAME toggle (or the quick toggle) on selects the WIRE chip; turning it off returns the chip selection to FLAT.
@@ -50,7 +50,7 @@ WIREFRAME appears as the WIRE shading chip, as the PIPELINE WIREFRAME toggle, an
 Default shading chip is **FLAT**, not the mockup's `gouraud` (L1174) — this rasterizer fills triangles flat, and defaulting to a mode it cannot do would misdescribe the very first frame.
 
 ### `modeLabel()` belongs to this ticket
-`src/ui/shadingMode.ts` is new and owned here: it exports the key→label map that titles the chips (POINTS, WIRE, FLAT, GOURAUD, DEPTH, NORMALS) and `modeLabel()`, which returns the label for the current `uiState.shadingMode`. SHAPE INFO's SHADING row, the viewport HUD mode chip and the status bar's mode segment all import it instead of deriving their own string; the viewport HUD's hardcoded GOURAUD goes away with it. One value, one derivation.
+`src/ui/shadingMode.ts` is new and owned here: it exports the key→label map that titles the chips (POINTS, WIRE, FLAT, GOURAUD, DEPTH, NORMALS) and `modeLabel()`, which returns the label for the current `store.shadingMode`. SHAPE INFO's SHADING row, the viewport HUD mode chip and the status bar's mode segment all import it instead of deriving their own string; the viewport HUD's hardcoded GOURAUD goes away with it. One value, one derivation.
 
 ## Pipeline — what is real
 
@@ -62,7 +62,7 @@ Drop the current label inversion while porting: `syncToggleButtons` (L526–L544
 
 ## Lighting
 
-There is no light in this engine. `Triangle` fills with the material string baked into the shape data; no normal is ever computed for shading. All four sliders are placeholders: they render, move, format their value, carry the placeholder affordance, and write the `lighting` slice of `src/ui/uiState.ts`.
+There is no light in this engine. `Triangle` fills with the material string baked into the shape data; no normal is ever computed for shading. All four sliders are placeholders: they render, move, format their value, carry the placeholder affordance, and write the `lighting` slice of `src/ui/UIStateStore.ts`.
 
 The mockup's scene graph carries a `KEY_LIGHT` entry whose row participates in the scene-graph ticket's visibility state. Both tickets read the same `lighting` slice, so hiding KEY_LIGHT and moving AZIMUTH cannot end up describing two different fictional lights.
 
@@ -72,8 +72,8 @@ The mockup's scene graph carries a `KEY_LIGHT` entry whose row participates in t
 |---|---|---|
 | Shading chip: WIRE | selected / not | real — `wireframeEnabled` (`src/index.ts` L546) |
 | Shading chips: POINTS, FLAT, GOURAUD, DEPTH, NORMALS | selected / not | `placeholder` — default FLAT; chip selects and the engine ignores it; owned by de-mock E3 |
-| WIREFRAME toggle | ON / OFF | real — `uiState.wireframe`, default off |
-| BACKFACE CULLING toggle | ON / OFF | real — `uiState.cull` backing `backfaceCullingEnabled` (`src/index.ts` L552), default on; enabling it resets and disables OPACITY |
+| WIREFRAME toggle | ON / OFF | real — `store.wireframe`, default off |
+| BACKFACE CULLING toggle | ON / OFF | real — `store.cull` backing `backfaceCullingEnabled` (`src/index.ts` L552), default on; enabling it resets and disables OPACITY |
 | Z-BUFFER toggle | ON / OFF | `placeholder` — default ON; the renderer has no depth buffer (painter order only); owned by de-mock E3 |
 | DITHERING toggle | ON / OFF | `placeholder` — default OFF; de-mock E3 |
 | EDGE ANTIALIAS toggle | ON / OFF | `placeholder` — default ON; de-mock E3 |
@@ -91,7 +91,7 @@ All four lighting placeholders are owned by de-mock E3, which is also what makes
 - `src/ui/inspector/controls/toggleRow.ts` — new; the shared ON/OFF factory over the primitives classes (`role="switch"`, `aria-checked`, keyboard, full-row hit area on mobile), reused by the WORLD tab. Declares no colours
 - `src/ui/inspector/controls/chipGrid.ts` — reused from the SHAPE tab ticket, extended with an optional per-chip placeholder affordance and an optional section-header note
 - `src/ui/inspector/controls/sliderRow.ts` — reused from the SHAPE tab ticket
-- `src/ui/uiState.ts` — extended with `shadingMode` (owned here), `zbuffer`, `dither`, `edgeAA`, `lighting.{azimuth,elevation,ambient,specular}`, and the shared `wireframe` / `cull` booleans
+- `src/ui/UIStateStore.ts` — extended with `shadingMode` (owned here), `zbuffer`, `dither`, `edgeAA`, `lighting.{azimuth,elevation,ambient,specular}`, and the shared `wireframe` / `cull` booleans
 - `src/index.ts` — expose wireframe and culling through the shared store instead of the two button handlers; delete `syncToggleButtons` and the six element lookups it needs, including their entries in the constructor guard
 - `src/index.html` — mount the tab into the RENDER slot the shell created; the two parked text-button rows are consumed here
 
@@ -101,7 +101,7 @@ No new stylesheet: every rule this tab needs already exists in `src/styles/compo
 
 - [ ] No CSS filter is applied to `#canvasID` or any ancestor, and `FILTERS` from the mockup appears nowhere in the repo
 - [ ] Selecting WIRE turns wireframe on and the canvas changes; selecting any other shading chip turns it off; the PIPELINE toggle, the shading chip and the viewport quick toggle never disagree
-- [ ] The five unbacked shading chips select visually, persist in `uiState`, carry `data-placeholder="true"` with a `title` and `aria-describedby`, and provably change nothing about the rendered frame
+- [ ] The five unbacked shading chips select visually, persist in `UIStateStore`, carry `data-placeholder="true"` with a `title` and `aria-describedby`, and provably change nothing about the rendered frame
 - [ ] The SHADING MODE header carries the `PREVIEW` note in the same typography and position as the PRIMITIVE header's count
 - [ ] `modeLabel()` is exported from `src/ui/shadingMode.ts` and is the only derivation of the mode string in the tree; no widget hardcodes GOURAUD
 - [ ] BACKFACE CULLING still defaults to on, and flipping it from this tab still resets OPACITY to 100, disables the OPACITY slider and leaves its follow-cursor tooltip working

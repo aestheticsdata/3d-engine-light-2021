@@ -57,7 +57,7 @@ Stage one ships with `setSize(1024, 640)` called once at boot. The invariant to 
 
 **Pixel budget, not optional.** This is a software rasteriser filling canvas paths on the main thread, so cost is linear in `width × height`. Today's 1024 × 640 is 0.65 MP; a 1400px-wide centre column at DPR 2 is 2800 × 1750 = 4.9 MP, roughly 7.5× the fill work per frame — and the checker floor draws about 8000 filled quads before the mesh gets a look in. Introduce `MAX_RENDER_PIXELS` (start at 1.6 MP, about 1600 × 1000) and derive `dprEffective = Math.min(devicePixelRatio, Math.sqrt(MAX_RENDER_PIXELS / (cssW · cssH)))`, so a large window degrades resolution instead of frame rate. The clamp is visible rather than hidden, because the resolution HUD chip reports the real backing store.
 
-**Downstream readouts.** The three widgets that computed from the canvas once at boot subscribe to the resize path and publish through `setField`, so both branch mounts update from one write: the resolution HUD chip, SYSTEM's BUFFER and COLOR BUFFER (`width · height · 4 / 1048576`, 2 decimals), and CAMERA's ASPECT. The CAMERA ticket's FOV formula `2·atan((canvas.height / 2) / 300)` becomes `2·atan((canvas.height / renderTarget.scale / 2) / 300)`, which is 93.7° at every size. Leave the FRAMERATE sparkline alone — it owns a separate canvas with `dpr = 2` pinned by its own ticket and its own size check inside `drawFps()`, and must not be attached to this observer.
+**Downstream readouts.** The three widgets that computed from the canvas once at boot subscribe to the resize path and publish through `FieldWriter.write`, so both branch mounts update from one write: the resolution HUD chip, SYSTEM's BUFFER and COLOR BUFFER (`width · height · 4 / 1048576`, 2 decimals), and CAMERA's ASPECT. The CAMERA ticket's FOV formula `2·atan((canvas.height / 2) / 300)` becomes `2·atan((canvas.height / renderTarget.scale / 2) / 300)`, which is 93.7° at every size. Leave the FRAMERATE sparkline alone — it owns a separate canvas with `dpr = 2` pinned by its own ticket and its own size check inside `drawFps()`, and must not be attached to this observer.
 
 **CSS.** `src/styles/components/viewport.css` drops `aspect-ratio: 16 / 10` from `.viewportStage` on desktop and lets the stage fill the card (`position: absolute; inset: 0`). That is the one sanctioned layout change in this epic: the letterbox *is* the placeholder. Mobile keeps the card's own `aspect-ratio: 16 / 10`, so the stage keeps its shape there and HUD anchoring is untouched in both branches.
 
@@ -79,10 +79,10 @@ Stage one ships with `setSize(1024, 640)` called once at boot. The invariant to 
 - `src/primitives/Triangle.ts` — `lineWidth?: number` on `TriangleRenderOptions`, used by the wireframe stroke
 - `src/rendering/BackgroundRenderer.ts` — `resize(width, height)`, `readonly` dropped from the two fields
 - `src/animations/shapeTransitionMachine.ts` — `resize(width, height)`, `margin` kept on the context
-- `src/index.ts` — `PITCH_RATE_NEUTRAL` / `YAW_RATE_NEUTRAL`, `centerX` / `centerY` removed, `resize()`, the `ResizeObserver`, the DPR `matchMedia` hook, teardown, the `setField` writes, `lineWidth` passed to both render calls
+- `src/index.ts` — `PITCH_RATE_NEUTRAL` / `YAW_RATE_NEUTRAL`, `centerX` / `centerY` removed, `resize()`, the `ResizeObserver`, the DPR `matchMedia` hook, teardown, the `FieldWriter.write` writes, `lineWidth` passed to both render calls
 - `src/index.html` — canvas keeps `width="1024" height="640"` as the pre-observer seed
 - `src/styles/components/viewport.css` — desktop stage fills the card; mobile unchanged
-- `src/ui/viewportHud.ts`, `src/ui/telemetry/SystemWidget.ts`, `src/ui/telemetry/CameraWidget.ts` — recompute on resize instead of at boot
+- `src/ui/ViewportHUD.ts`, `src/ui/telemetry/SystemWidget.ts`, `src/ui/telemetry/CameraWidget.ts` — recompute on resize instead of at boot
 
 ## Done when
 
@@ -95,7 +95,7 @@ Stage one ships with `setSize(1024, 640)` called once at boot. The invariant to 
 - [ ] Wireframe strokes keep their apparent thickness at DPR 1 and DPR 2
 - [ ] Backing pixels never exceed `MAX_RENDER_PIXELS`; a maximised window on a large display reduces resolution rather than frame rate, and the resolution chip shows the clamped figure
 - [ ] Resizing while paused leaves a correctly rendered frame on screen, not a blank canvas
-- [ ] The resolution chip, SYSTEM BUFFER and COLOR BUFFER, and CAMERA ASPECT all update on resize in both branches through a single `setField` write each; COLOR BUFFER still reads `2.50 MB` at 1024 × 640
+- [ ] The resolution chip, SYSTEM BUFFER and COLOR BUFFER, and CAMERA ASPECT all update on resize in both branches through a single `FieldWriter.write` write each; COLOR BUFFER still reads `2.50 MB` at 1024 × 640
 - [ ] `ResizeObserver` fires at most one resize per animation frame during a continuous drag, and is disconnected on teardown
 - [ ] Moving the window to a display with a different `devicePixelRatio` re-rasterises without a window resize
 - [ ] The FRAMERATE sparkline canvas is untouched and still resizes itself at its pinned DPR 2

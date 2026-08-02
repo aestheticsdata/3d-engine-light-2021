@@ -95,8 +95,9 @@ codebase — `lint` passing proves nothing about whether the rules still work. `
 runs them against `scripts/lint-fixtures/` and fails if any rule stops firing, or starts
 over-firing. Both directions are checked.
 
-`test` is vitest over the four pure modules whose behaviour the OOP refonte must not change —
-the store, the shape transition machine and the two standalone derivations. It runs in the
+`test` is vitest over the six pure modules whose behaviour the OOP refonte must not change, in
+five suites — the store, the shape transition machine, the two standalone derivations, the fps
+meter and the projection. It runs in the
 **node** environment: nothing under test owns a canvas or a DOM node, and a suite that needs an
 emulation layer to run has stopped testing the logic.
 

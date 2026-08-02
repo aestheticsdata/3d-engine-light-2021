@@ -46,24 +46,24 @@ Wrapping and truncation, narrowest supported width 320px:
 
 | Field | Value shown | Source today |
 |---|---|---|
-| Run state | `RUNNING` / `PAUSED` | real: `Main.isPlaying` (`src/index.ts` L235, flipped in `togglePause`, L520–L524); push through `setField('statusLabel', …)` alongside the existing pause-button label update |
+| Run state | `RUNNING` / `PAUSED` | real: `Main.isPlaying` (`src/index.ts` L235, flipped in `togglePause`, L520–L524); push through `fields.write('statusLabel', …)` alongside the existing pause-button label update |
 | Selected object | `SPHERE_01 selected`, `TORUS_KNOT_01 selected` | real for the single-mesh scene: `sceneObjectId(Main.currentPrimitiveName)` from `src/ui/sceneObjectId.ts` (shell ticket) — do not re-derive the string here, the snake-case rule is what makes this match the scene-graph row and the viewport bracket. Multi-object selection is `placeholder`, owned by de-mock E7 |
-| Shading mode | `WIRE` / `FLAT` today | import `modeLabel()` from the render-tab ticket, which owns `shadingMode` in `uiState`. It reads `Main.wireframeEnabled` (`src/index.ts` L110) until the full six-mode set POINTS/WIRE/FLAT/GOURAUD/DEPTH/NORMALS (design L1162) becomes real in de-mock E3 |
+| Shading mode | `WIRE` / `FLAT` today | import `modeLabel()` from the render-tab ticket, which owns `shadingMode` in `UIStateStore`. It reads `Main.wireframeEnabled` (`src/index.ts` L110) until the full six-mode set POINTS/WIRE/FLAT/GOURAUD/DEPTH/NORMALS (design L1162) becomes real in de-mock E3 |
 | Texture | `TEXTURED` / `SOLID` | import the derivation the shape-info ticket owns and exports — unique non-`rgba` material strings off `object3D.triangles` (`src/index.ts` L286–L294), reduced to the two-value label. Do not print the raw material list here; the viewport HUD, shape info and this bar must all show the same string |
 | Projection | `PERSPECTIVE` | `placeholder`: the engine only does focal-length perspective projection in `Surface3D`; render the constant string. Orthographic is owned by de-mock E2 |
 | Units | `units: metres` | `placeholder`: static design copy, the engine has no world-unit concept; owned by de-mock E5 |
 | URL | `1991computer.com/3dengine` | real: static string, matches vite `base: "/3dengine"` |
-| Uptime | `m:ss uptime` | real, read-only here. The **system ticket** owns the clock and the formatter: one `setInterval(…, 1000)` started in `Main.init`, published as `setField('uptime', …)`. This bar adds no timer. The rAF display throttle cannot drive it — `Main.stop()` cancels the loop on pause (`src/index.ts` L577–L584), while the design deliberately keeps counting while paused (L1223) |
+| Uptime | `m:ss uptime` | real, read-only here. The **system ticket** owns the clock and the formatter: one `setInterval(…, 1000)` started in `Main.init`, published as `fields.write('uptime', …)`. This bar adds no timer. The rAF display throttle cannot drive it — `Main.stop()` cancels the loop on pause (`src/index.ts` L577–L584), while the design deliberately keeps counting while paused (L1223) |
 
 Both placeholder segments carry the shared placeholder affordance from the primitives ticket — `data-placeholder="true"` plus `title` and `aria-describedby` naming the owning de-mock ticket. That convention adds no visual treatment to a read-only text segment, so the bar reads as one uniform line.
 
-All writes go through `setField(name, value)` from `src/ui/fields.ts` (shell ticket) so the desktop and mobile copies of any duplicated node stay in sync.
+All writes go through the injected `FieldWriter` — `this.fields.write(name, value)`, `src/ui/FieldWriter.ts` (shell ticket) — so the desktop and mobile copies of any duplicated node stay in sync.
 
 ## Files
 
 - `src/index.html` — one `.statusBar` element carrying `.panel`, with three `.statusGroup` wrappers and six `.statusItem` segments, each carrying `data-field`.
 - `src/styles/components/status-bar.css` — new; layout only, imported from `src/styles/main.css` after the shared component files.
-- `src/ui/statusBar.ts` — new: `createStatusBar(root)` returning setters for run state, selected id, mode and texture. No uptime logic, no timer.
+- `src/ui/StatusBar.ts` — new: `class StatusBar`, constructed with the shared `FieldWriter`, exposing `setRunState(isPlaying)`, `setSelected(primitive)`, `setMode(wireframeEnabled)` and `setTexture(summary)`. No uptime logic, no timer.
 - `src/index.ts` — instantiate the status bar, push run state on pause toggle, push mode on the wireframe toggle, push selected id and texture on primitive change.
 
 ## Done when
