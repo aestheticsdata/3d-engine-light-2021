@@ -1,0 +1,19 @@
+language js(typescript)
+
+// D4 — this repo has never used inheritance or `implements`, and the OOP refonte keeps
+// that at zero. Contracts are plain interfaces, checked structurally: StateMachine
+// already consumes its states table that way.
+//
+// Node patterns rather than snippets, because a snippet cannot see a heritage clause at
+// all — `class $n { $body }` fails to match `class A extends B {}`, which is the exact
+// case this rule exists to catch. `abstract` lives in d04-no-abstract.grit; Grit cannot
+// read the class's `abstract` token, so it needs a different mechanism entirely.
+or {
+    TsImplementsClause(),
+    JsExtendsClause()
+} as $clause where {
+    register_diagnostic(
+        span = $clause,
+        message = "D4: no inheritance or `implements`. Inject a collaborator instead."
+    )
+}

@@ -1,16 +1,13 @@
-import type ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 import { easeInOutCubic, lerp } from "@animations/shapeTransition/easing";
-import type { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
+
 import type { StateMachineUpdate } from "@animations/StateMachine";
+import type ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
+import type { ShapeTransitionState, TransitionPayload } from "@animations/shapeTransition/types";
 
 // The first shape of the session drops in from above with nothing to replace.
 
 class EnteringState {
-  public onEnter(
-    context: ShapeTransitionContext,
-    _controller: unknown,
-    payload?: unknown,
-  ) {
+  public onEnter(context: ShapeTransitionContext, _controller: unknown, payload?: unknown) {
     const transition = this.requirePayload(payload);
 
     context.beginEntrance(transition.mesh);

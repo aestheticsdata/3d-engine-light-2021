@@ -9,6 +9,7 @@
 // nothing in the repo would notice a shape rendering inside-out.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
+
 import type { Object3D } from "@data/types";
 
 const DEFAULT_TORUS_RADIUS = 80;
@@ -60,11 +61,7 @@ class TorusGenerator {
         const cosPhi = Math.cos(phi);
         const ringRadius = this.torusRadius + this.tubeRadius * cosPhi;
 
-        this.builder.addPoint([
-          ringRadius * cosTheta,
-          ringRadius * sinTheta,
-          this.tubeRadius * sinPhi,
-        ]);
+        this.builder.addPoint([ringRadius * cosTheta, ringRadius * sinTheta, this.tubeRadius * sinPhi]);
       }
     }
   }

@@ -21,10 +21,8 @@ export interface ShapeInfo {
 const shapeInfo: Record<string, ShapeInfo> = {
   sphere: {
     title: "Sphere",
-    description:
-      "A low-poly sphere built from latitude and longitude bands with a bold checker pattern.",
-    geometricFeature:
-      "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
+    description: "A low-poly sphere built from latitude and longitude bands with a bold checker pattern.",
+    geometricFeature: "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
     densityLabel: "Medium density",
     generator: "lat/long bands",
     textureSummary: "No textures",
@@ -35,10 +33,8 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   cube: {
     title: "Cube",
-    description:
-      "A hard-edged box mixing flat-colored faces with subdivided textured surfaces.",
-    geometricFeature:
-      "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
+    description: "A hard-edged box mixing flat-colored faces with subdivided textured surfaces.",
+    geometricFeature: "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
     densityLabel: "High density",
     generator: "unit hull + subdivided faces",
     textureSummary: "Dog and galaxy textures",
@@ -49,10 +45,8 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   pyramid: {
     title: "Pyramid",
-    description:
-      "A classic square-based pyramid with strongly contrasted side colors and a sharp apex.",
-    geometricFeature:
-      "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
+    description: "A classic square-based pyramid with strongly contrasted side colors and a sharp apex.",
+    geometricFeature: "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
     densityLabel: "Low density",
     generator: "square base + apex fan",
     textureSummary: "No textures",
@@ -69,18 +63,15 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   cross: {
     title: "Cross",
-    description:
-      "An extruded cross silhouette that reads like a solid emblem rather than a rounded primitive.",
-    geometricFeature:
-      "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
+    description: "An extruded cross silhouette that reads like a solid emblem rather than a rounded primitive.",
+    geometricFeature: "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
     densityLabel: "Medium density",
     generator: "extruded 2D profile",
     textureSummary: "No textures",
   },
   donut: {
     title: "Donut",
-    description:
-      "A torus primitive with a dense triangulated ring and alternating pastel surface colors.",
+    description: "A torus primitive with a dense triangulated ring and alternating pastel surface colors.",
     geometricFeature:
       "A circular tube is swept around a larger circle, producing a continuous loop with no sharp corners.",
     densityLabel: "High density",
@@ -93,8 +84,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   torusKnot: {
     title: "Torus Knot",
-    description:
-      "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
+    description: "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
     geometricFeature:
       "The tube follows a p/q knot centerline and uses transported frames to keep the cross-section stable.",
     densityLabel: "High density",
@@ -110,8 +100,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   menger: {
     title: "Menger Sponge",
-    description:
-      "A level-2 cube fractal carved by recursively removing center volumes on each axis.",
+    description: "A level-2 cube fractal carved by recursively removing center volumes on each axis.",
     geometricFeature:
       "Only exposed voxel faces are emitted, revealing tunnels and cavities while preserving a clean outer silhouette.",
     densityLabel: "Very high density",
@@ -150,8 +139,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
   },
   rhombicDodecahedron: {
     title: "Rhombic dodecahedron",
-    description:
-      "A Catalan solid whose 12 identical rhombic faces are shaded in three tones, one per axis they share.",
+    description: "A Catalan solid whose 12 identical rhombic faces are shaded in three tones, one per axis they share.",
     geometricFeature:
       "The convex hull of a cube and its dual octahedron, and the dual of the cuboctahedron: a face here for every vertex there.",
     densityLabel: "Low density",

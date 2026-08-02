@@ -12,6 +12,7 @@
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 // Not exposed through an options interface: the circumradius is what puts every
@@ -37,8 +38,7 @@ class CuboctahedronGenerator {
       vertices,
       faces: this.buildFaces(vertices),
       radius: CIRCUMRADIUS,
-      colorForFace: (vertexCount) =>
-        vertexCount === 4 ? SQUARE_COLOR : TRIANGLE_COLOR,
+      colorForFace: (vertexCount) => (vertexCount === 4 ? SQUARE_COLOR : TRIANGLE_COLOR),
     });
 
     return this.builder.mesh;
@@ -73,9 +73,7 @@ class CuboctahedronGenerator {
     // coordinate. For x = +1 that is (1,1,0) (1,-1,0) (1,0,1) (1,0,-1).
     AXES.forEach((axis) => {
       SIGNS.forEach((sign) => {
-        faces.push(
-          this.indicesWhere(vertices, (vertex) => vertex[axis] === sign),
-        );
+        faces.push(this.indicesWhere(vertices, (vertex) => vertex[axis] === sign));
       });
     });
 
@@ -88,9 +86,7 @@ class CuboctahedronGenerator {
 
           faces.push(
             this.indicesWhere(vertices, (vertex) =>
-              vertex.every(
-                (value, axis) => value === 0 || value === octant[axis],
-              ),
+              vertex.every((value, axis) => value === 0 || value === octant[axis]),
             ),
           );
         });
@@ -100,10 +96,7 @@ class CuboctahedronGenerator {
     return faces;
   }
 
-  private indicesWhere(
-    vertices: number[][],
-    predicate: (vertex: number[]) => boolean,
-  ): number[] {
+  private indicesWhere(vertices: number[][], predicate: (vertex: number[]) => boolean): number[] {
     return vertices.reduce<number[]>((indices, vertex, index) => {
       if (predicate(vertex)) {
         indices.push(index);

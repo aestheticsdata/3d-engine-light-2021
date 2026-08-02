@@ -3,7 +3,7 @@
 
 :root {
   --duration-blink: 1.6s;
-  --opacity-blink-min: .15;
+  --opacity-blink-min: 0.15;
 
   /* NEW — not extracted from the design, which declares no transitions or easings.
      Use only if a later ticket adds hover/tab animation.
@@ -15,12 +15,18 @@
      entering or leaving takes --duration-base. */
   --duration-fast: 120ms;
   --duration-base: 240ms;
-  --ease-standard: cubic-bezier(.2,0,0,1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Keep the 45/55 stops exactly — the near-square wave is what makes the dot
    read as a hardware LED rather than a pulse. */
 @keyframes recblink {
-  0%, 45% { opacity: 1 }
-  55%, 100% { opacity: var(--opacity-blink-min) }
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: var(--opacity-blink-min);
+  }
 }

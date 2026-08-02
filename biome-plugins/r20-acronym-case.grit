@@ -1,0 +1,42 @@
+language js(typescript)
+
+// R20 — an acronym keeps its capitals in a type name: UIStateStore, never
+// UiStateStore. Half-capitalising one is what autocomplete produces, and it makes the
+// same acronym read two ways in one tree — this repo had UiStateStore, DomScope,
+// FpsMeter and ViewportHud beside an already-correct UV.
+//
+// The acronym may sit anywhere: at the front (UiState), at the back (ViewportHud), in
+// the middle (ShapeUiPanel), or be the whole name (Ui). What marks it as a word rather
+// than a coincidence is PascalCase itself — it either opens the name or follows a
+// lowercase letter or digit, and it is either followed by a capital or ends the name.
+// The three parts of the regex say exactly that, in order.
+//
+// The ESLint original wrote that with lookaheads. Grit's regex engine has none, so the
+// same shape is expressed as an optional capital-initial prefix that must end lowercase,
+// then the acronym, then an optional capital-initial suffix. It is equivalent because
+// Grit matches the whole identifier: a name starting lowercase can satisfy no arm, which
+// is what keeps `dogUrl` and `viewportHud` out, and a fully capitalised acronym never
+// matches a half-capitalised alternative, which is why `UV`, `DOMScope` and `FPSMeter`
+// stay silent without needing an exception.
+//
+// Do not write this as two alternatives anchored separately. Grit anchors a pattern by
+// wrapping it as `^` + pattern + `$`, so a top-level `|` compiles to `^ARM1|ARM2$` —
+// each arm anchored at one end only, and an acronym with capitals on both sides matched
+// by neither. `ShapeUiPanel` went unreported for exactly that reason.
+//
+// `Rgba` is listed before `Rgb`, and `Uuid` alongside: the acronym has to match to its
+// full length, so in `RgbaColor` the trailing `a` defeats the "followed by a capital"
+// test and a list holding only `Rgb` reads as covering it while letting it through.
+//
+// Non-capturing groups are mandatory: a capture group makes the plugin fail to compile
+// with "regex pattern matched 1 variables, but expected 0".
+or {
+    JsIdentifierBinding(),
+    TsIdentifierBinding()
+} as $identifier where {
+    $identifier <: r"(?:[A-Z][A-Za-z0-9]*[a-z0-9])?(?:Ui|Ux|Fps|Hud|Dom|Uv|Fov|Url|Uri|Api|Css|Html|Xml|Json|Svg|Rgba|Rgb|Gpu|Cpu|Http|Uuid)(?:[A-Z][A-Za-z0-9]*)?",
+    register_diagnostic(
+        span = $identifier,
+        message = "R20: an acronym keeps its capitals in a type name — UIStateStore, not UiStateStore. R13 then forces the filename to follow."
+    )
+}

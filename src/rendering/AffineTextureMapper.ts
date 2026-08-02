@@ -28,8 +28,8 @@
 // - uvDet == 0 means the UV triangle is degenerate, so we skip rendering.
 // -----------------------------------------------------------------------------
 
-import type Point2D from "@primitives/Point2D";
 import type { UV } from "@data/types";
+import type Point2D from "@primitives/Point2D";
 
 // Flat rather than two nested triples: this literal is built once per textured
 // triangle per frame, and one object costs less than one object holding two
@@ -82,17 +82,9 @@ class AffineTextureMapper {
     const m21 = (a.x * (x3 - x2) + b.x * (x1 - x3) + c.x * (x2 - x1)) / uvDet;
     const m22 = (a.y * (x3 - x2) + b.y * (x1 - x3) + c.y * (x2 - x1)) / uvDet;
 
-    const dx =
-      (a.x * (x2 * y3 - x3 * y2) +
-        b.x * (x3 * y1 - x1 * y3) +
-        c.x * (x1 * y2 - x2 * y1)) /
-      uvDet;
+    const dx = (a.x * (x2 * y3 - x3 * y2) + b.x * (x3 * y1 - x1 * y3) + c.x * (x1 * y2 - x2 * y1)) / uvDet;
 
-    const dy =
-      (a.y * (x2 * y3 - x3 * y2) +
-        b.y * (x3 * y1 - x1 * y3) +
-        c.y * (x1 * y2 - x2 * y1)) /
-      uvDet;
+    const dy = (a.y * (x2 * y3 - x3 * y2) + b.y * (x3 * y1 - x1 * y3) + c.y * (x1 * y2 - x2 * y1)) / uvDet;
 
     context.save();
 

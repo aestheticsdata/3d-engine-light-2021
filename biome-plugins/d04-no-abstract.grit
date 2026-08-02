@@ -1,0 +1,27 @@
+language js(typescript)
+
+// D4 — no `abstract`, on a class or on a member.
+//
+// Split from the rest of D4 because it needs three mechanisms rather than one.
+// `TsAbstractModifier()` matches abstract *members* only — it never matches a class, so
+// on its own it lets every abstract class through. Grit cannot read the class's own
+// `abstract` token either, and the obvious snippet is defeated by type parameters and
+// decorators the same way R1's was.
+//
+// What is left is the node's source text, anchored. A class node's text begins with
+// `abstract` exactly when the class is abstract, so the leading anchor is what keeps a
+// class that merely *contains* the word — a method named `abstractLooking`, a comment —
+// from matching. `[\s\S]` rather than `.` because the node spans lines.
+//
+// The two class nodes are distinct: `export default abstract class X {}` is a
+// JsClassExportDefaultDeclaration and is invisible to JsClassDeclaration.
+or {
+    TsAbstractModifier(),
+    JsClassDeclaration() as $decl where { $decl <: r"abstract[\s\S]*" },
+    JsClassExportDefaultDeclaration() as $exported where { $exported <: r"abstract[\s\S]*" }
+} as $hit where {
+    register_diagnostic(
+        span = $hit,
+        message = "D4: no `abstract` classes or members. Inject a collaborator instead."
+    )
+}

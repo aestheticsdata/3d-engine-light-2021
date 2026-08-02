@@ -6,6 +6,7 @@
 // reach it is, not to module scope beside a rasteriser.
 
 import Matrix3D from "@primitives/Matrix3D";
+
 import type Mesh from "@primitives/Mesh";
 
 const PITCH_YAW_ROTATION_DIVISOR = 110;
@@ -65,14 +66,10 @@ class CameraController {
   public rotate(mesh: Mesh) {
     const speedFactor = this.rotationSpeed / 100;
 
-    this.matrix3D.setAngle(
-      ((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-    );
+    this.matrix3D.setAngle(((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor);
     mesh.transformMesh(this.matrix3D.pitch);
 
-    this.matrix3D.setAngle(
-      (-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-    );
+    this.matrix3D.setAngle((-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor);
     mesh.transformMesh(this.matrix3D.yaw);
 
     this.matrix3D.setAngle((this.roll / ROLL_ROTATION_DIVISOR) * speedFactor);
@@ -128,8 +125,7 @@ class CameraController {
   // other copies in the repo are module-private to their own files, and adding a
   // third here to save one expression is how a fourth appears next.
   private zoomOffsetFor(sliderValue: number): number {
-    const raw =
-      (sliderValue - ZOOM_SLIDER_MIN) / (ZOOM_SLIDER_MAX - ZOOM_SLIDER_MIN);
+    const raw = (sliderValue - ZOOM_SLIDER_MIN) / (ZOOM_SLIDER_MAX - ZOOM_SLIDER_MIN);
     const progress = Math.min(1, Math.max(0, raw));
 
     return ZOOM_ZOFFSET_FAR + (ZOOM_ZOFFSET_NEAR - ZOOM_ZOFFSET_FAR) * progress;

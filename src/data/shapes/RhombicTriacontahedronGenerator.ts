@@ -12,8 +12,9 @@
 
 import Icosahedron, { PHI } from "@data/builders/Icosahedron";
 import MeshBuilder from "@data/builders/MeshBuilder";
-import Vec3Math from "@data/builders/Vec3Math";
 import { AXES } from "@data/builders/symmetry";
+import Vec3Math from "@data/builders/Vec3Math";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -51,18 +52,14 @@ class RhombicTriacontahedronGenerator {
     // The two orbits, in one list: the 12 icosahedral corners keep their
     // indices, the 20 dodecahedral ones follow. The icosahedron's rows are
     // copied rather than aliased, so nothing downstream can write through them.
-    const vertices = [
-      ...this.icosahedron.vertices.map((vertex) => [...vertex]),
-      ...this.buildDodecahedron(),
-    ];
+    const vertices = [...this.icosahedron.vertices.map((vertex) => [...vertex]), ...this.buildDodecahedron()];
     const groups = this.groupFacesByCube();
 
     this.builder.addConvexPolyhedron({
       vertices,
       faces: this.buildFaces(),
       radius: CIRCUMRADIUS,
-      colorForFace: (_vertexCount, faceIndex) =>
-        FACE_COLORS[this.colorIndexAt(groups, faceIndex)],
+      colorForFace: (_vertexCount, faceIndex) => FACE_COLORS[this.colorIndexAt(groups, faceIndex)],
     });
 
     return this.builder.mesh;
@@ -87,14 +84,7 @@ class RhombicTriacontahedronGenerator {
   // comes out a planar golden rhombus.
   private buildDodecahedron(): number[][] {
     return this.icosahedron.faces.map((face) =>
-      AXES.map(
-        (axis) =>
-          face.reduce(
-            (sum, vertex) => sum + this.icosahedron.vertices[vertex][axis],
-            0,
-          ) /
-          PHI ** 2,
-      ),
+      AXES.map((axis) => face.reduce((sum, vertex) => sum + this.icosahedron.vertices[vertex][axis], 0) / PHI ** 2),
     );
   }
 
@@ -106,16 +96,13 @@ class RhombicTriacontahedronGenerator {
     const dodecahedronOffset = this.icosahedron.vertices.length;
 
     return this.icosahedron.edges.map(([first, second]) => {
-      const adjacent = this.icosahedron.faces.reduce<number[]>(
-        (indices, face, index) => {
-          if (face.includes(first) && face.includes(second)) {
-            indices.push(dodecahedronOffset + index);
-          }
+      const adjacent = this.icosahedron.faces.reduce<number[]>((indices, face, index) => {
+        if (face.includes(first) && face.includes(second)) {
+          indices.push(dodecahedronOffset + index);
+        }
 
-          return indices;
-        },
-        [],
-      );
+        return indices;
+      }, []);
 
       return [first, second, ...adjacent];
     });
@@ -144,10 +131,7 @@ class RhombicTriacontahedronGenerator {
         }
 
         const alignment = Math.abs(this.vec.dot(axis, other));
-        if (
-          alignment > 1 - ALIGNMENT_TOLERANCE ||
-          alignment < ALIGNMENT_TOLERANCE
-        ) {
+        if (alignment > 1 - ALIGNMENT_TOLERANCE || alignment < ALIGNMENT_TOLERANCE) {
           groups[otherIndex] = cubeCount;
         }
       });
@@ -161,9 +145,7 @@ class RhombicTriacontahedronGenerator {
   private buildFaceAxes(): number[][] {
     return this.icosahedron.edges.map(([first, second]) => {
       const direction = AXES.map(
-        (axis) =>
-          this.icosahedron.vertices[first][axis] +
-          this.icosahedron.vertices[second][axis],
+        (axis) => this.icosahedron.vertices[first][axis] + this.icosahedron.vertices[second][axis],
       );
       const length = Math.hypot(...direction);
 

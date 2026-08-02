@@ -43,9 +43,7 @@ class FPSMeter {
     this.times.push(now);
     this.fps = this.times.length;
     this.smoothedFps =
-      this.smoothedFps === 0
-        ? this.fps
-        : this.smoothedFps + (this.fps - this.smoothedFps) * SMOOTHING_FACTOR;
+      this.smoothedFps === 0 ? this.fps : this.smoothedFps + (this.fps - this.smoothedFps) * SMOOTHING_FACTOR;
 
     if (now - this.lastDisplayUpdateAt < DISPLAY_UPDATE_INTERVAL_MS) {
       return null;

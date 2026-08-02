@@ -1,4 +1,5 @@
 import Point2D from "@primitives/Point2D";
+
 import type Viewport from "@primitives/Viewport";
 
 class Point3D {
@@ -46,12 +47,9 @@ class Point3D {
   // locals first because the second row of the rotation needs the unrotated x,
   // so assigning as we go would feed each row the previous row's output.
   public transformPt(rot: number[][]) {
-    const x =
-      rot[0][0] * this.x + rot[0][1] * this.y + rot[0][2] * this.z + rot[0][3];
-    const y =
-      rot[1][0] * this.x + rot[1][1] * this.y + rot[1][2] * this.z + rot[1][3];
-    const z =
-      rot[2][0] * this.x + rot[2][1] * this.y + rot[2][2] * this.z + rot[2][3];
+    const x = rot[0][0] * this.x + rot[0][1] * this.y + rot[0][2] * this.z + rot[0][3];
+    const y = rot[1][0] * this.x + rot[1][1] * this.y + rot[1][2] * this.z + rot[1][3];
+    const z = rot[2][0] * this.x + rot[2][1] * this.y + rot[2][2] * this.z + rot[2][3];
 
     this.x = x;
     this.y = y;

@@ -32,11 +32,7 @@ class PolyhedronBuilder {
   // every solid in the family shows up at the same size as the other shapes.
   public centerAndScale(vertices: number[][], radius: number): number[][] {
     const center = this.vec.centroid(vertices);
-    const maxDistance = Math.max(
-      ...vertices.map((vertex) =>
-        this.vec.magnitude(this.vec.sub(vertex, center)),
-      ),
-    );
+    const maxDistance = Math.max(...vertices.map((vertex) => this.vec.magnitude(this.vec.sub(vertex, center))));
     const scale = radius / maxDistance;
 
     return vertices.map((vertex) => [
@@ -57,15 +53,9 @@ class PolyhedronBuilder {
   // near-misses there would pull a fifth vertex into a four-vertex face and the
   // cyclic sort would triangulate a non-planar rhombus without complaining.
   // Solids with irrational coordinates pass one explicitly.
-  public facesFromNormals(
-    vertices: number[][],
-    normals: number[][],
-    tolerance: number = 0,
-  ): number[][] {
+  public facesFromNormals(vertices: number[][], normals: number[][], tolerance: number = 0): number[][] {
     return normals.map((normal) => {
-      const reach = Math.max(
-        ...vertices.map((vertex) => this.vec.dot(vertex, normal)),
-      );
+      const reach = Math.max(...vertices.map((vertex) => this.vec.dot(vertex, normal)));
 
       return vertices.reduce<number[]>((indices, vertex, index) => {
         if (this.vec.dot(vertex, normal) >= reach - tolerance) {
@@ -86,19 +76,14 @@ class PolyhedronBuilder {
     // Any two non-collinear spokes from the face centre span the face plane.
     let normal: Vec3 = [0, 0, 0];
     for (let i = 1; i < pts.length; i += 1) {
-      normal = this.vec.cross(
-        this.vec.sub(pts[0], faceCenter),
-        this.vec.sub(pts[i], faceCenter),
-      );
+      normal = this.vec.cross(this.vec.sub(pts[0], faceCenter), this.vec.sub(pts[i], faceCenter));
       if (this.vec.magnitude(normal) > 1e-6) {
         break;
       }
     }
 
     const flipped: Vec3 = [-normal[0], -normal[1], -normal[2]];
-    const outward = this.vec.normalize(
-      this.vec.dot(normal, faceCenter) < 0 ? flipped : normal,
-    );
+    const outward = this.vec.normalize(this.vec.dot(normal, faceCenter) < 0 ? flipped : normal);
 
     // 2D frame inside the face plane, used only to sort the vertices by angle.
     const u = this.vec.normalize(this.vec.sub(pts[0], faceCenter));
@@ -120,12 +105,7 @@ class PolyhedronBuilder {
     const a = vertices[ordered[0]];
     const b = vertices[ordered[1]];
     const c = vertices[ordered[2]];
-    if (
-      this.vec.dot(
-        this.vec.cross(this.vec.sub(b, a), this.vec.sub(c, a)),
-        outward,
-      ) > 0
-    ) {
+    if (this.vec.dot(this.vec.cross(this.vec.sub(b, a), this.vec.sub(c, a)), outward) > 0) {
       ordered.reverse();
     }
 

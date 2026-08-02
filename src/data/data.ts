@@ -1,4 +1,3 @@
-import type { Data3D } from "@data/types";
 import cross from "@data/shapes/cross";
 import cube from "@data/shapes/cube";
 import cuboctahedron from "@data/shapes/cuboctahedron";
@@ -13,6 +12,8 @@ import rhombicTriacontahedron from "@data/shapes/rhombicTriacontahedron";
 import sphere from "@data/shapes/sphere";
 import torusKnot from "@data/shapes/torusKnot";
 import truncatedCuboctahedron from "@data/shapes/truncatedCuboctahedron";
+
+import type { Data3D } from "@data/types";
 
 export type { Data3D, Object3D } from "@data/types";
 

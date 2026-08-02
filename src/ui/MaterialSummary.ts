@@ -34,13 +34,7 @@ class MaterialSummary {
     // shape change, and a caller that reaches for .sort() should fail loudly
     // instead of quietly reordering what the panel is about to print.
     this.keys = Object.freeze(
-      Array.from(
-        new Set(
-          object3D.triangles
-            .map((triangle) => triangle[3])
-            .filter(isTextureKey),
-        ),
-      ),
+      Array.from(new Set(object3D.triangles.map((triangle) => triangle[3]).filter(isTextureKey))),
     );
   }
 

@@ -56,11 +56,7 @@
   max-width: min(100%, var(--size-canvas-w));
   max-height: min(100%, var(--size-canvas-h));
 
-  width: min(
-    100cqw,
-    calc(100cqh * var(--size-canvas-ratio)),
-    var(--size-canvas-w)
-  );
+  width: min(100cqw, calc(100cqh * var(--size-canvas-ratio)), var(--size-canvas-w));
 }
 
 .viewportStage canvas {
@@ -85,11 +81,11 @@
    lands; they are written out so the mapping lives in one place. */
 
 [data-shading-mode="points"] .viewportStage canvas {
-  filter: contrast(1.15) saturate(.7);
+  filter: contrast(1.15) saturate(0.7);
 }
 
 [data-shading-mode="wire"] .viewportStage canvas {
-  filter: saturate(.5) contrast(1.2);
+  filter: saturate(0.5) contrast(1.2);
 }
 
 [data-shading-mode="flat"] .viewportStage canvas {
@@ -101,7 +97,7 @@
 }
 
 [data-shading-mode="depth"] .viewportStage canvas {
-  filter: grayscale(1) contrast(1.35) brightness(.9);
+  filter: grayscale(1) contrast(1.35) brightness(0.9);
 }
 
 [data-shading-mode="normals"] .viewportStage canvas {
@@ -217,13 +213,13 @@
   width: var(--size-hairline);
   height: var(--size-crosshair);
   margin-top: calc(var(--size-crosshair) / -2);
-  margin-left: -.5px;
+  margin-left: -0.5px;
 }
 
 .viewportHud__crosshair--h {
   width: var(--size-crosshair);
   height: var(--size-hairline);
-  margin-top: -.5px;
+  margin-top: -0.5px;
   margin-left: calc(var(--size-crosshair) / -2);
 }
 

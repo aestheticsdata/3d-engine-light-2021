@@ -12,6 +12,7 @@
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -69,8 +70,7 @@ class KisRhombicDodecahedronGenerator {
       vertices: this.vertices,
       faces: this.faces,
       radius: CIRCUMRADIUS,
-      colorForFace: (_vertexCount, faceIndex) =>
-        FACE_COLORS[this.faceTones[faceIndex]],
+      colorForFace: (_vertexCount, faceIndex) => FACE_COLORS[this.faceTones[faceIndex]],
     });
 
     return this.builder.mesh;
@@ -128,11 +128,7 @@ class KisRhombicDodecahedronGenerator {
   // (corner, tip) pairs — no ordering to get right by hand. Walking the rhombus
   // visits those pairs as 00, 10, 11, 01, so the parity of the two slots
   // alternates the tone around the pyramid.
-  private addPyramidFaces(
-    normal: number[],
-    zeroAxis: number,
-    liveAxes: number[],
-  ) {
+  private addPyramidFaces(normal: number[], zeroAxis: number, liveAxes: number[]) {
     const apex = this.directionIndex(normal);
 
     const tips = liveAxes.map((axis) => {
@@ -183,9 +179,7 @@ class KisRhombicDodecahedronGenerator {
     const index = this.indexByDirection.get(direction.join(","));
 
     if (index === undefined) {
-      throw new Error(
-        `kisRhombicDodecahedron: no vertex is registered for direction (${direction.join(", ")}).`,
-      );
+      throw new Error(`kisRhombicDodecahedron: no vertex is registered for direction (${direction.join(", ")}).`);
     }
 
     return index;

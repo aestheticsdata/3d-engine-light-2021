@@ -3,16 +3,16 @@
 
 :root {
   --space-0: 0;
-  --space-px: 1px;    /* desktop shape-info column gap */
+  --space-px: 1px; /* desktop shape-info column gap */
   --space-0-5: 2px;
   --space-1: 3px;
-  --space-1-5: 4px;   /* desktop chip grids, scene-graph padding */
+  --space-1-5: 4px; /* desktop chip grids, scene-graph padding */
   --space-2: 5px;
-  --space-2-5: 6px;   /* mobile grid gaps */
+  --space-2-5: 6px; /* mobile grid gaps */
   --space-3: 7px;
-  --space-4: 8px;     /* desktop page padding + every desktop grid gap */
+  --space-4: 8px; /* desktop page padding + every desktop grid gap */
   --space-4-5: 9px;
-  --space-5: 10px;    /* mobile page padding + mobile stack gap */
+  --space-5: 10px; /* mobile page padding + mobile stack gap */
   --space-5-5: 11px;
   --space-6: 12px;
   --space-7: 14px;

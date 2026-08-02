@@ -29,6 +29,7 @@
 // inside-out.
 
 import PolyhedronBuilder from "@data/builders/PolyhedronBuilder";
+
 import type { Object3D, Triangle3D, UV } from "@data/types";
 
 const DEFAULT_SUBDIVISION_GRID = 12;
@@ -100,24 +101,12 @@ class MeshBuilder {
   // Positional rather than an options object because the order IS the meaning:
   // these four indices are a winding, and naming them would not make the order
   // any less load-bearing.
-  public addQuadByIndices(
-    a: number,
-    b: number,
-    c: number,
-    d: number,
-    color: string,
-  ) {
+  public addQuadByIndices(a: number, b: number, c: number, d: number, color: string) {
     this.triangles.push([a, b, c, color]);
     this.triangles.push([a, c, d, color]);
   }
 
-  public addQuadByCoords(
-    p0: number[],
-    p1: number[],
-    p2: number[],
-    p3: number[],
-    color: string,
-  ) {
+  public addQuadByCoords(p0: number[], p1: number[], p2: number[], p3: number[], color: string) {
     const i0 = this.addPoint(p0);
     const i1 = this.addPoint(p1);
     const i2 = this.addPoint(p2);
@@ -182,31 +171,17 @@ class MeshBuilder {
     const baseIndex = this.points.length;
     scaled.forEach((vertex) => this.points.push(vertex));
 
-    this.polyhedron
-      .orderFaces(scaled, options.faces)
-      .forEach((ordered, faceIndex) => {
-        const color = options.colorForFace(
-          options.faces[faceIndex].length,
-          faceIndex,
-        );
+    this.polyhedron.orderFaces(scaled, options.faces).forEach((ordered, faceIndex) => {
+      const color = options.colorForFace(options.faces[faceIndex].length, faceIndex);
 
-        for (let i = 1; i < ordered.length - 1; i += 1) {
-          this.triangles.push([
-            baseIndex + ordered[0],
-            baseIndex + ordered[i],
-            baseIndex + ordered[i + 1],
-            color,
-          ]);
-        }
-      });
+      for (let i = 1; i < ordered.length - 1; i += 1) {
+        this.triangles.push([baseIndex + ordered[0], baseIndex + ordered[i], baseIndex + ordered[i + 1], color]);
+      }
+    });
   }
 
   private lerp3(p0: number[], p1: number[], t: number): number[] {
-    return [
-      p0[0] + (p1[0] - p0[0]) * t,
-      p0[1] + (p1[1] - p0[1]) * t,
-      p0[2] + (p1[2] - p0[2]) * t,
-    ];
+    return [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t, p0[2] + (p1[2] - p0[2]) * t];
   }
 }
 

@@ -11,9 +11,9 @@
 // test. A class does not — `new UIStateStore()` is the isolation, and losing
 // that scaffolding is the first dividend of the conversion.
 
+import UIStateStore from "@ui/UIStateStore";
 import { describe, expect, it } from "vitest";
 
-import UIStateStore from "@ui/UIStateStore";
 import type { UIState } from "@ui/UIStateStore";
 
 describe("registerSlice", () => {
@@ -73,9 +73,7 @@ describe("subscribe", () => {
   it("returns an unsubscribe that stops delivery", () => {
     const store = new UIStateStore();
     const seen: (number | undefined)[] = [];
-    const unsubscribe = store.subscribe((state) =>
-      seen.push(state.drawnTriangles),
-    );
+    const unsubscribe = store.subscribe((state) => seen.push(state.drawnTriangles));
 
     store.setState({ drawnTriangles: 1 });
     unsubscribe();

@@ -6,12 +6,12 @@
 // copy of either derivation is how two surfaces start disagreeing about the same
 // shape, so these run against the real registry entries rather than fixtures.
 
-import { describe, expect, it } from "vitest";
-
 import cube from "@data/shapes/cube";
 import pyramid from "@data/shapes/pyramid";
 import MaterialSummary from "@ui/MaterialSummary";
 import { sceneObjectId } from "@ui/sceneObjectId";
+import { describe, expect, it } from "vitest";
+
 import type { Object3D } from "@data/types";
 
 describe("MaterialSummary", () => {
@@ -61,9 +61,7 @@ describe("MaterialSummary", () => {
 describe("sceneObjectId", () => {
   it("splits a camelCase key into an upper snake-case row id", () => {
     expect(sceneObjectId("torusKnot")).toBe("TORUS_KNOT_01");
-    expect(sceneObjectId("kisRhombicDodecahedron")).toBe(
-      "KIS_RHOMBIC_DODECAHEDRON_01",
-    );
+    expect(sceneObjectId("kisRhombicDodecahedron")).toBe("KIS_RHOMBIC_DODECAHEDRON_01");
   });
 
   it("leaves a single-word key alone", () => {

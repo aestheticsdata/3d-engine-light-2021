@@ -9,14 +9,14 @@
     "preview": "vite preview",
     "snapshot:geometry": "node scripts/snapshot-geometry.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "biome check ./src",
+    "lint:fix": "biome check --write ./src",
+    "lint:rules": "node scripts/check-lint-rules.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.8.0",
+    "@biomejs/biome": "2.5.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.65.0",
     "vite": "^7.2.7",
     "vitest": "^4.1.10"
   }

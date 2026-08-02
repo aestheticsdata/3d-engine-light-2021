@@ -15,10 +15,11 @@
 // value and its listener while this class owns `disabled` and the tooltip.
 
 import DOMScope from "@ui/DOMScope";
-import FollowCursorTooltip from "@ui/tooltip";
-import { OPACITY_SLIDER } from "@ui/SliderBank";
-import type { ShadingMode } from "@ui/modeLabel";
 import { modeLabel } from "@ui/modeLabel";
+import { OPACITY_SLIDER } from "@ui/SliderBank";
+import FollowCursorTooltip from "@ui/tooltip";
+
+import type { ShadingMode } from "@ui/modeLabel";
 
 const OPACITY_SLIDER_MIN = 0;
 const OPACITY_SLIDER_MAX = 100;
@@ -48,14 +49,8 @@ class RenderPipelinePanel {
     const missing = "RENDER control is missing.";
 
     this.wireframeBtn = scope.require<HTMLElement>("#toggleWireframe", missing);
-    this.backfaceCullingBtn = scope.require<HTMLElement>(
-      "#toggleBackfaceCulling",
-      missing,
-    );
-    this.opacitySlider = scope.require<HTMLInputElement>(
-      OPACITY_SLIDER,
-      missing,
-    );
+    this.backfaceCullingBtn = scope.require<HTMLElement>("#toggleBackfaceCulling", missing);
+    this.opacitySlider = scope.require<HTMLInputElement>(OPACITY_SLIDER, missing);
     this.opacityDisabledTooltip = new FollowCursorTooltip({
       target: this.opacitySlider,
       message: "Turn backface culling off to adjust opacity.",
@@ -84,10 +79,7 @@ class RenderPipelinePanel {
   public bind(onChange: () => void) {
     this.notifyChange = onChange;
     this.wireframeBtn.addEventListener("click", this.toggleWireframe);
-    this.backfaceCullingBtn.addEventListener(
-      "click",
-      this.toggleBackfaceCulling,
-    );
+    this.backfaceCullingBtn.addEventListener("click", this.toggleBackfaceCulling);
     this.syncToggleButtons();
   }
 
@@ -102,9 +94,7 @@ class RenderPipelinePanel {
   // An arrow property: this is the slider bank's `apply` for the opacity binding
   // and is handed over as a value.
   public setOpacityFromSlider = (sliderValue: number) => {
-    const raw =
-      (sliderValue - OPACITY_SLIDER_MIN) /
-      (OPACITY_SLIDER_MAX - OPACITY_SLIDER_MIN);
+    const raw = (sliderValue - OPACITY_SLIDER_MIN) / (OPACITY_SLIDER_MAX - OPACITY_SLIDER_MIN);
 
     this.opacityFraction = Math.min(1, Math.max(0, raw));
     this.notifyChange();
@@ -130,10 +120,7 @@ class RenderPipelinePanel {
   // rather than the state, which is why the two disagreed at every default.
   private syncToggleButtons() {
     this.wireframeBtn.classList.toggle("is-on", this.wireframeEnabled);
-    this.backfaceCullingBtn.classList.toggle(
-      "is-on",
-      this.backfaceCullingEnabled,
-    );
+    this.backfaceCullingBtn.classList.toggle("is-on", this.backfaceCullingEnabled);
   }
 
   private toggleWireframe = () => {

@@ -1,0 +1,9 @@
+language js(typescript)
+
+TsAccessibilityModifier() as $modifier where {
+    $modifier <: "protected",
+    register_diagnostic(
+        span = $modifier,
+        message = "D4: no `protected` — it only means something under inheritance, which this repo does not use. Use `private`."
+    )
+}

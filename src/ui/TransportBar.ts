@@ -31,9 +31,7 @@ class TransportBar {
   }
 
   public bindToggle(handler: () => void) {
-    this.toggleMounts.forEach((node) =>
-      node.addEventListener("click", handler),
-    );
+    this.toggleMounts.forEach((node) => node.addEventListener("click", handler));
   }
 
   public bindReset(handler: () => void) {
@@ -49,9 +47,7 @@ class TransportBar {
 
     // The REC dot claims a running render loop; freeze and dim it when there
     // isn't one.
-    this.runStateDots.forEach((node) =>
-      node.classList.toggle("is-paused", !isPlaying),
-    );
+    this.runStateDots.forEach((node) => node.classList.toggle("is-paused", !isPlaying));
   }
 }
 

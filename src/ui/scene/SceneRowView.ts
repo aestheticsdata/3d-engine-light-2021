@@ -5,8 +5,9 @@
 // repaint in a second loop somewhere else. Naming it is the reason the panel
 // splits, not the line count.
 
-import type { SceneRow } from "@ui/scene/sceneRows";
 import { HINT_ID, PLACEHOLDER_NOTE } from "@ui/scene/sceneRows";
+
+import type { SceneRow } from "@ui/scene/sceneRows";
 import type UIStateStore from "@ui/UIStateStore";
 
 export interface SceneRowState {
@@ -16,8 +17,7 @@ export interface SceneRowState {
   triangles: number | null;
 }
 
-const formatTriangles = (count: number | null) =>
-  count === null ? "—" : `${count} △`;
+const formatTriangles = (count: number | null) => (count === null ? "—" : `${count} △`);
 
 class SceneRowView {
   private readonly definition: SceneRow;
@@ -71,9 +71,7 @@ class SceneRowView {
         node.dataset.placeholder = "true";
         node.title = PLACEHOLDER_NOTE;
       });
-      [this.selectButton, this.visButton].forEach((node) =>
-        node.setAttribute("aria-describedby", HINT_ID),
-      );
+      [this.selectButton, this.visButton].forEach((node) => node.setAttribute("aria-describedby", HINT_ID));
     }
 
     this.selectButton.addEventListener("click", () => {

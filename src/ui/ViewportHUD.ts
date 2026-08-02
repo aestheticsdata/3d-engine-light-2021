@@ -21,8 +21,9 @@
 // already written by Main's own writes, and a second pass over the same nodes
 // would be work that changes nothing.
 
-import type FieldWriter from "@ui/FieldWriter";
 import { modeLabel } from "@ui/modeLabel";
+
+import type FieldWriter from "@ui/FieldWriter";
 
 // Placeholders. Each is a constant, never derived from engine state — a value
 // computed from the wrong source is worse than an obvious mock, because it
@@ -69,10 +70,7 @@ class ViewportHUD {
   // the stage at its own 1440 frame; what the rasteriser works at is the canvas
   // buffer, and that is the number worth showing.
   public seed() {
-    this.fields.write(
-      "resolution",
-      `${this.canvas.width} × ${this.canvas.height}`,
-    );
+    this.fields.write("resolution", `${this.canvas.width} × ${this.canvas.height}`);
     this.fields.write("camPos", CAM_POS);
     this.fields.write("camRot", CAM_ROT);
     this.fields.write("camTarget", CAM_TARGET);
@@ -83,10 +81,7 @@ class ViewportHUD {
   // bar pushes through the writer, so the two cannot drift — there is one
   // derivation and one write.
   public setMode(wireframeEnabled: boolean) {
-    this.card.setAttribute(
-      "data-shading-mode",
-      modeLabel(wireframeEnabled).toLowerCase(),
-    );
+    this.card.setAttribute("data-shading-mode", modeLabel(wireframeEnabled).toLowerCase());
   }
 
   // The distance is passed in rather than recomputed: Main owns the focal

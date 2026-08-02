@@ -13,6 +13,7 @@
 import MeshBuilder from "@data/builders/MeshBuilder";
 import PolyhedronBuilder from "@data/builders/PolyhedronBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -29,11 +30,7 @@ const REACH_TOLERANCE = 0;
 // splits them into the three groups of four that share an axis, which is the
 // structure worth seeing. Both triangles of a rhombus always match, because the
 // builder colours per face rather than per triangle.
-const FACE_COLORS = [
-  "rgba(139, 106, 196, 1)",
-  "rgba(108, 79, 163, 1)",
-  "rgba(78, 54, 124, 1)",
-];
+const FACE_COLORS = ["rgba(139, 106, 196, 1)", "rgba(108, 79, 163, 1)", "rgba(78, 54, 124, 1)"];
 
 // The normal and the axis it zeroes travel together in one record. They were two
 // arrays rejoined by index, which is one careless `push` away from colouring
@@ -64,8 +61,7 @@ class RhombicDodecahedronGenerator {
         REACH_TOLERANCE,
       ),
       radius: CIRCUMRADIUS,
-      colorForFace: (_vertexCount, faceIndex) =>
-        FACE_COLORS[normals[faceIndex].zeroAxis],
+      colorForFace: (_vertexCount, faceIndex) => FACE_COLORS[normals[faceIndex].zeroAxis],
     });
 
     return this.builder.mesh;

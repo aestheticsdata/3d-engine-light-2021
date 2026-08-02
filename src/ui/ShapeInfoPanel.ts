@@ -14,10 +14,11 @@
 // timeout, fade out, repaint once, fade in — belongs here.
 
 import DOMScope from "@ui/DOMScope";
+import { primitiveLabel } from "@ui/primitiveLabel";
+
+import type { Object3D } from "@data/types";
 import type MaterialSummary from "@ui/MaterialSummary";
 import type { ShadingMode } from "@ui/modeLabel";
-import { primitiveLabel } from "@ui/primitiveLabel";
-import type { Object3D } from "@data/types";
 
 // Twinned with `animation: panelFadeOut 180ms` in
 // src/styles/components/shape-info.css:56. Change one and the repaint either
@@ -43,20 +44,11 @@ class ShapeInfoPanel {
     this.content = scope.require<HTMLElement>("#shapeInfoPanelContent", missing);
     this.nameNode = scope.require<HTMLElement>("#shapeInfoName", missing);
     this.pointsNode = scope.require<HTMLElement>("#shapeInfoPoints", missing);
-    this.trianglesNode = scope.require<HTMLElement>(
-      "#shapeInfoTriangles",
-      missing,
-    );
-    this.texturesNode = scope.require<HTMLElement>(
-      "#shapeInfoTextures",
-      missing,
-    );
+    this.trianglesNode = scope.require<HTMLElement>("#shapeInfoTriangles", missing);
+    this.texturesNode = scope.require<HTMLElement>("#shapeInfoTextures", missing);
     this.opacityNode = scope.require<HTMLElement>("#shapeInfoOpacity", missing);
     this.shadingNode = scope.require<HTMLElement>("#shapeInfoShading", missing);
-    this.materialNode = scope.require<HTMLElement>(
-      "#shapeInfoMaterial",
-      missing,
-    );
+    this.materialNode = scope.require<HTMLElement>("#shapeInfoMaterial", missing);
     this.fadeTimeoutId = null;
   }
 
@@ -69,10 +61,7 @@ class ShapeInfoPanel {
     // made of, and it must not move when culling hides half of it. The scene
     // graph's mesh row is the one that follows the renderer.
     this.setValue(this.trianglesNode, String(object3D.triangles.length));
-    this.setValue(
-      this.texturesNode,
-      textureKeys.length > 0 ? textureKeys.join(", ") : "none",
-    );
+    this.setValue(this.texturesNode, textureKeys.length > 0 ? textureKeys.join(", ") : "none");
     this.setValue(this.materialNode, material.label);
   }
 

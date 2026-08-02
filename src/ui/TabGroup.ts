@@ -26,9 +26,7 @@ class TabGroup {
   private _current: string;
 
   constructor(options: TabGroupOptions) {
-    this.tabs = Array.from(
-      options.tablist.querySelectorAll<HTMLElement>("[data-tab-id]"),
-    );
+    this.tabs = Array.from(options.tablist.querySelectorAll<HTMLElement>("[data-tab-id]"));
     this.root = options.root;
     this.attribute = options.attribute;
     this.onChange = options.onChange;

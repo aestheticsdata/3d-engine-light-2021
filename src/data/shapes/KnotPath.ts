@@ -93,26 +93,18 @@ class KnotPath {
     const tangent = frames[0].tangent;
     let initialNormal: Vec3 = [1, 0, 0];
 
-    if (
-      Math.abs(tangent[1]) <= Math.abs(tangent[0]) &&
-      Math.abs(tangent[1]) <= Math.abs(tangent[2])
-    ) {
+    if (Math.abs(tangent[1]) <= Math.abs(tangent[0]) && Math.abs(tangent[1]) <= Math.abs(tangent[2])) {
       initialNormal = [0, 1, 0];
     }
 
-    if (
-      Math.abs(tangent[2]) <= Math.abs(tangent[0]) &&
-      Math.abs(tangent[2]) <= Math.abs(tangent[1])
-    ) {
+    if (Math.abs(tangent[2]) <= Math.abs(tangent[0]) && Math.abs(tangent[2]) <= Math.abs(tangent[1])) {
       initialNormal = [0, 0, 1];
     }
 
     const seed = this.unit(this.vec.cross(tangent, initialNormal));
 
     frames[0].normal = this.unit(this.vec.cross(tangent, seed));
-    frames[0].binormal = this.unit(
-      this.vec.cross(tangent, frames[0].normal),
-    );
+    frames[0].binormal = this.unit(this.vec.cross(tangent, frames[0].normal));
   }
 
   private transportFrames(frames: KnotFrame[]) {
@@ -125,22 +117,11 @@ class KnotPath {
       let carried = frames[i - 1].normal;
       if (axisLength > 1e-8) {
         const angle = Math.atan2(axisLength, this.vec.dot(prevTangent, tangent));
-        carried = this.vec.rotateAroundAxis(
-          frames[i - 1].normal,
-          this.vec.scale(axis, 1 / axisLength),
-          angle,
-        );
+        carried = this.vec.rotateAroundAxis(frames[i - 1].normal, this.vec.scale(axis, 1 / axisLength), angle);
       }
 
-      frames[i].normal = this.unit(
-        this.vec.sub(
-          carried,
-          this.vec.scale(tangent, this.vec.dot(carried, tangent)),
-        ),
-      );
-      frames[i].binormal = this.unit(
-        this.vec.cross(tangent, frames[i].normal),
-      );
+      frames[i].normal = this.unit(this.vec.sub(carried, this.vec.scale(tangent, this.vec.dot(carried, tangent))));
+      frames[i].binormal = this.unit(this.vec.cross(tangent, frames[i].normal));
     }
   }
 
@@ -157,27 +138,14 @@ class KnotPath {
 
     // acos loses the sign, so it comes back from which side of the first
     // tangent the residual rotation turns towards.
-    if (
-      this.vec.dot(
-        frames[0].tangent,
-        this.vec.cross(frames[0].normal, frames[last].normal),
-      ) > 0
-    ) {
+    if (this.vec.dot(frames[0].tangent, this.vec.cross(frames[0].normal, frames[last].normal)) > 0) {
       theta = -theta;
     }
 
     const thetaStep = theta / last;
     for (let i = 1; i < frames.length; i += 1) {
-      frames[i].normal = this.unit(
-        this.vec.rotateAroundAxis(
-          frames[i].normal,
-          frames[i].tangent,
-          thetaStep * i,
-        ),
-      );
-      frames[i].binormal = this.unit(
-        this.vec.cross(frames[i].tangent, frames[i].normal),
-      );
+      frames[i].normal = this.unit(this.vec.rotateAroundAxis(frames[i].normal, frames[i].tangent, thetaStep * i));
+      frames[i].binormal = this.unit(this.vec.cross(frames[i].tangent, frames[i].normal));
     }
   }
 
@@ -186,11 +154,7 @@ class KnotPath {
     const qu = this.q * u;
     const ringRadius = this.majorRadius + this.pathRadius * Math.cos(qu);
 
-    return [
-      ringRadius * Math.cos(pu),
-      ringRadius * Math.sin(pu),
-      this.pathRadius * Math.sin(qu),
-    ];
+    return [ringRadius * Math.cos(pu), ringRadius * Math.sin(pu), this.pathRadius * Math.sin(qu)];
   }
 
   private tangent(u: number): Vec3 {

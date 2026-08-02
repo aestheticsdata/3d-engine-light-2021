@@ -9,10 +9,11 @@
 // `uptime`; the render loop cannot drive it anyway, since Main.stop() cancels
 // rAF on pause while the clock has to keep counting.
 
-import type FieldWriter from "@ui/FieldWriter";
-import type MaterialSummary from "@ui/MaterialSummary";
 import { modeLabel } from "@ui/modeLabel";
 import { sceneObjectId } from "@ui/sceneObjectId";
+
+import type FieldWriter from "@ui/FieldWriter";
+import type MaterialSummary from "@ui/MaterialSummary";
 
 class StatusBar {
   private readonly fields: FieldWriter;

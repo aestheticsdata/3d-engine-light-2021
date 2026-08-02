@@ -6,9 +6,6 @@
 // a module-scope helper that should stay one.
 
 export const easeInOutCubic = (progress: number): number =>
-  progress < 0.5
-    ? 4 * progress * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-export const lerp = (start: number, end: number, progress: number): number =>
-  start + (end - start) * progress;
+export const lerp = (start: number, end: number, progress: number): number => start + (end - start) * progress;
