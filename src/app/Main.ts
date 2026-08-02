@@ -28,7 +28,7 @@ import CameraController, {
   ROTATION_SPEED_SLIDER_MAX,
 } from "@app/CameraController";
 import FieldWriter from "@ui/FieldWriter";
-import { uiState } from "@ui/UiStateStore";
+import UiStateStore from "@ui/UiStateStore";
 import StatusBar from "@ui/StatusBar";
 import ViewportHud from "@ui/ViewportHud";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
@@ -57,6 +57,12 @@ const TRANSITION_DURATION_MS = 1250;
 const PRIMITIVE_SELECT = "#primitives";
 
 class Main {
+  // The console's only store, constructed here rather than exported beside its
+  // class. A module-scope instance is one every future importer shares by
+  // accident, and its slices are already registered before anything decides
+  // they should be — which is what made the panel's registerSlice call an
+  // import-time side effect until it moved into the panel's own constructor.
+  private readonly uiState: UiStateStore;
   // FPS and the drawn-triangle count do not resolve a node here: both appear in
   // more than one place in the DOM (toolbar, mobile header, telemetry card), so
   // they go through the writer, which touches every [data-field] node at once.
@@ -99,10 +105,15 @@ class Main {
       throw new Error("2D canvas context is not available.");
     }
 
+    // First, and in the constructor body rather than a field initialiser:
+    // `useDefineForClassFields` runs initialisers before this body, so anything
+    // built here that subscribes would be reaching for a store that does not
+    // exist yet.
+    this.uiState = new UiStateStore();
     this.fields = fields;
     this.statusBar = new StatusBar(this.fields);
     this.viewportHud = new ViewportHud(canvas, this.fields);
-    this.sceneGraph = new SceneGraphPanel(uiState);
+    this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.stage = stage;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
@@ -131,7 +142,7 @@ class Main {
         // Selection returns to the mesh row on every shape change (D11):
         // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
         // the object the row describes changes underneath it.
-        uiState.setState({ sceneSelection: MESH_ROW_ID });
+        this.uiState.setState({ sceneSelection: MESH_ROW_ID });
         this.animateShapeInfoPanel(primitive);
       },
     });
@@ -159,7 +170,7 @@ class Main {
 
     // Hiding the mesh has to repaint immediately when the loop is not
     // running; while it is, the next frame already picks it up.
-    this.unsubscribe = uiState.subscribe(() => {
+    this.unsubscribe = this.uiState.subscribe(() => {
       const hidden = this.sceneGraph.isMeshHidden();
       if (hidden === this.meshHidden) {
         return;
@@ -320,7 +331,7 @@ class Main {
   // graph row through here and nowhere else, so the three cannot disagree.
   private publishDrawnTriangles(count: number) {
     this.fields.write("trisDrawn", count);
-    uiState.setState({ drawnTriangles: count });
+    this.uiState.setState({ drawnTriangles: count });
   }
 
   private buildMesh(primitive: string): Mesh {
@@ -390,7 +401,7 @@ class Main {
   // (L1306): the transport is a session control, not a scene control, and RESET
   // must not restart a loop the user stopped on purpose.
   //
-  // resetAll() restores every slice registered in uiState. That is what makes
+  // resetAll() restores every slice registered in the store. That is what makes
   // RESET coverage automatic — a later ticket registers its slice with its
   // defaults and is restored here without this function being edited.
   private resetControls = () => {
@@ -398,7 +409,7 @@ class Main {
     this.sliders.applyDefaults();
     this.sliders.syncFromDom();
     this.pipeline.syncOpacityAvailability();
-    uiState.resetAll();
+    this.uiState.resetAll();
     this.syncPipelineReadouts();
   };
 }

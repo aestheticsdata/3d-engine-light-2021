@@ -113,8 +113,9 @@ describe("subscribe", () => {
     expect(order).toEqual(["first", "late"]);
   });
 
-  // index.ts:276-283 subscribes a listener that repaints, and guards itself with
-  // a change detector precisely because notify is synchronous and re-entrant.
+  // Main subscribes a listener that repaints, and guards itself with a
+  // mesh-hidden change detector precisely because notify is synchronous and
+  // re-entrant.
   // Queueing or coalescing the nested pass would make that guard the wrong shape.
   it("runs a notification raised from inside a notification immediately", () => {
     const store = new UiStateStore();
@@ -138,15 +139,36 @@ describe("subscribe", () => {
   });
 });
 
-describe("the module-scope singleton", () => {
-  // Stage one keeps `export const uiState` alive because sceneGraph.ts still
-  // reads the store from module scope. COS-392 deletes it, and this test is the
-  // reminder that it is a temporary shape rather than the design.
-  it("is one instance shared by every current consumer", async () => {
-    const first = await import("@ui/UiStateStore");
-    const second = await import("@ui/UiStateStore");
+// The inverse of the test this replaces. Through COS-367 and COS-361 the module
+// exported a ready-made instance beside the class, and the test pinned the fact
+// that everyone got the same one. COS-392 deleted it, so what is worth pinning
+// now is that the module hands out no state at all: importing it twice gives two
+// callers nothing to share, and two stores cannot contaminate one another.
+describe("the module", () => {
+  it("exports no instance, only the class", async () => {
+    const module = await import("@ui/UiStateStore");
 
-    expect(first.uiState).toBe(second.uiState);
-    expect(first.uiState).toBeInstanceOf(UiStateStore);
+    expect(Object.keys(module)).toEqual(["default"]);
+    expect(module.default).toBe(UiStateStore);
+  });
+
+  it("gives each instance its own state, defaults and listeners", () => {
+    const first = new UiStateStore();
+    const second = new UiStateStore();
+    const seen: (number | undefined)[] = [];
+
+    first.registerSlice({ drawnTriangles: 0 });
+    first.subscribe((state) => seen.push(state.drawnTriangles));
+
+    second.setState({ drawnTriangles: 4096 });
+
+    expect(seen).toEqual([]);
+    expect(first.getState().drawnTriangles).toBe(0);
+
+    // `second` registered nothing, so resetAll has no default to restore and
+    // must not reach into the slice `first` registered.
+    second.resetAll();
+
+    expect(second.getState().drawnTriangles).toBe(4096);
   });
 });
