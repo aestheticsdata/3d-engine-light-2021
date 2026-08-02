@@ -12,7 +12,7 @@
 // startup crash naming the culprit, rather than a `!` assertion or an
 // optional-chain that quietly does nothing three widgets later.
 
-class DomScope {
+class DOMScope {
   private readonly root: ParentNode;
 
   constructor(root: ParentNode) {
@@ -34,4 +34,4 @@ class DomScope {
   }
 }
 
-export default DomScope;
+export default DOMScope;

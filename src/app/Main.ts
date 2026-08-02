@@ -18,7 +18,7 @@ import Surface3D from "@primitives/Surface3D";
 import Viewport from "@primitives/Viewport";
 import TextureRegistry from "@textures/TextureRegistry";
 import type { BootContext } from "@app/Bootstrapper";
-import FpsMeter from "@app/FpsMeter";
+import FPSMeter from "@app/FPSMeter";
 import RenderLoop from "@app/RenderLoop";
 import ShapeSwitcher from "@app/ShapeSwitcher";
 import CameraController, {
@@ -30,9 +30,9 @@ import CameraController, {
   ROTATION_SPEED_SLIDER_MAX,
 } from "@app/CameraController";
 import type FieldWriter from "@ui/FieldWriter";
-import UiStateStore from "@ui/UiStateStore";
+import UIStateStore from "@ui/UIStateStore";
 import StatusBar from "@ui/StatusBar";
-import ViewportHud from "@ui/ViewportHud";
+import ViewportHUD from "@ui/ViewportHUD";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
 import ShapeStoryPanel from "@ui/ShapeStoryPanel";
 import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
@@ -64,7 +64,7 @@ class Main {
   // accident, and its slices are already registered before anything decides
   // they should be — which is what made the panel's registerSlice call an
   // import-time side effect until it moved into the panel's own constructor.
-  private readonly uiState: UiStateStore;
+  private readonly uiState: UIStateStore;
   // FPS and the drawn-triangle count do not resolve a node here: both appear in
   // more than one place in the DOM (toolbar, mobile header, telemetry card), so
   // they go through the writer, which touches every [data-field] node at once.
@@ -72,7 +72,7 @@ class Main {
   // exists.
   private readonly fields: FieldWriter;
   private readonly statusBar: StatusBar;
-  private readonly viewportHud: ViewportHud;
+  private readonly viewportHud: ViewportHUD;
   private readonly sceneGraph: SceneGraphPanel;
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
@@ -80,7 +80,7 @@ class Main {
   private readonly transport: TransportBar;
   private readonly sliders: SliderBank;
   private readonly picker: PrimitivePicker;
-  private readonly fpsMeter: FpsMeter;
+  private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
   private readonly stage: CanvasRenderingContext2D;
@@ -111,10 +111,10 @@ class Main {
     // `useDefineForClassFields` runs initialisers before this body, so anything
     // built here that subscribes would be reaching for a store that does not
     // exist yet.
-    this.uiState = new UiStateStore();
+    this.uiState = new UIStateStore();
     this.fields = fields;
     this.statusBar = new StatusBar(this.fields);
-    this.viewportHud = new ViewportHud(canvas, this.fields);
+    this.viewportHud = new ViewportHUD(canvas, this.fields);
     this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.stage = stage;
@@ -148,7 +148,7 @@ class Main {
         this.animateShapeInfoPanel(primitive);
       },
     });
-    this.fpsMeter = new FpsMeter(() => performance.now());
+    this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
         this.renderFrame(timestamp);

@@ -8,18 +8,18 @@
 // joined mid-pass. Both would ship green.
 //
 // The module form needed vi.resetModules() to get an uncontaminated store per
-// test. A class does not — `new UiStateStore()` is the isolation, and losing
+// test. A class does not — `new UIStateStore()` is the isolation, and losing
 // that scaffolding is the first dividend of the conversion.
 
 import { describe, expect, it } from "vitest";
 
-import UiStateStore from "@ui/UiStateStore";
-import type { UiState } from "@ui/UiStateStore";
+import UIStateStore from "@ui/UIStateStore";
+import type { UIState } from "@ui/UIStateStore";
 
 describe("registerSlice", () => {
   it("writes the slice into state and notifies exactly once", () => {
-    const store = new UiStateStore();
-    const seen: Readonly<UiState>[] = [];
+    const store = new UIStateStore();
+    const seen: Readonly<UIState>[] = [];
     store.subscribe((state) => seen.push({ ...state }));
 
     store.registerSlice({ drawnTriangles: 0, sceneSelection: "MESH_01" });
@@ -34,7 +34,7 @@ describe("registerSlice", () => {
   // The second write is the one that matters: registerSlice fills `defaults` as
   // well as `state`, and that is the whole reason RESET coverage is automatic.
   it("records the slice as the value RESET restores it to", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     store.registerSlice({ drawnTriangles: 0 });
     store.setState({ drawnTriangles: 4096 });
 
@@ -46,7 +46,7 @@ describe("registerSlice", () => {
 
 describe("resetAll", () => {
   it("restores every registered slice in a single notification", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     store.registerSlice({ drawnTriangles: 0 });
     store.registerSlice({ sceneSelection: "MESH_01" });
     store.registerSlice({ sceneHidden: [] });
@@ -56,7 +56,7 @@ describe("resetAll", () => {
       sceneHidden: ["MESH_01"],
     });
 
-    const seen: Readonly<UiState>[] = [];
+    const seen: Readonly<UIState>[] = [];
     store.subscribe((state) => seen.push({ ...state }));
     store.resetAll();
 
@@ -71,7 +71,7 @@ describe("resetAll", () => {
 
 describe("subscribe", () => {
   it("returns an unsubscribe that stops delivery", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     const seen: (number | undefined)[] = [];
     const unsubscribe = store.subscribe((state) =>
       seen.push(state.drawnTriangles),
@@ -86,7 +86,7 @@ describe("subscribe", () => {
   });
 
   it("delivers in subscription order", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     const order: string[] = [];
     store.subscribe(() => order.push("first"));
     store.subscribe(() => order.push("second"));
@@ -98,10 +98,10 @@ describe("subscribe", () => {
 
   // Set.forEach visits entries added while it is iterating, so a listener that
   // subscribes from inside a notification is reached in that same pass. A
-  // defensive `[...this.listeners].forEach(...)` in UiStateStore.notify looks
+  // defensive `[...this.listeners].forEach(...)` in UIStateStore.notify looks
   // harmless and would delay it to the next one.
   it("visits a listener that subscribed during the pass already running", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     const order: string[] = [];
     store.subscribe(() => {
       order.push("first");
@@ -118,7 +118,7 @@ describe("subscribe", () => {
   // re-entrant.
   // Queueing or coalescing the nested pass would make that guard the wrong shape.
   it("runs a notification raised from inside a notification immediately", () => {
-    const store = new UiStateStore();
+    const store = new UIStateStore();
     const order: (number | undefined)[] = [];
     let reentered = false;
 
@@ -146,15 +146,15 @@ describe("subscribe", () => {
 // callers nothing to share, and two stores cannot contaminate one another.
 describe("the module", () => {
   it("exports no instance, only the class", async () => {
-    const module = await import("@ui/UiStateStore");
+    const module = await import("@ui/UIStateStore");
 
     expect(Object.keys(module)).toEqual(["default"]);
-    expect(module.default).toBe(UiStateStore);
+    expect(module.default).toBe(UIStateStore);
   });
 
   it("gives each instance its own state, defaults and listeners", () => {
-    const first = new UiStateStore();
-    const second = new UiStateStore();
+    const first = new UIStateStore();
+    const second = new UIStateStore();
     const seen: (number | undefined)[] = [];
 
     first.registerSlice({ drawnTriangles: 0 });

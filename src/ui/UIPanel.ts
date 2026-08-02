@@ -1,7 +1,7 @@
 // What a panel is, written down once so the panel tickets do not each invent it.
 //
-// A panel owns a region of the console, resolves its nodes through a DomScope
-// and repaints from UiStateStore. `paint` is the whole contract: the store
+// A panel owns a region of the console, resolves its nodes through a DOMScope
+// and repaints from UIStateStore. `paint` is the whole contract: the store
 // notifies, the panel redraws from state, and nothing else is public.
 //
 // `readonly paint: () => void` is a property of function type, not a method
@@ -16,8 +16,8 @@
 // and the epic keeps it that way (decisions.md D4): declare the shape here and
 // let the compiler check it where a panel is consumed.
 
-interface UiPanel {
+interface UIPanel {
   readonly paint: () => void;
 }
 
-export default UiPanel;
+export default UIPanel;

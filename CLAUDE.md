@@ -26,7 +26,7 @@ export default ThingDoer;   // last line, bare class above
 Never `export default class`. Never `export class`. Never
 `export const createThing = () => ({ … })`.
 
-The full recovered ruleset — nineteen rules, each cited to a real `file:line` in this
+The full recovered ruleset — twenty rules, each cited to a real `file:line` in this
 repo — is **[notes/oop-refonte/reference/house-style.md](notes/oop-refonte/reference/house-style.md)**.
 Read it before adding a module. The short version:
 
@@ -37,7 +37,7 @@ Read it before adding a module. The short version:
 | Methods | regular methods with an explicit modifier. An arrow class property **only** when the method is handed to `addEventListener` and needs a bound `this`. |
 | Reads | getters over private state. There are no setters in this codebase — use a method. |
 | Order | fields → constructor → getters → public methods → private methods. |
-| Files | one class per file, basename === class name, and split past ~160 lines of code. |
+| Files | one class per file, basename === class name, and split past ~160 lines of code. An acronym in a type name keeps its capitals — `UIStateStore`, `DOMScope`, never `Ui`/`Dom`; camelCase members are exempt. |
 | Imports | always through the path alias (`@ui/…`, `@primitives/…`), even within the same directory. Aliases are declared in **both** `tsconfig.json` and `vite.config.js` — add to both or the build breaks. A binding used only as a type is an `import type`; split the declaration when one module supplies both. |
 
 **Data tables stay data tables.** An inert object literal with no behaviour
@@ -74,7 +74,7 @@ pnpm test
 `pnpm run build` only transpiles — esbuild does **not** type-check. `typecheck` is the
 one that catches a broken conversion, so run it before saying anything compiles.
 
-`lint` encodes the house style mechanically in `eslint.config.mjs` — nine `no-restricted-syntax`
+`lint` encodes the house style mechanically in `eslint.config.mjs` — ten `no-restricted-syntax`
 selectors plus three `typescript-eslint` rules, no preset. Every rule is an **error** across all
 of `src/`, with no per-file downgrade and no inline disable anywhere in the repo, so any
 violation the run reports is a new one.
@@ -100,7 +100,7 @@ console rebuild) and **COS-234** (de-mock, the engine behind it).
 
 `notes/` holds only what a ticket cannot: the rules and the rulings.
 
-- `notes/oop-refonte/` — the house style (R1–R18) and the binding decisions behind
+- `notes/oop-refonte/` — the house style (R1–R20) and the binding decisions behind
   COS-356: what makes a file exempt, the ten files not converted, and the recorded
   baselines. Read `reference/decisions.md` before arguing that something should or
   should not become a class. Its `README.md` documents `pnpm run snapshot:geometry`,

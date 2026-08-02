@@ -7,7 +7,7 @@
 
 import type { SceneRow } from "@ui/scene/sceneRows";
 import { HINT_ID, PLACEHOLDER_NOTE } from "@ui/scene/sceneRows";
-import type UiStateStore from "@ui/UiStateStore";
+import type UIStateStore from "@ui/UIStateStore";
 
 export interface SceneRowState {
   label: string;
@@ -21,14 +21,14 @@ const formatTriangles = (count: number | null) =>
 
 class SceneRowView {
   private readonly definition: SceneRow;
-  private readonly store: UiStateStore;
+  private readonly store: UIStateStore;
   private readonly root: HTMLElement;
   private readonly selectButton: HTMLButtonElement;
   private readonly idNode: HTMLElement;
   private readonly trisNode: HTMLElement;
   private readonly visButton: HTMLButtonElement;
 
-  constructor(definition: SceneRow, store: UiStateStore) {
+  constructor(definition: SceneRow, store: UIStateStore) {
     this.definition = definition;
     this.store = store;
 

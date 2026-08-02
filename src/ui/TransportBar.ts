@@ -6,7 +6,7 @@
 // handler and no second code path, which is also why this class holds node
 // lists rather than elements.
 
-import DomScope from "@ui/DomScope";
+import DOMScope from "@ui/DOMScope";
 
 const TOGGLE_MOUNTS = "[data-transport='toggle']";
 const RESET_MOUNTS = "[data-action='reset']";
@@ -23,7 +23,7 @@ class TransportBar {
     // missing one is a shell contract violation
     // (notes/ui-refonte/ui/03-shell.md:82), and dropping the check would turn a
     // broken skeleton into a console with no transport and no error.
-    new DomScope(document).require("#playPause", "Transport is missing.");
+    new DOMScope(document).require("#playPause", "Transport is missing.");
 
     this.toggleMounts = document.querySelectorAll<HTMLElement>(TOGGLE_MOUNTS);
     this.resetMounts = document.querySelectorAll<HTMLElement>(RESET_MOUNTS);
