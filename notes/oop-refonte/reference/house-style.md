@@ -295,9 +295,18 @@ the conflict was read off in the original tree, not where anything is today.
 
 ## What is enforced mechanically
 
-`pnpm run lint` (`biome.json`) encodes the rules below and **nothing else** — the
-`recommended` preset is off, so there is no stylistic pack and no imported baseline.
-Everything not in this table is enforced by review.
+`pnpm run lint` (`biome.json`) encodes the rules below. Biome's own `recommended` preset
+runs alongside them, which is what pfa does and what COS-403 restored; everything not in
+this table and not in that preset is enforced by review.
+
+Two of the preset's rules are switched off, both because the code they flag is deliberate
+rather than careless. The reasoning lives here because `biome.json` is strict JSON and
+cannot hold a comment — see the warning at the end of this section.
+
+| Rule off | Why |
+| -- | -- |
+| `suspicious/noDuplicateProperties` | Both hits are fallback declarations. `.viewportStage` repeats `width` so a browser without container-query units keeps the `100%` value, and `reset.css` repeats `content` because that pair is what the reset it came from ships. |
+| `a11y/useHeadingContent` | `#shapeStoryTitle` is filled by `ShapeStoryPanel` at runtime. Putting placeholder text in the markup to satisfy the rule would flash the wrong shape name on load, which is worse for the reader than the empty parse-time state. |
 
 Two of the eight are native Biome rules. The other six are Grit plugins in `biome-plugins/`
 — eight files, because D4 needs three — since Biome has no `no-restricted-syntax`: a custom
@@ -335,6 +344,12 @@ disabled rule is indistinguishable from a clean codebase.
 and `conformant.ts` must stay clean, and it fails if any count moves. Run it after
 touching a plugin or bumping Biome. The count matters as much as the presence: R6 + R8
 must not claim the exempt constructor, and R20 must not claim `UIStateStore` or `dogUrl`.
+
+**Never put a comment in `biome.json`.** It is strict JSON, and a `//` line does not
+produce a config error — Biome falls back to its built-in defaults, whose `indentStyle` is
+**tab**, so the next `lint:fix` retabs all 91 files and the house rules stop running
+entirely. The only visible symptom is a formatter diff, which reads as a formatting
+problem rather than a dead config. Anything that needs explaining goes in this file.
 
 **Write the awkward shape into the fixture, not the easy one.** An adversarial pass over
 the first version of these plugins found four rules with silent holes, and `lint:rules`

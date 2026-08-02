@@ -91,7 +91,9 @@ class MengerSpongeGenerator {
             continue;
           }
 
-          this.facesOf(x, y, z).forEach((face) => this.addFaceIfExposed(x, y, z, face));
+          this.facesOf(x, y, z).forEach((face) => {
+            this.addFaceIfExposed(x, y, z, face);
+          });
         }
       }
     }

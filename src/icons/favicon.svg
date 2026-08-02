@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><title>3D engine</title><defs>
     <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12204A"></stop><stop offset="1" stop-color="#0A1330"></stop></linearGradient>
     <radialGradient id="fg" cx=".5" cy=".55" r=".55"><stop offset="0" stop-color="#FFC81E" stop-opacity="0.22"></stop><stop offset="1" stop-color="#FFC81E" stop-opacity="0"></stop></radialGradient></defs>
     <rect width="64" height="64" rx="9" fill="url(#tile)"></rect><rect width="64" height="64" rx="9" fill="url(#fg)"></rect>

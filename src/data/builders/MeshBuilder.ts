@@ -169,7 +169,9 @@ class MeshBuilder {
     const scaled = this.polyhedron.centerAndScale(options.vertices, radius);
 
     const baseIndex = this.points.length;
-    scaled.forEach((vertex) => this.points.push(vertex));
+    scaled.forEach((vertex) => {
+      this.points.push(vertex);
+    });
 
     this.polyhedron.orderFaces(scaled, options.faces).forEach((ordered, faceIndex) => {
       const color = options.colorForFace(options.faces[faceIndex].length, faceIndex);

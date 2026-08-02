@@ -22,7 +22,9 @@ class TextureRegistry {
   public async load(defs: Record<string, string>): Promise<void> {
     const entries = await Promise.all(Object.entries(defs).map(([key, url]) => this.loadImage(key, url)));
 
-    entries.forEach(([key, image]) => this.images.set(key, image));
+    entries.forEach(([key, image]) => {
+      this.images.set(key, image);
+    });
   }
 
   public get(key: string): HTMLImageElement | undefined {
