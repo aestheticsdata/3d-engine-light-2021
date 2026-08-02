@@ -62,9 +62,7 @@ class Icosahedron {
     const index = this.edgeIndices.get(key);
 
     if (index === undefined) {
-      throw new Error(
-        `Icosahedron vertices ${first} and ${second} are not an edge.`,
-      );
+      throw new Error(`Icosahedron vertices ${first} and ${second} are not an edge.`);
     }
 
     return index;
@@ -117,11 +115,7 @@ class Icosahedron {
         }
 
         this.vertexTable.forEach((___, third) => {
-          if (
-            third > second &&
-            this.adjacent(second, third) &&
-            this.adjacent(first, third)
-          ) {
+          if (third > second && this.adjacent(second, third) && this.adjacent(first, third)) {
             faces.push([first, second, third]);
           }
         });
@@ -134,8 +128,7 @@ class Icosahedron {
   private adjacent(first: number, second: number): boolean {
     const a = this.vertexTable[first];
     const b = this.vertexTable[second];
-    const squared =
-      (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    const squared = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 
     return Math.abs(squared - EDGE_LENGTH_SQUARED) < EDGE_TOLERANCE;
   }

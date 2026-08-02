@@ -12,5 +12,4 @@
 
 export type ShadingMode = "WIRE" | "FLAT";
 
-export const modeLabel = (wireframeEnabled: boolean): ShadingMode =>
-  wireframeEnabled ? "WIRE" : "FLAT";
+export const modeLabel = (wireframeEnabled: boolean): ShadingMode => (wireframeEnabled ? "WIRE" : "FLAT");

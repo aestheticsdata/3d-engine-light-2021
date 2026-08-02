@@ -14,9 +14,7 @@ export type UV = [number, number];
 // difference is load-bearing: `length === 7` narrows it, so the three UV slots
 // are either all present or all absent and a five-slot half-textured face is
 // unrepresentable rather than merely discouraged.
-export type Triangle3D =
-  | [number, number, number, string]
-  | [number, number, number, string, UV, UV, UV];
+export type Triangle3D = [number, number, number, string] | [number, number, number, string, UV, UV, UV];
 
 export interface Object3D {
   points: number[][];

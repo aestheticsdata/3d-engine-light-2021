@@ -6,10 +6,11 @@
 // is either derived from that store or pushed in by Main.
 
 import DOMScope from "@ui/DOMScope";
-import ROWS, { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import SceneRowView from "@ui/scene/SceneRowView";
-import type UIStateStore from "@ui/UIStateStore";
+import ROWS, { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import { sceneObjectId } from "@ui/sceneObjectId";
+
+import type UIStateStore from "@ui/UIStateStore";
 
 class SceneGraphPanel {
   private readonly store: UIStateStore;
@@ -21,17 +22,11 @@ class SceneGraphPanel {
   private meshId: string;
 
   constructor(store: UIStateStore) {
-    const card = new DOMScope(document).require<HTMLElement>(
-      ".sceneGraph",
-      "Scene graph card is missing.",
-    );
+    const card = new DOMScope(document).require<HTMLElement>(".sceneGraph", "Scene graph card is missing.");
     const scope = new DOMScope(card);
 
     this.store = store;
-    this.body = scope.require<HTMLElement>(
-      ".scene-graph__body",
-      "Scene graph body is missing.",
-    );
+    this.body = scope.require<HTMLElement>(".scene-graph__body", "Scene graph body is missing.");
     this.note = scope.find<HTMLElement>(".panel__note");
     this.rowViews = new Map();
     this.meshId = "";

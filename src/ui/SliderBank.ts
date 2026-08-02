@@ -44,9 +44,7 @@ class SliderBank {
     this.elements = new Map();
 
     this.bindings.forEach((binding) => {
-      const element = document.querySelector<HTMLInputElement>(
-        binding.selector,
-      );
+      const element = document.querySelector<HTMLInputElement>(binding.selector);
 
       if (element) {
         this.elements.set(binding.selector, element);
@@ -71,9 +69,7 @@ class SliderBank {
 
       const eventName = element.type === "range" ? "input" : "change";
       element.addEventListener(eventName, (event) => {
-        binding.apply(
-          parseInt((event.currentTarget as HTMLInputElement).value, 10),
-        );
+        binding.apply(parseInt((event.currentTarget as HTMLInputElement).value, 10));
       });
     });
   }
@@ -105,9 +101,7 @@ class SliderBank {
   public syncFromDom() {
     this.bindings.forEach((binding) => {
       const element = this.elements.get(binding.selector);
-      const value = element
-        ? parseInt(element.value, 10)
-        : binding.defaultValue;
+      const value = element ? parseInt(element.value, 10) : binding.defaultValue;
 
       binding.apply(value);
     });

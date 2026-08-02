@@ -14,6 +14,7 @@
 // gained a point.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
+
 import type { Object3D } from "@data/types";
 
 const PROFILE: number[][] = [
@@ -71,35 +72,19 @@ class CrossGenerator {
 
   private extrudeProfile() {
     DEPTHS.forEach((z) => {
-      PROFILE.forEach((point) =>
-        this.builder.addPoint([point[0], point[1], z]),
-      );
+      PROFILE.forEach((point) => this.builder.addPoint([point[0], point[1], z]));
     });
   }
 
   private addCaps() {
-    CAP_QUADS.forEach((quad) =>
-      this.builder.addQuadByIndices(
-        quad[0],
-        quad[1],
-        quad[2],
-        quad[3],
-        CAP_COLOR,
-      ),
-    );
+    CAP_QUADS.forEach((quad) => this.builder.addQuadByIndices(quad[0], quad[1], quad[2], quad[3], CAP_COLOR));
   }
 
   private addSideWalls() {
     OUTLINE.forEach((near, i) => {
       const next = OUTLINE[(i + 1) % OUTLINE.length];
 
-      this.builder.addQuadByIndices(
-        near,
-        near + LAYER_STRIDE,
-        next + LAYER_STRIDE,
-        next,
-        WALL_COLOR,
-      );
+      this.builder.addQuadByIndices(near, near + LAYER_STRIDE, next + LAYER_STRIDE, next, WALL_COLOR);
     });
   }
 }

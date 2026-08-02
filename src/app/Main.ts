@@ -8,19 +8,6 @@
 // that widget.
 
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import type { Data3D } from "@data/data";
-import data from "@data/data";
-import shapeInfo from "@data/shapeInfo";
-import type Mesh from "@primitives/Mesh";
-import MeshFactory from "@primitives/MeshFactory";
-import type { MeshRenderRequest } from "@primitives/Surface3D";
-import Surface3D from "@primitives/Surface3D";
-import Viewport from "@primitives/Viewport";
-import TextureRegistry from "@textures/TextureRegistry";
-import type { BootContext } from "@app/Bootstrapper";
-import FPSMeter from "@app/FPSMeter";
-import RenderLoop from "@app/RenderLoop";
-import ShapeSwitcher from "@app/ShapeSwitcher";
 import CameraController, {
   DEFAULT_PITCH,
   DEFAULT_ROLL,
@@ -29,21 +16,22 @@ import CameraController, {
   DEFAULT_ZOOM_SLIDER_VALUE,
   ROTATION_SPEED_SLIDER_MAX,
 } from "@app/CameraController";
-import type FieldWriter from "@ui/FieldWriter";
-import UIStateStore from "@ui/UIStateStore";
-import StatusBar from "@ui/StatusBar";
-import ViewportHUD from "@ui/ViewportHUD";
-import ShapeInfoPanel from "@ui/ShapeInfoPanel";
-import ShapeStoryPanel from "@ui/ShapeStoryPanel";
-import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
-import { MESH_ROW_ID } from "@ui/scene/sceneRows";
+import FPSMeter from "@app/FPSMeter";
+import RenderLoop from "@app/RenderLoop";
+import ShapeSwitcher from "@app/ShapeSwitcher";
+import data from "@data/data";
+import shapeInfo from "@data/shapeInfo";
+import MeshFactory from "@primitives/MeshFactory";
+import Surface3D from "@primitives/Surface3D";
+import Viewport from "@primitives/Viewport";
+import dogUrl from "@textures/images/border-collie.jpeg";
+import galaxyUrl from "@textures/images/galaxy.jpeg";
+import TextureRegistry from "@textures/TextureRegistry";
 import MaterialSummary from "@ui/MaterialSummary";
 import PrimitivePicker from "@ui/PrimitivePicker";
-import RenderPipelinePanel, {
-  DEFAULT_OPACITY_SLIDER_VALUE,
-} from "@ui/RenderPipelinePanel";
-import TransportBar from "@ui/TransportBar";
-import type { SliderBinding } from "@ui/SliderBank";
+import RenderPipelinePanel, { DEFAULT_OPACITY_SLIDER_VALUE } from "@ui/RenderPipelinePanel";
+import ShapeInfoPanel from "@ui/ShapeInfoPanel";
+import ShapeStoryPanel from "@ui/ShapeStoryPanel";
 import SliderBank, {
   OPACITY_SLIDER,
   PITCH_SLIDER,
@@ -52,8 +40,19 @@ import SliderBank, {
   YAW_SLIDER,
   ZOOM_SLIDER,
 } from "@ui/SliderBank";
-import dogUrl from "@textures/images/border-collie.jpeg";
-import galaxyUrl from "@textures/images/galaxy.jpeg";
+import StatusBar from "@ui/StatusBar";
+import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
+import { MESH_ROW_ID } from "@ui/scene/sceneRows";
+import TransportBar from "@ui/TransportBar";
+import UIStateStore from "@ui/UIStateStore";
+import ViewportHUD from "@ui/ViewportHUD";
+
+import type { BootContext } from "@app/Bootstrapper";
+import type { Data3D } from "@data/data";
+import type Mesh from "@primitives/Mesh";
+import type { MeshRenderRequest } from "@primitives/Surface3D";
+import type FieldWriter from "@ui/FieldWriter";
+import type { SliderBinding } from "@ui/SliderBank";
 
 const TRANSITION_DURATION_MS = 1250;
 const PRIMITIVE_SELECT = "#primitives";
@@ -250,10 +249,7 @@ class Main {
         // Clamped because the camera's default knows nothing about the markup's
         // max: if the two ever disagree the browser pins the value silently and
         // the read-back then contradicts the camera.
-        defaultValue: Math.min(
-          DEFAULT_ROTATION_SPEED,
-          ROTATION_SPEED_SLIDER_MAX,
-        ),
+        defaultValue: Math.min(DEFAULT_ROTATION_SPEED, ROTATION_SPEED_SLIDER_MAX),
         apply: (value) => this.camera.setRotationSpeed(value),
       },
     ];
@@ -381,10 +377,10 @@ class Main {
   // so a missing hand-off is a compile error instead of "dog" painted as a CSS
   // colour.
   private paint(renderables: MeshRenderRequest[]) {
-    this.renderedTriangles = this.surface3D.render(
-      this.sceneGraph.isMeshHidden() ? [] : renderables,
-      { ...this.pipeline.getRenderOptions(), textures: this.textures },
-    );
+    this.renderedTriangles = this.surface3D.render(this.sceneGraph.isMeshHidden() ? [] : renderables, {
+      ...this.pipeline.getRenderOptions(),
+      textures: this.textures,
+    });
   }
 
   private togglePause = () => {

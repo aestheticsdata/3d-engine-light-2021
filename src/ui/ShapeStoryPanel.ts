@@ -5,7 +5,8 @@
 
 import DOMScope from "@ui/DOMScope";
 import { primitiveLabel } from "@ui/primitiveLabel";
-import type { ShapeReference, ShapeInfo } from "@data/shapeInfo";
+
+import type { ShapeInfo, ShapeReference } from "@data/shapeInfo";
 
 class ShapeStoryPanel {
   private readonly title: HTMLElement;
@@ -20,17 +21,11 @@ class ShapeStoryPanel {
     const missing = "SHAPE STORY node is missing.";
 
     this.title = scope.require<HTMLElement>("#shapeStoryTitle", missing);
-    this.description = scope.require<HTMLElement>(
-      "#shapeStoryDescription",
-      missing,
-    );
+    this.description = scope.require<HTMLElement>("#shapeStoryDescription", missing);
     this.feature = scope.require<HTMLElement>("#shapeStoryFeature", missing);
     this.density = scope.require<HTMLElement>("#shapeStoryDensity", missing);
     this.generator = scope.require<HTMLElement>("#shapeStoryGenerator", missing);
-    this.references = scope.require<HTMLElement>(
-      "#shapeStoryReferences",
-      missing,
-    );
+    this.references = scope.require<HTMLElement>("#shapeStoryReferences", missing);
   }
 
   public show(primitive: string, info: ShapeInfo | undefined) {

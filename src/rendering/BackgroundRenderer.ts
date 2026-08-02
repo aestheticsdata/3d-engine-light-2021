@@ -65,9 +65,7 @@ class BackgroundRenderer {
     this.floorCenterX = this.width * FLOOR_CENTER_RATIO;
     this.floorFocal = this.width * FLOOR_FOCAL_RATIO;
     this.floorNearZ =
-      ((CAMERA_HEIGHT * this.floorFocal) /
-        Math.max(1, this.height - this.floorHorizonY)) *
-      NEAR_Z_RATIO;
+      ((CAMERA_HEIGHT * this.floorFocal) / Math.max(1, this.height - this.floorHorizonY)) * NEAR_Z_RATIO;
   }
 
   public render(context: CanvasRenderingContext2D) {
@@ -96,10 +94,7 @@ class BackgroundRenderer {
     }
 
     const targetHeight = this.height * SKY_COVERAGE_RATIO;
-    const scale = Math.max(
-      this.width / this.skyImage.width,
-      targetHeight / this.skyImage.height,
-    );
+    const scale = Math.max(this.width / this.skyImage.width, targetHeight / this.skyImage.height);
     const drawWidth = this.skyImage.width * scale;
     const drawHeight = this.skyImage.height * scale;
     const drawX = (this.width - drawWidth) / 2;
@@ -156,8 +151,7 @@ class BackgroundRenderer {
         const bottomRight = ground.project(xRight, zBottom);
         const bottomLeft = ground.project(xLeft, zBottom);
 
-        context.fillStyle =
-          (row + col) % 2 === 0 ? FLOOR_LIGHT_CELL : FLOOR_DARK_CELL;
+        context.fillStyle = (row + col) % 2 === 0 ? FLOOR_LIGHT_CELL : FLOOR_DARK_CELL;
         context.beginPath();
         context.moveTo(topLeft.x, topLeft.y);
         context.lineTo(topRight.x, topRight.y);

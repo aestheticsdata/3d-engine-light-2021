@@ -5,9 +5,8 @@
 //
 // The clock is a plain counter. Nothing here waits on real time.
 
-import { describe, expect, it } from "vitest";
-
 import FPSMeter from "@app/FPSMeter";
+import { describe, expect, it } from "vitest";
 
 const WINDOW_MS = 90;
 

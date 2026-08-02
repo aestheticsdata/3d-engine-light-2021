@@ -10,14 +10,12 @@
 // screen projecting about the centre it was built with; making it follow a
 // resize would be an improvement, and it belongs to the resize ticket, not here.
 
-import { describe, expect, it } from "vitest";
-
 import Matrix3D from "@primitives/Matrix3D";
 import Point3D from "@primitives/Point3D";
 import Viewport from "@primitives/Viewport";
+import { describe, expect, it } from "vitest";
 
-const canvasOf = (width: number, height: number) =>
-  ({ width, height }) as HTMLCanvasElement;
+const canvasOf = (width: number, height: number) => ({ width, height }) as HTMLCanvasElement;
 
 const viewport = () => new Viewport(canvasOf(1024, 640));
 

@@ -12,8 +12,9 @@
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import Vec3Math from "@data/builders/Vec3Math";
-import type { KnotFrame } from "@data/shapes/KnotPath";
 import KnotPath from "@data/shapes/KnotPath";
+
+import type { KnotFrame } from "@data/shapes/KnotPath";
 import type { Object3D } from "@data/types";
 
 type Vec3 = [number, number, number];
@@ -121,13 +122,7 @@ class TorusKnotGenerator {
     }
   }
 
-  private addOrientedTriangle(
-    a: number,
-    b: number,
-    c: number,
-    outward: Vec3,
-    color: string,
-  ) {
+  private addOrientedTriangle(a: number, b: number, c: number, outward: Vec3, color: string) {
     const faceNormal = this.vec.cross(
       this.vec.sub(this.pointAsVec(b), this.pointAsVec(a)),
       this.vec.sub(this.pointAsVec(c), this.pointAsVec(a)),

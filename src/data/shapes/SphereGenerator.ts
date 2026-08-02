@@ -7,6 +7,7 @@
 // original made and this conversion keeps.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
+
 import type { Object3D } from "@data/types";
 
 const DEFAULT_RADIUS = 100;
@@ -32,8 +33,7 @@ class SphereGenerator {
     this.builder = new MeshBuilder();
     this.radius = options.radius ?? DEFAULT_RADIUS;
     this.latSegments = options.latSegments ?? DEFAULT_LAT_SEGMENTS;
-    this.lonSegments =
-      options.lonSegments ?? this.latSegments + LON_SEGMENTS_OFFSET;
+    this.lonSegments = options.lonSegments ?? this.latSegments + LON_SEGMENTS_OFFSET;
   }
 
   public build(): Object3D {

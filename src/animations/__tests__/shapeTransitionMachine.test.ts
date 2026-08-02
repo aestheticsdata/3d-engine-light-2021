@@ -7,10 +7,9 @@
 // same frame reads them. A rewrite that defers the transition to the next frame
 // would leave one stale frame on screen and pass every eyeball check.
 
-import { describe, expect, it } from "vitest";
-
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import Mesh from "@primitives/Mesh";
+import { describe, expect, it } from "vitest";
 
 const DURATION = 100;
 
@@ -18,8 +17,7 @@ const DURATION = 100;
 // triangle.
 const emptyMesh = () => new Mesh([], []);
 
-const machine = () =>
-  new ShapeTransitionMachine({ width: 1024, height: 640, duration: DURATION });
+const machine = () => new ShapeTransitionMachine({ width: 1024, height: 640, duration: DURATION });
 
 describe("playInitialEntrance", () => {
   it("lands in idle with the incoming mesh at rest once the duration is up", () => {

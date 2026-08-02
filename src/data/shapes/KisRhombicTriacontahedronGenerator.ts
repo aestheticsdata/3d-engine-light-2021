@@ -13,6 +13,7 @@
 import Icosahedron, { PHI } from "@data/builders/Icosahedron";
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -73,8 +74,7 @@ class KisRhombicTriacontahedronGenerator {
       vertices: this.buildVertices(),
       faces: faces.map((face) => face.vertices),
       radius: CIRCUMRADIUS,
-      colorForFace: (_vertexCount, faceIndex) =>
-        FACE_COLORS[faces[faceIndex].tone],
+      colorForFace: (_vertexCount, faceIndex) => FACE_COLORS[faces[faceIndex].tone],
     });
 
     return this.builder.mesh;
@@ -85,15 +85,9 @@ class KisRhombicTriacontahedronGenerator {
   // rhombus — that is, one per icosahedron edge.
   private buildVertices(): number[][] {
     return [
-      ...this.icosahedron.vertices.map((vertex) =>
-        this.alongDirection(vertex, this.fiveFoldRadius),
-      ),
-      ...this.icosahedron.faces.map((face) =>
-        this.alongDirection(this.sumOf(face), this.threeFoldRadius),
-      ),
-      ...this.icosahedron.edges.map((edge) =>
-        this.alongDirection(this.sumOf(edge), this.twoFoldRadius),
-      ),
+      ...this.icosahedron.vertices.map((vertex) => this.alongDirection(vertex, this.fiveFoldRadius)),
+      ...this.icosahedron.faces.map((face) => this.alongDirection(this.sumOf(face), this.threeFoldRadius)),
+      ...this.icosahedron.edges.map((edge) => this.alongDirection(this.sumOf(edge), this.twoFoldRadius)),
     ];
   }
 
@@ -108,16 +102,13 @@ class KisRhombicTriacontahedronGenerator {
       // The rhombus under this apex, exactly as R30 builds it: the edge's two
       // endpoints are its five-fold corners, and the two icosahedron faces
       // meeting along that edge give its three-fold corners.
-      const corners = this.icosahedron.faces.reduce<number[]>(
-        (indices, face, index) => {
-          if (face.includes(first) && face.includes(second)) {
-            indices.push(threeFoldOffset + index);
-          }
+      const corners = this.icosahedron.faces.reduce<number[]>((indices, face, index) => {
+        if (face.includes(first) && face.includes(second)) {
+          indices.push(threeFoldOffset + index);
+        }
 
-          return indices;
-        },
-        [],
-      );
+        return indices;
+      }, []);
 
       // Walking the rhombus alternates tip, corner, tip, corner, so every one
       // of its four edges runs from a tip to a corner — which makes the
@@ -149,12 +140,7 @@ class KisRhombicTriacontahedronGenerator {
   }
 
   private sumOf(vertexIndices: number[]): number[] {
-    return AXES.map((axis) =>
-      vertexIndices.reduce(
-        (sum, vertex) => sum + this.icosahedron.vertices[vertex][axis],
-        0,
-      ),
-    );
+    return AXES.map((axis) => vertexIndices.reduce((sum, vertex) => sum + this.icosahedron.vertices[vertex][axis], 0));
   }
 }
 

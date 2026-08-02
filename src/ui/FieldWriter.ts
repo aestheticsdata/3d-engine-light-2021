@@ -24,11 +24,9 @@ class FieldWriter {
   public write(name: string, value: string | number) {
     const text = String(value);
 
-    document
-      .querySelectorAll<HTMLElement>(`[data-field="${name}"]`)
-      .forEach((node) => {
-        node.textContent = text;
-      });
+    document.querySelectorAll<HTMLElement>(`[data-field="${name}"]`).forEach((node) => {
+      node.textContent = text;
+    });
   }
 }
 

@@ -20,6 +20,7 @@
 // prints the point count.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
+
 import type { Object3D } from "@data/types";
 
 const DEFAULT_LEVEL = 2;
@@ -90,9 +91,7 @@ class MengerSpongeGenerator {
             continue;
           }
 
-          this.facesOf(x, y, z).forEach((face) =>
-            this.addFaceIfExposed(x, y, z, face),
-          );
+          this.facesOf(x, y, z).forEach((face) => this.addFaceIfExposed(x, y, z, face));
         }
       }
     }
@@ -102,13 +101,7 @@ class MengerSpongeGenerator {
     const [dx, dy, dz] = face.neighbour;
 
     if (!this.solids.has(this.keyOf(x + dx, y + dy, z + dz))) {
-      this.builder.addQuadByCoords(
-        face.corners[0],
-        face.corners[1],
-        face.corners[2],
-        face.corners[3],
-        face.color,
-      );
+      this.builder.addQuadByCoords(face.corners[0], face.corners[1], face.corners[2], face.corners[3], face.color);
     }
   }
 
@@ -127,32 +120,62 @@ class MengerSpongeGenerator {
     return [
       {
         neighbour: [1, 0, 0],
-        corners: [[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]],
+        corners: [
+          [x1, y0, z0],
+          [x1, y1, z0],
+          [x1, y1, z1],
+          [x1, y0, z1],
+        ],
         color: POS_X[checker],
       },
       {
         neighbour: [-1, 0, 0],
-        corners: [[x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [x0, y0, z0]],
+        corners: [
+          [x0, y0, z1],
+          [x0, y1, z1],
+          [x0, y1, z0],
+          [x0, y0, z0],
+        ],
         color: NEG_X[checker],
       },
       {
         neighbour: [0, 1, 0],
-        corners: [[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]],
+        corners: [
+          [x0, y1, z0],
+          [x0, y1, z1],
+          [x1, y1, z1],
+          [x1, y1, z0],
+        ],
         color: POS_Y[checker],
       },
       {
         neighbour: [0, -1, 0],
-        corners: [[x0, y0, z1], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1]],
+        corners: [
+          [x0, y0, z1],
+          [x0, y0, z0],
+          [x1, y0, z0],
+          [x1, y0, z1],
+        ],
         color: NEG_Y[checker],
       },
       {
         neighbour: [0, 0, 1],
-        corners: [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],
+        corners: [
+          [x0, y0, z1],
+          [x1, y0, z1],
+          [x1, y1, z1],
+          [x0, y1, z1],
+        ],
         color: POS_Z[checker],
       },
       {
         neighbour: [0, 0, -1],
-        corners: [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]],
+        corners: [
+          [x1, y0, z0],
+          [x0, y0, z0],
+          [x0, y1, z0],
+          [x1, y1, z0],
+        ],
         color: NEG_Z[checker],
       },
     ];

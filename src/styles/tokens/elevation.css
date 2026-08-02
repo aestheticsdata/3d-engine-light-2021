@@ -2,13 +2,13 @@
    Must not own: shadows — the design declares none, and none may be added anywhere in this rebuild. */
 
 :root {
-  --blur-hud: blur(3px);                              /* the only blur in the design */
+  --blur-hud: blur(3px); /* the only blur in the design */
   --elevation-hud-bg: var(--color-hud-bg);
   --elevation-hud-bg-dense: var(--color-hud-bg-dense);
   --elevation-hud-bg-gizmo: var(--color-hud-bg-gizmo);
   --elevation-hud-border: var(--color-hud-border);
-  --elevation-opacity-pending: .55;                   /* NEW — placeholder affordance, not extracted */
-  --layer-sticky: 6;                                  /* mobile sticky header, design L676 */
+  --elevation-opacity-pending: 0.55; /* NEW — placeholder affordance, not extracted */
+  --layer-sticky: 6; /* mobile sticky header, design L676 */
 }
 
 /* Depth in this design is expressed only as background steps plus a hairline

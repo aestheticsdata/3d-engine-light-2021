@@ -26,11 +26,12 @@
 // AffineTextureMapper.
 // -----------------------------------------------------------------------------
 
-import type Point3D from "@primitives/Point3D";
 import Point2D from "@primitives/Point2D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
-import type TextureRegistry from "@textures/TextureRegistry";
+
 import type { UV } from "@data/types";
+import type Point3D from "@primitives/Point3D";
+import type TextureRegistry from "@textures/TextureRegistry";
 
 export interface TriangleRenderOptions {
   // Required, not optional. An optional registry means a wiring mistake falls
@@ -73,15 +74,7 @@ class Triangle {
   // Positional, and one of the constructors R4 exempts by name: MeshFactory
   // spreads a registry tuple straight into it, and the order of a, b, c is the
   // winding.
-  constructor(
-    a: Point3D,
-    b: Point3D,
-    c: Point3D,
-    material: string,
-    uva?: UV,
-    uvb?: UV,
-    uvc?: UV,
-  ) {
+  constructor(a: Point3D, b: Point3D, c: Point3D, material: string, uva?: UV, uvb?: UV, uvc?: UV) {
     this.a = a;
     this.b = b;
     this.c = c;

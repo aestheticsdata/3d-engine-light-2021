@@ -48,8 +48,8 @@
   --size-touch-min: 44px;
 
   /* panels */
-  --size-panel-header: 24px;       /* sidebar panels */
-  --size-panel-header-card: 22px;  /* telemetry cards */
+  --size-panel-header: 24px; /* sidebar panels */
+  --size-panel-header-card: 22px; /* telemetry cards */
 
   /* controls */
   --size-button: 26px;
@@ -64,8 +64,8 @@
   --size-chip-quick: 24px;
   --size-hud-chip: 22px;
   --size-hud-chip-sm: 22px;
-  --size-select: 26px;         /* NEW — no design equivalent, see components/select.css */
-  --size-picker-max-h: 320px;  /* NEW — the select popup, where the engine lets us style it */
+  --size-select: 26px; /* NEW — no design equivalent, see components/select.css */
+  --size-picker-max-h: 320px; /* NEW — the select popup, where the engine lets us style it */
   --size-toggle-w: 62px;
   --size-toggle-h: 19px;
   --size-toggle-row: 26px;
@@ -86,8 +86,8 @@
   --size-legend-swatch: 7px;
   --size-ft-bar: 12px;
   --size-budget-bar: 6px;
-  --size-fps-canvas: auto;   /* flex:1 inside the card on desktop */
-  --size-zbuf-h: auto;       /* flex:1 inside the card on desktop */
+  --size-fps-canvas: auto; /* flex:1 inside the card on desktop */
+  --size-zbuf-h: auto; /* flex:1 inside the card on desktop */
   --size-gizmo: 66px;
   --size-gizmo-axis-xy: 34px;
   --size-gizmo-axis-z: 24px;
@@ -96,7 +96,7 @@
   --size-selection-corner: 14px;
   --size-selection-label-h: 16px;
   --size-camera-readout-minw: 148px;
-  --size-tooltip-max-w: 220px;   /* NEW — no design equivalent, carried over from main.css L330 */
+  --size-tooltip-max-w: 220px; /* NEW — no design equivalent, carried over from main.css L330 */
 
   /* dividers + primitives */
   --size-divider-toolbar: 20px;
@@ -108,8 +108,8 @@
   --size-range-thumb-h: 15px;
   --size-story-rule-w: 28px;
   --size-story-rule-h: 2px;
-  --size-hairline: 1px;      /* every 1px border in the rebuild */
-  --size-mark: 2px;          /* tab underline, row mark, swatch border */
+  --size-hairline: 1px; /* every 1px border in the rebuild */
+  --size-mark: 2px; /* tab underline, row mark, swatch border */
 
   /* mobile-only shells: no desktop counterpart, so nothing overrides them */
   --size-appbar-h: 52px;

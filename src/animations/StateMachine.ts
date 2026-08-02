@@ -14,17 +14,9 @@ export interface StateMachineController<C, S extends string> {
 }
 
 export interface StateDefinition<C, S extends string> {
-  onEnter?: (
-    context: C,
-    controller: StateMachineController<C, S>,
-    payload?: unknown,
-  ) => void;
+  onEnter?: (context: C, controller: StateMachineController<C, S>, payload?: unknown) => void;
   onUpdate?: (context: C, update: StateMachineUpdate<C, S>) => void;
-  onExit?: (
-    context: C,
-    controller: StateMachineController<C, S>,
-    nextState: S,
-  ) => void;
+  onExit?: (context: C, controller: StateMachineController<C, S>, nextState: S) => void;
 }
 
 interface StateMachineOptions<C, S extends string> {
@@ -48,11 +40,7 @@ class StateMachine<C, S extends string> {
     this.currentStateStartedAt = options.startTime ?? 0;
     this.lastUpdatedAt = options.startTime ?? 0;
 
-    this.states[this.currentState].onEnter?.(
-      this.context,
-      this.createController(),
-      undefined,
-    );
+    this.states[this.currentState].onEnter?.(this.context, this.createController(), undefined);
   }
 
   public get state(): S {
@@ -67,31 +55,20 @@ class StateMachine<C, S extends string> {
     const transitionTime = now ?? this.lastUpdatedAt;
     const previousState = this.currentState;
 
-    this.states[previousState].onExit?.(
-      this.context,
-      this.createController(previousState),
-      nextState,
-    );
+    this.states[previousState].onExit?.(this.context, this.createController(previousState), nextState);
 
     this.currentState = nextState;
     this.currentStateStartedAt = transitionTime;
     this.lastUpdatedAt = transitionTime;
 
-    this.states[nextState].onEnter?.(
-      this.context,
-      this.createController(),
-      payload,
-    );
+    this.states[nextState].onEnter?.(this.context, this.createController(), payload);
   }
 
   public update(now: number) {
     const delta = Math.max(0, now - this.lastUpdatedAt);
     this.lastUpdatedAt = now;
 
-    this.states[this.currentState].onUpdate?.(
-      this.context,
-      this.createUpdate(now, delta),
-    );
+    this.states[this.currentState].onUpdate?.(this.context, this.createUpdate(now, delta));
   }
 
   public rebaseTime(now: number) {
@@ -104,8 +81,7 @@ class StateMachine<C, S extends string> {
     return {
       context: this.context,
       state,
-      transition: (nextState: S, payload?: unknown) =>
-        this.transition(nextState, payload, this.lastUpdatedAt),
+      transition: (nextState: S, payload?: unknown) => this.transition(nextState, payload, this.lastUpdatedAt),
     };
   }
 
@@ -122,8 +98,7 @@ class StateMachine<C, S extends string> {
 
         return Math.min(1, Math.max(0, (now - this.currentStateStartedAt) / duration));
       },
-      transition: (nextState: S, payload?: unknown) =>
-        this.transition(nextState, payload, now),
+      transition: (nextState: S, payload?: unknown) => this.transition(nextState, payload, now),
     };
   }
 }

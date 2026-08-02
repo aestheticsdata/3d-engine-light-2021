@@ -8,8 +8,8 @@
 // five primitives lands on the fifth and plays two animations, not five.
 
 import type ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import type Mesh from "@primitives/Mesh";
 import type { Data3D } from "@data/types";
+import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 
 export interface ShapeSwitcherOptions {
@@ -79,10 +79,7 @@ class ShapeSwitcher {
       this.currentPrimitiveName = this.targetPrimitiveName;
     }
 
-    if (
-      this.queuedPrimitiveName &&
-      this.queuedPrimitiveName !== this.currentPrimitiveName
-    ) {
+    if (this.queuedPrimitiveName && this.queuedPrimitiveName !== this.currentPrimitiveName) {
       const nextPrimitive = this.queuedPrimitiveName;
       this.queuedPrimitiveName = null;
       this.startTransition(nextPrimitive, now);
@@ -119,10 +116,7 @@ class ShapeSwitcher {
     // so on first load the name is still null while the machine may already
     // hold a mesh. Dropping either test flips first load between the entrance
     // and the switch animation.
-    if (
-      !this.currentPrimitiveName &&
-      !this.transitionMachine.getActiveMeshes().length
-    ) {
+    if (!this.currentPrimitiveName && !this.transitionMachine.getActiveMeshes().length) {
       this.transitionMachine.playInitialEntrance(mesh, now);
     } else {
       this.transitionMachine.switchTo(mesh, now);

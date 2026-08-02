@@ -29,11 +29,7 @@ class Vec3Math {
   }
 
   public cross(a: Vec3, b: Vec3): Vec3 {
-    return [
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0],
-    ];
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   }
 
   public magnitude(v: Vec3): number {
@@ -59,16 +55,9 @@ class Vec3Math {
   }
 
   public centroid(points: number[][]): Vec3 {
-    const sum = points.reduce<Vec3>(
-      (acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]],
-      [0, 0, 0],
-    );
+    const sum = points.reduce<Vec3>((acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]], [0, 0, 0]);
 
-    return [
-      sum[0] / points.length,
-      sum[1] / points.length,
-      sum[2] / points.length,
-    ];
+    return [sum[0] / points.length, sum[1] / points.length, sum[2] / points.length];
   }
 
   // Rodrigues' rotation. The axis must already be a unit vector.

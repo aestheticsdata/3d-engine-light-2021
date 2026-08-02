@@ -2,10 +2,10 @@
    Must not own: border widths or colours — those are --size-hairline / --size-mark and colors.css. */
 
 :root {
-  --radius-xs: 1px;              /* brand mark, legend swatches, range thumb */
-  --radius-sm: 2px;              /* the default: chips, toggles, rows, bars */
-  --radius-md: 3px;              /* buttons, toolbar HUD chips */
-  --radius-lg: 4px;              /* panels, cards, toolbar, status bar */
-  --radius-full: 50%;            /* REC dot */
+  --radius-xs: 1px; /* brand mark, legend swatches, range thumb */
+  --radius-sm: 2px; /* the default: chips, toggles, rows, bars */
+  --radius-md: 3px; /* buttons, toolbar HUD chips */
+  --radius-lg: 4px; /* panels, cards, toolbar, status bar */
+  --radius-full: 50%; /* REC dot */
   --radius-bar-top: 1px 1px 0 0; /* z-buffer bars */
 }

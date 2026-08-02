@@ -18,6 +18,7 @@
 import MeshBuilder from "@data/builders/MeshBuilder";
 import PolyhedronBuilder from "@data/builders/PolyhedronBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -65,11 +66,7 @@ class TruncatedCuboctahedronGenerator {
 
     this.builder.addConvexPolyhedron({
       vertices,
-      faces: this.polyhedron.facesFromNormals(
-        vertices,
-        this.buildFaceNormals(),
-        REACH_TOLERANCE,
-      ),
+      faces: this.polyhedron.facesFromNormals(vertices, this.buildFaceNormals(), REACH_TOLERANCE),
       radius: CIRCUMRADIUS,
       colorForFace: (vertexCount) => this.colorFor(vertexCount),
     });
@@ -87,9 +84,7 @@ class TruncatedCuboctahedronGenerator {
         SIGNS.forEach((signY) => {
           SIGNS.forEach((signZ) => {
             const signs = [signX, signY, signZ];
-            vertices.push(
-              ordering.map((slot, axis) => signs[axis] * MAGNITUDES[slot]),
-            );
+            vertices.push(ordering.map((slot, axis) => signs[axis] * MAGNITUDES[slot]));
           });
         });
       });

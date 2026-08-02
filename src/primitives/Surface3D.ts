@@ -1,6 +1,6 @@
 import type Mesh from "@primitives/Mesh";
-import type BackgroundRenderer from "@rendering/BackgroundRenderer";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
+import type BackgroundRenderer from "@rendering/BackgroundRenderer";
 
 export interface MeshRenderRequest {
   mesh: Mesh;
@@ -12,18 +12,12 @@ class Surface3D {
   private readonly surface3DContainer: CanvasRenderingContext2D;
   private readonly backgroundRenderer: BackgroundRenderer | null;
 
-  constructor(
-    container: CanvasRenderingContext2D,
-    backgroundRenderer: BackgroundRenderer | null = null,
-  ) {
+  constructor(container: CanvasRenderingContext2D, backgroundRenderer: BackgroundRenderer | null = null) {
     this.surface3DContainer = container;
     this.backgroundRenderer = backgroundRenderer;
   }
 
-  public render(
-    renderables: MeshRenderRequest[],
-    options: TriangleRenderOptions,
-  ): number {
+  public render(renderables: MeshRenderRequest[], options: TriangleRenderOptions): number {
     this.backgroundRenderer?.render(this.surface3DContainer);
     if (!this.backgroundRenderer) {
       this.surface3DContainer.clearRect(

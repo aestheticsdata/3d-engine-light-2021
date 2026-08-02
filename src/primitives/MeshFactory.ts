@@ -10,8 +10,9 @@
 import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
 import Triangle from "@primitives/Triangle";
-import type Viewport from "@primitives/Viewport";
+
 import type { Object3D } from "@data/types";
+import type Viewport from "@primitives/Viewport";
 
 class MeshFactory {
   private readonly viewport: Viewport;
@@ -21,9 +22,7 @@ class MeshFactory {
   }
 
   public build(object3D: Object3D): Mesh {
-    const points = object3D.points.map(
-      (point) => new Point3D(point[0], point[1], point[2], this.viewport),
-    );
+    const points = object3D.points.map((point) => new Point3D(point[0], point[1], point[2], this.viewport));
 
     // `triangle` is a union of a 4-tuple (flat colour) and a 7-tuple (colour
     // plus three UVs), so its `length` is the literal type `4 | 7`. Testing it
@@ -34,15 +33,7 @@ class MeshFactory {
       const [a, b, c, material] = triangle;
 
       if (triangle.length === 7) {
-        return new Triangle(
-          points[a],
-          points[b],
-          points[c],
-          material,
-          triangle[4],
-          triangle[5],
-          triangle[6],
-        );
+        return new Triangle(points[a], points[b], points[c], material, triangle[4], triangle[5], triangle[6]);
       }
 
       return new Triangle(points[a], points[b], points[c], material);

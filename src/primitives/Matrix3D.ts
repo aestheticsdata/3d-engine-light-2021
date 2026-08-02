@@ -41,23 +41,23 @@ class Matrix3D {
   private setMatrix3D(cos: number, sin: number) {
     this.rollMatrix = [
       [cos, -sin, 0, 0],
-      [sin,  cos, 0, 0],
-      [0,    0,   1, 0],
-      [0,    0,   0, 1],
+      [sin, cos, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1],
     ];
 
     this.pitchMatrix = [
-      [1,  0,    0,   0],
-      [0,  cos, -sin, 0],
-      [0,  sin,  cos, 0],
-      [0,  0,    0,   1],
+      [1, 0, 0, 0],
+      [0, cos, -sin, 0],
+      [0, sin, cos, 0],
+      [0, 0, 0, 1],
     ];
 
     this.yawMatrix = [
-      [ cos, 0,  sin, 0],
-      [0,    1,  0,   0],
-      [-sin, 0,  cos, 0],
-      [0,    0,  0,   1],
+      [cos, 0, sin, 0],
+      [0, 1, 0, 0],
+      [-sin, 0, cos, 0],
+      [0, 0, 0, 1],
     ];
   }
 }

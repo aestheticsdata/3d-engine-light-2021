@@ -17,6 +17,7 @@
 import Icosahedron from "@data/builders/Icosahedron";
 import MeshBuilder from "@data/builders/MeshBuilder";
 import { AXES } from "@data/builders/symmetry";
+
 import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
@@ -44,8 +45,7 @@ class IcosidodecahedronGenerator {
       vertices: this.buildVertices(),
       faces: [...this.buildTriangleFaces(), ...this.buildPentagonFaces()],
       radius: CIRCUMRADIUS,
-      colorForFace: (vertexCount) =>
-        vertexCount === 5 ? PENTAGON_COLOR : TRIANGLE_COLOR,
+      colorForFace: (vertexCount) => (vertexCount === 5 ? PENTAGON_COLOR : TRIANGLE_COLOR),
     });
 
     return this.builder.mesh;
@@ -54,12 +54,7 @@ class IcosidodecahedronGenerator {
   // The ID vertices *are* the icosahedron's edge midpoints.
   private buildVertices(): number[][] {
     return this.icosahedron.edges.map(([first, second]) =>
-      AXES.map(
-        (axis) =>
-          (this.icosahedron.vertices[first][axis] +
-            this.icosahedron.vertices[second][axis]) /
-          2,
-      ),
+      AXES.map((axis) => (this.icosahedron.vertices[first][axis] + this.icosahedron.vertices[second][axis]) / 2),
     );
   }
 
@@ -77,16 +72,13 @@ class IcosidodecahedronGenerator {
   // collected in any order here.
   private buildPentagonFaces(): number[][] {
     return this.icosahedron.vertices.map((_, vertex) =>
-      this.icosahedron.edges.reduce<number[]>(
-        (indices, [first, second], index) => {
-          if (first === vertex || second === vertex) {
-            indices.push(index);
-          }
+      this.icosahedron.edges.reduce<number[]>((indices, [first, second], index) => {
+        if (first === vertex || second === vertex) {
+          indices.push(index);
+        }
 
-          return indices;
-        },
-        [],
-      ),
+        return indices;
+      }, []),
     );
   }
 }

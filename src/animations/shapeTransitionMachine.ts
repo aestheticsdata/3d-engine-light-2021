@@ -1,8 +1,9 @@
 import StateMachine from "@animations/StateMachine";
-import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 import EnteringState from "@animations/shapeTransition/EnteringState";
 import IdleState from "@animations/shapeTransition/IdleState";
+import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 import SwitchingState from "@animations/shapeTransition/SwitchingState";
+
 import type { ShapeTransitionState } from "@animations/shapeTransition/types";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
@@ -16,10 +17,7 @@ interface ShapeTransitionOptions {
 
 class ShapeTransitionMachine {
   private readonly context: ShapeTransitionContext;
-  private readonly machine: StateMachine<
-    ShapeTransitionContext,
-    ShapeTransitionState
-  >;
+  private readonly machine: StateMachine<ShapeTransitionContext, ShapeTransitionState>;
 
   constructor(options: ShapeTransitionOptions) {
     // How far off-screen a mesh starts and ends. One margin for both axes,
@@ -85,9 +83,7 @@ class ShapeTransitionMachine {
   // z offset straight onto these objects, so they have to be the very meshes
   // being drawn.
   public getActiveMeshes(): Mesh[] {
-    return Array.from(
-      new Set(this.context.renderables.map((renderable) => renderable.mesh)),
-    );
+    return Array.from(new Set(this.context.renderables.map((renderable) => renderable.mesh)));
   }
 }
 

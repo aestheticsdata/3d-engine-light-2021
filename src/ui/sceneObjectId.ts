@@ -7,5 +7,4 @@
 //   kisRhombicDodecahedron    -> KIS_RHOMBIC_DODECAHEDRON_01
 //   cube                      -> CUBE_01
 
-export const sceneObjectId = (key: string): string =>
-  `${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}_01`;
+export const sceneObjectId = (key: string): string => `${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}_01`;

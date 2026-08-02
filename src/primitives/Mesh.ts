@@ -1,6 +1,6 @@
-import type { TriangleRenderOptions } from "@primitives/Triangle";
-import type Triangle from "@primitives/Triangle";
 import type Point3D from "@primitives/Point3D";
+import type Triangle from "@primitives/Triangle";
+import type { TriangleRenderOptions } from "@primitives/Triangle";
 
 class Mesh {
   private readonly points: Point3D[];
