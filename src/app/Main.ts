@@ -261,7 +261,9 @@ class Main {
   private changeZoom = (sliderValue: number) => {
     this.camera.setZoomFromSlider(sliderValue);
     this.viewportHud.setZoom(sliderValue, this.camera.distance);
-    this.shapes.getActiveMeshes().forEach((mesh) => this.camera.applyTo(mesh));
+    this.shapes.getActiveMeshes().forEach((mesh) => {
+      this.camera.applyTo(mesh);
+    });
     this.renderPausedFrame();
   };
 
@@ -355,7 +357,9 @@ class Main {
     const renderables = this.shapes.getRenderables();
     // Rotated even while hidden, so showing the mesh again resumes the spin
     // where it would have been rather than where it was hidden.
-    renderables.forEach((renderable) => this.camera.rotate(renderable.mesh));
+    renderables.forEach((renderable) => {
+      this.camera.rotate(renderable.mesh);
+    });
     this.paint(renderables);
   }
 

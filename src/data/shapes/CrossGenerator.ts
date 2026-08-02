@@ -72,12 +72,16 @@ class CrossGenerator {
 
   private extrudeProfile() {
     DEPTHS.forEach((z) => {
-      PROFILE.forEach((point) => this.builder.addPoint([point[0], point[1], z]));
+      PROFILE.forEach((point) => {
+        this.builder.addPoint([point[0], point[1], z]);
+      });
     });
   }
 
   private addCaps() {
-    CAP_QUADS.forEach((quad) => this.builder.addQuadByIndices(quad[0], quad[1], quad[2], quad[3], CAP_COLOR));
+    CAP_QUADS.forEach((quad) => {
+      this.builder.addQuadByIndices(quad[0], quad[1], quad[2], quad[3], CAP_COLOR);
+    });
   }
 
   private addSideWalls() {

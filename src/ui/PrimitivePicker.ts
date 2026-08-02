@@ -37,7 +37,9 @@ class PrimitivePicker {
     }
 
     select.replaceChildren();
-    names.forEach((name) => select.add(new Option(name, name)));
+    names.forEach((name) => {
+      select.add(new Option(name, name));
+    });
 
     if (this.listening) {
       return;

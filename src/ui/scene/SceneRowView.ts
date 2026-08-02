@@ -71,7 +71,9 @@ class SceneRowView {
         node.dataset.placeholder = "true";
         node.title = PLACEHOLDER_NOTE;
       });
-      [this.selectButton, this.visButton].forEach((node) => node.setAttribute("aria-describedby", HINT_ID));
+      [this.selectButton, this.visButton].forEach((node) => {
+        node.setAttribute("aria-describedby", HINT_ID);
+      });
     }
 
     this.selectButton.addEventListener("click", () => {

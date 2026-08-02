@@ -15,6 +15,14 @@
   color: var(--color-text-muted);
 }
 
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  margin: 0;
+  cursor: ew-resize;
+}
+
 .slider-row input[type="range"] {
   flex: 1;
   height: var(--size-slider-input);
@@ -25,14 +33,6 @@
   text-align: right;
   font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
   color: var(--color-text-primary);
-}
-
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  margin: 0;
-  cursor: ew-resize;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {

@@ -97,7 +97,9 @@ class UIStateStore {
   // detector (src/app/Main.ts) is shaped around both. Spreading the Set into an
   // array first looks like tidying and silently changes them.
   private notify() {
-    this.listeners.forEach((listener) => listener(this.state));
+    this.listeners.forEach((listener) => {
+      listener(this.state);
+    });
   }
 }
 

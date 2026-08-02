@@ -80,8 +80,11 @@ one that catches a broken conversion, so run it before saying anything compiles.
 
 `lint` is **Biome** (`biome.json`) — formatter, linter and import organiser in one, and
 `lint:fix` writes the fixes. It encodes the house style mechanically: two native rules
-plus eight Grit plugins in `biome-plugins/`, with the rule preset set to `none` so
-nothing but the house style is reported. Every rule is an **error** across all of `src/`,
+plus eight Grit plugins in `biome-plugins/`. Biome's own `recommended` preset runs on top,
+matching pfa, with two rules switched off in `biome.json` — see house-style.md for which
+and why. Note `biome.json` is strict JSON: a `//` comment in it does not error, it makes
+Biome fall back to its defaults, which silently retabs the whole tree. Put the reasoning in
+house-style.md, never in the config. Every rule is an **error** across all of `src/`,
 with no per-file downgrade and no inline suppression anywhere in the repo, so any
 violation the run reports is a new one. Biome also covers CSS, HTML and SVG, which ESLint
 did not.

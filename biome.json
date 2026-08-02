@@ -33,7 +33,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "none",
+      "preset": "recommended",
+      "suspicious": {
+        "noDuplicateProperties": "off"
+      },
+      "a11y": {
+        "useHeadingContent": "off"
+      },
       "style": {
         "noParameterProperties": "error",
         "useImportType": {
