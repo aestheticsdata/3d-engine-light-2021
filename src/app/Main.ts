@@ -45,6 +45,7 @@ import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
 import { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import TransportBar from "@ui/TransportBar";
 import FramerateWidget from "@ui/telemetry/FramerateWidget";
+import FrameTimeWidget from "@ui/telemetry/FrameTimeWidget";
 import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
 
@@ -81,6 +82,7 @@ class Main {
   private readonly sliders: SliderBank;
   private readonly picker: PrimitivePicker;
   private readonly framerate: FramerateWidget;
+  private readonly frameTime: FrameTimeWidget;
   private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
@@ -150,6 +152,7 @@ class Main {
       },
     });
     this.framerate = new FramerateWidget();
+    this.frameTime = new FrameTimeWidget(this.fields);
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -334,6 +337,7 @@ class Main {
 
     this.fields.write("fps", rate);
     this.framerate.render();
+    this.frameTime.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -379,6 +383,7 @@ class Main {
     }
 
     this.paint(this.shapes.getRenderables());
+    this.frameTime.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -391,10 +396,14 @@ class Main {
   // so a missing hand-off is a compile error instead of "dog" painted as a CSS
   // colour.
   private paint(renderables: MeshRenderRequest[]) {
+    const startedAt = performance.now();
+
     this.renderedTriangles = this.surface3D.render(this.sceneGraph.isMeshHidden() ? [] : renderables, {
       ...this.pipeline.getRenderOptions(),
       textures: this.textures,
     });
+
+    this.frameTime.pushSample(performance.now() - startedAt);
   }
 
   private togglePause = () => {
