@@ -20,7 +20,7 @@
 // prints the point count.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const DEFAULT_LEVEL = 2;
 const DEFAULT_TOTAL_SIZE = 210;

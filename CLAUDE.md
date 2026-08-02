@@ -26,7 +26,7 @@ export default ThingDoer;   // last line, bare class above
 Never `export default class`. Never `export class`. Never
 `export const createThing = () => ({ … })`.
 
-The full recovered ruleset — eighteen rules, each cited to a real `file:line` in this
+The full recovered ruleset — nineteen rules, each cited to a real `file:line` in this
 repo — is **[notes/oop-refonte/reference/house-style.md](notes/oop-refonte/reference/house-style.md)**.
 Read it before adding a module. The short version:
 
@@ -38,7 +38,7 @@ Read it before adding a module. The short version:
 | Reads | getters over private state. There are no setters in this codebase — use a method. |
 | Order | fields → constructor → getters → public methods → private methods. |
 | Files | one class per file, basename === class name, and split past ~160 lines of code. |
-| Imports | always through the path alias (`@ui/…`, `@primitives/…`), even within the same directory. Aliases are declared in **both** `tsconfig.json` and `vite.config.js` — add to both or the build breaks. |
+| Imports | always through the path alias (`@ui/…`, `@primitives/…`), even within the same directory. Aliases are declared in **both** `tsconfig.json` and `vite.config.js` — add to both or the build breaks. A binding used only as a type is an `import type`; split the declaration when one module supplies both. |
 
 **Data tables stay data tables.** An inert object literal with no behaviour
 (`src/data/data.ts`, `src/data/shapeInfo.ts`, `src/data/shapes/pyramid.ts`) is a plain
@@ -75,8 +75,9 @@ pnpm test
 one that catches a broken conversion, so run it before saying anything compiles.
 
 `lint` encodes the house style mechanically in `eslint.config.mjs` — nine `no-restricted-syntax`
-selectors plus two `typescript-eslint` rules, no preset. An **error** is a new violation; the
-**warnings** are the known ones a named ticket already owns, listed in the `PENDING` map.
+selectors plus three `typescript-eslint` rules, no preset. Every rule is an **error** across all
+of `src/`, with no per-file downgrade and no inline disable anywhere in the repo, so any
+violation the run reports is a new one.
 
 `test` is vitest over the four pure modules whose behaviour the OOP refonte must not change —
 the store, the shape transition machine and the two standalone derivations. It runs in the

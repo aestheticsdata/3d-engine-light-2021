@@ -8,11 +8,15 @@
 // available proof.
 //
 // It goes through Vite's own build rather than a hand-rolled TypeScript loader
-// for two reasons: the registry's imports go through the @data alias, and Vite
-// already knows that alias from vite.config.js — so the script cannot drift from
-// the app's own resolution. Node's type stripping alone is not enough, because
-// `import { Data3D } from "@data/types"` is a type import written in value
-// syntax and would fail at runtime with a missing export.
+// because the registry's imports go through the @data alias, and Vite already
+// knows that alias from vite.config.js — so the script cannot drift from the
+// app's own resolution.
+//
+// There used to be a second reason: `import { Data3D } from "@data/types"` was a
+// type import written in value syntax, which Node's type stripping cannot erase
+// and which failed at runtime with a missing export. R19 made every such import
+// an `import type`, so that one no longer holds. The alias reason alone is still
+// enough, and it is the one that will not go away.
 //
 // Nothing here touches the DOM, and nothing here imports from src/ui or src/app.
 

@@ -8,7 +8,7 @@
 import DomScope from "@ui/DomScope";
 import ROWS, { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import SceneRowView from "@ui/scene/SceneRowView";
-import UiStateStore from "@ui/UiStateStore";
+import type UiStateStore from "@ui/UiStateStore";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
 class SceneGraphPanel {

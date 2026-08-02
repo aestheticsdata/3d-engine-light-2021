@@ -7,10 +7,10 @@
 // request made mid-flight — later requests overwrite it, so clicking through
 // five primitives lands on the fifth and plays two animations, not five.
 
-import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import Mesh from "@primitives/Mesh";
-import { Data3D } from "@data/types";
-import { MeshRenderRequest } from "@primitives/Surface3D";
+import type ShapeTransitionMachine from "@animations/shapeTransitionMachine";
+import type Mesh from "@primitives/Mesh";
+import type { Data3D } from "@data/types";
+import type { MeshRenderRequest } from "@primitives/Surface3D";
 
 export interface ShapeSwitcherOptions {
   objects3D: Data3D;

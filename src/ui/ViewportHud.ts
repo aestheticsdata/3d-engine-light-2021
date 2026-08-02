@@ -21,7 +21,7 @@
 // already written by Main's own writes, and a second pass over the same nodes
 // would be work that changes nothing.
 
-import FieldWriter from "@ui/FieldWriter";
+import type FieldWriter from "@ui/FieldWriter";
 import { modeLabel } from "@ui/modeLabel";
 
 // Placeholders. Each is a constant, never derived from engine state — a value

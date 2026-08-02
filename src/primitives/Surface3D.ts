@@ -1,6 +1,6 @@
-import Mesh from "@primitives/Mesh";
-import BackgroundRenderer from "@rendering/BackgroundRenderer";
-import { TriangleRenderOptions } from "@primitives/Triangle";
+import type Mesh from "@primitives/Mesh";
+import type BackgroundRenderer from "@rendering/BackgroundRenderer";
+import type { TriangleRenderOptions } from "@primitives/Triangle";
 
 export interface MeshRenderRequest {
   mesh: Mesh;

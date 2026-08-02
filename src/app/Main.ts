@@ -8,14 +8,16 @@
 // that widget.
 
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import data, { Data3D } from "@data/data";
+import type { Data3D } from "@data/data";
+import data from "@data/data";
 import shapeInfo from "@data/shapeInfo";
-import Mesh from "@primitives/Mesh";
+import type Mesh from "@primitives/Mesh";
 import MeshFactory from "@primitives/MeshFactory";
-import Surface3D, { MeshRenderRequest } from "@primitives/Surface3D";
+import type { MeshRenderRequest } from "@primitives/Surface3D";
+import Surface3D from "@primitives/Surface3D";
 import Viewport from "@primitives/Viewport";
 import TextureRegistry from "@textures/TextureRegistry";
-import { BootContext } from "@app/Bootstrapper";
+import type { BootContext } from "@app/Bootstrapper";
 import FpsMeter from "@app/FpsMeter";
 import RenderLoop from "@app/RenderLoop";
 import ShapeSwitcher from "@app/ShapeSwitcher";
@@ -27,7 +29,7 @@ import CameraController, {
   DEFAULT_ZOOM_SLIDER_VALUE,
   ROTATION_SPEED_SLIDER_MAX,
 } from "@app/CameraController";
-import FieldWriter from "@ui/FieldWriter";
+import type FieldWriter from "@ui/FieldWriter";
 import UiStateStore from "@ui/UiStateStore";
 import StatusBar from "@ui/StatusBar";
 import ViewportHud from "@ui/ViewportHud";
@@ -41,12 +43,12 @@ import RenderPipelinePanel, {
   DEFAULT_OPACITY_SLIDER_VALUE,
 } from "@ui/RenderPipelinePanel";
 import TransportBar from "@ui/TransportBar";
+import type { SliderBinding } from "@ui/SliderBank";
 import SliderBank, {
   OPACITY_SLIDER,
   PITCH_SLIDER,
   ROLL_SLIDER,
   ROTATION_SPEED_SLIDER,
-  SliderBinding,
   YAW_SLIDER,
   ZOOM_SLIDER,
 } from "@ui/SliderBank";

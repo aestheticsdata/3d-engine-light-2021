@@ -1,5 +1,5 @@
 import Point2D from "@primitives/Point2D";
-import Viewport from "@primitives/Viewport";
+import type Viewport from "@primitives/Viewport";
 
 class Point3D {
   private x: number;

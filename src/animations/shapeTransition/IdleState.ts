@@ -1,4 +1,4 @@
-import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
+import type ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionContext";
 
 // Nothing is moving: whatever is current sits at the origin, and the two
 // transient meshes are dropped so a later switch cannot pick up the last one.

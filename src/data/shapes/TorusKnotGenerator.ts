@@ -12,8 +12,9 @@
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import Vec3Math from "@data/builders/Vec3Math";
-import KnotPath, { KnotFrame } from "@data/shapes/KnotPath";
-import { Object3D } from "@data/types";
+import type { KnotFrame } from "@data/shapes/KnotPath";
+import KnotPath from "@data/shapes/KnotPath";
+import type { Object3D } from "@data/types";
 
 type Vec3 = [number, number, number];
 

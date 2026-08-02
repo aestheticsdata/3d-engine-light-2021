@@ -3,9 +3,9 @@ import ShapeTransitionContext from "@animations/shapeTransition/ShapeTransitionC
 import EnteringState from "@animations/shapeTransition/EnteringState";
 import IdleState from "@animations/shapeTransition/IdleState";
 import SwitchingState from "@animations/shapeTransition/SwitchingState";
-import { ShapeTransitionState } from "@animations/shapeTransition/types";
-import Mesh from "@primitives/Mesh";
-import { MeshRenderRequest } from "@primitives/Surface3D";
+import type { ShapeTransitionState } from "@animations/shapeTransition/types";
+import type Mesh from "@primitives/Mesh";
+import type { MeshRenderRequest } from "@primitives/Surface3D";
 
 interface ShapeTransitionOptions {
   width: number;

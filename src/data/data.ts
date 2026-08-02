@@ -1,4 +1,4 @@
-import { Data3D } from "@data/types";
+import type { Data3D } from "@data/types";
 import cross from "@data/shapes/cross";
 import cube from "@data/shapes/cube";
 import cuboctahedron from "@data/shapes/cuboctahedron";

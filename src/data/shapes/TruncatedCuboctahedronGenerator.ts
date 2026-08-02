@@ -18,7 +18,7 @@
 import MeshBuilder from "@data/builders/MeshBuilder";
 import PolyhedronBuilder from "@data/builders/PolyhedronBuilder";
 import { AXES, SIGNS } from "@data/builders/symmetry";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const CIRCUMRADIUS = 100;
 

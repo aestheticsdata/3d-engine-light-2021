@@ -26,11 +26,11 @@
 // AffineTextureMapper.
 // -----------------------------------------------------------------------------
 
-import Point3D from "@primitives/Point3D";
+import type Point3D from "@primitives/Point3D";
 import Point2D from "@primitives/Point2D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
-import TextureRegistry from "@textures/TextureRegistry";
-import { UV } from "@data/types";
+import type TextureRegistry from "@textures/TextureRegistry";
+import type { UV } from "@data/types";
 
 export interface TriangleRenderOptions {
   // Required, not optional. An optional registry means a wiring mistake falls

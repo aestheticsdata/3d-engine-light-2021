@@ -1,4 +1,4 @@
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const pyramid: Object3D = {
   points: [

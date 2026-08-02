@@ -14,7 +14,7 @@
 // gained a point.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
-import { Object3D } from "@data/types";
+import type { Object3D } from "@data/types";
 
 const PROFILE: number[][] = [
   [-30, -30],
