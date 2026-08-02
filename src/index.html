@@ -518,12 +518,28 @@
               <section class="panel panel--fill framerate">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">framerate</span>
+                  <span class="panel__note">90 frames</span>
                 </div>
-                <div class="panel__body panel__body--pad-4">
+                <div class="panel__body framerate__body">
+                  <canvas id="fpsChart"></canvas>
                   <div class="stat-tile-row">
                     <div class="stat-tile">
-                      <div class="stat-tile__caption">FPS</div>
-                      <div class="stat-tile__value" data-field="fps">0</div>
+                      <div class="stat-tile__caption">MIN</div>
+                      <div id="framerateMin" class="stat-tile__value stat-tile__value--warn">0</div>
+                    </div>
+                    <div class="stat-tile">
+                      <div class="stat-tile__caption">AVG</div>
+                      <div id="framerateAvg" class="stat-tile__value">0</div>
+                    </div>
+                    <div class="stat-tile">
+                      <div class="stat-tile__caption">MAX</div>
+                      <div id="framerateMax" class="stat-tile__value stat-tile__value--ok">0</div>
+                    </div>
+                    <div class="stat-tile stat-tile--wide">
+                      <div class="stat-tile__caption">
+                        <span class="framerate__caption-full">DROPPED</span><span class="framerate__caption-short">DROP</span>
+                      </div>
+                      <div id="framerateDropped" class="stat-tile__value">0</div>
                     </div>
                   </div>
                 </div>

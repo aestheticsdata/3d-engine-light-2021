@@ -1,0 +1,49 @@
+/* Owns: the framerate card's flex ratio in the telemetry row, the canvas box
+   and the DROP/DROPPED caption swap.
+   Must not own: the card, its header, the stat tiles or the tile row
+   (panel.css, tile.css) — this ticket creates no shared CSS. */
+
+.framerate {
+  flex: 1.15;
+}
+
+.framerate__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-2-5);
+  min-height: 0;
+}
+
+#fpsChart {
+  width: 100%;
+  flex: 1;
+  display: block;
+  min-height: 0;
+}
+
+.framerate__caption-short {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .framerate__body {
+    gap: var(--space-3);
+  }
+
+  /* Fixed, not flex: the mobile branch sizes the chart from --size-fps-canvas
+     rather than the remaining card height. */
+  #fpsChart {
+    flex: none;
+    min-height: auto;
+    height: var(--size-fps-canvas);
+  }
+
+  .framerate__caption-full {
+    display: none;
+  }
+
+  .framerate__caption-short {
+    display: inline;
+  }
+}
