@@ -14,6 +14,18 @@ class Mesh {
     this.triangles = [...triangles];
   }
 
+  // What this mesh submits, for the GEOMETRY card. MeshFactory maps the
+  // registry entry one-for-one, so these are the same two numbers SHAPE INFO
+  // prints — counted per mesh rather than per primitive, which is what keeps
+  // them honest while a transition has two meshes on screen at once.
+  public get pointCount(): number {
+    return this.points.length;
+  }
+
+  public get triangleCount(): number {
+    return this.triangles.length;
+  }
+
   public renderMesh(
     context: CanvasRenderingContext2D,
     offsetX: number = 0,

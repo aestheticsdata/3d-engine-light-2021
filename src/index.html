@@ -641,6 +641,18 @@
                       ></span>
                     </div>
                   </div>
+                  <!-- BUDGETS' second block, the mobile half of the desktop
+                       GEOMETRY card's footer. The card, its header and its
+                       padding are the frame-time ticket's. -->
+                  <div class="budgets__polyBudget">
+                    <div class="budgets__polyBudgetLabelRow">
+                      <span class="budgets__polyBudgetLabel">POLY BUDGET</span>
+                      <span class="budgets__polyBudgetValue" data-field="polyBudget">&mdash;</span>
+                    </div>
+                    <div class="budget-bar">
+                      <span id="budgetsPolyFill" class="budget-bar__fill"></span>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -682,15 +694,90 @@
                   </div>
                 </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- No data-mpanel: mobile splits this card in two — the POLY
+                   BUDGET block inside BUDGETS above, and the GEOMETRY stat card
+                   below — rather than restyling it. The DRAWN row the shell
+                   parked here is gone: the drawn count is the toolbar's and the
+                   HUD's, and this card counts what was submitted. -->
+              <section class="panel panel--fill geometry">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">geometry</span>
+                  <span class="panel__note">scene total</span>
                 </div>
-                <div class="panel__body panel__body--pad-4">
+                <div class="panel__body panel__body--pad-4 geometry__body">
                   <div class="stat-list">
                     <div class="stat-row">
-                      <span class="stat-row__label">DRAWN</span>
-                      <span class="stat-row__value" data-field="trisDrawn">0</span>
+                      <span class="stat-row__label">VERTICES</span>
+                      <span class="stat-row__value" data-field="geoVertices">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">EDGES</span>
+                      <span class="stat-row__value" data-field="geoEdges">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">TRIANGLES</span>
+                      <span class="stat-row__value" data-field="geoTriangles">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">CULLED</span>
+                      <span class="stat-row__value stat-row__value--warn" data-field="geoCulled">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DRAW CALLS</span>
+                      <span
+                        class="stat-row__value stat-row__value--dim"
+                        data-placeholder="true"
+                        title="Draw-call accounting is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-geometry"
+                      >&mdash;</span>
+                    </div>
+                  </div>
+                  <div class="geometry__footer">
+                    <div class="geometry__footerRow">
+                      <span class="geometry__footerLabel">POLY BUDGET</span>
+                      <span class="geometry__footerValue" data-field="polyBudget">&mdash;</span>
+                    </div>
+                    <div class="budget-bar">
+                      <span id="geometryBudgetFill" class="budget-bar__fill"></span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <span class="placeholder-hint" id="ph-geometry">Draw-call accounting is not instrumented yet (de-mock E6).</span>
+
+              <!-- Mobile-only: the statGroups GEOMETRY card, entirely the
+                   primitives' stat-card recipe bar its own rows. -->
+              <section class="panel geometry-stats" data-mpanel="stats">
+                <div class="panel__header panel__header--card">
+                  <span class="panel__title">geometry</span>
+                  <span class="panel__note" data-field="polyBudget">&mdash;</span>
+                </div>
+                <div class="panel__body panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">VERTICES</span>
+                      <span class="stat-row__value" data-field="geoVertices">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">EDGES</span>
+                      <span class="stat-row__value" data-field="geoEdges">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">TRIANGLES</span>
+                      <span class="stat-row__value" data-field="geoTriangles">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">CULLED</span>
+                      <span class="stat-row__value stat-row__value--warn" data-field="geoCulled">0</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DRAW CALLS</span>
+                      <span
+                        class="stat-row__value stat-row__value--dim"
+                        data-placeholder="true"
+                        title="Draw-call accounting is not instrumented yet (de-mock E6)."
+                        aria-describedby="ph-geometry"
+                      >&mdash;</span>
                     </div>
                   </div>
                 </div>

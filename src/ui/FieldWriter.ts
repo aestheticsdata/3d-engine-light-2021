@@ -18,6 +18,7 @@
 //   status bar   statusLabel, selectedId, shadingMode, texLabel
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
 //   frame time   frameMs, frameTimeNote
+//   geometry     geoVertices, geoEdges, geoTriangles, geoCulled, polyBudget
 //   system       uptime
 
 class FieldWriter {
