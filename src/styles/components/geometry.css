@@ -1,0 +1,104 @@
+/* Owns: the desktop GEOMETRY card's POLY BUDGET footer, the budget bar both
+   branches share, BUDGETS' poly-budget block, and hiding each of the two cards
+   on the wrong breakpoint.
+   Must not own: the card, its header, or the stat-list/stat-row recipe
+   (panel.css, rows.css) — this card's five rows are the primitives' own. */
+
+/* flex:1 plus the column is what gives the footer below something to be pushed
+   to the bottom of; .panel__body--pad-4 supplies the 8px and nothing else. */
+.geometry__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.geometry__footer {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  gap: var(--space-1-5);
+  padding-top: var(--space-2-5);
+  border-top: var(--size-hairline) solid var(--color-border-subtle);
+}
+
+.geometry__footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.geometry__footerLabel {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-sm);
+  color: var(--color-text-muted);
+}
+
+/* 9px mono, where every other desktop value in the card is 10px: the design
+   sets the ratio a step smaller so it reads as meta rather than as a sixth
+   stat row. */
+.geometry__footerValue {
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+/* One recipe for both mounts — the desktop footer and BUDGETS' mobile block
+   carry identical markup, and what changes between the branches is the height
+   token and the radius, not the bar. */
+.budget-bar {
+  height: var(--size-budget-bar);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+}
+
+.budget-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--color-state-ok);
+}
+
+/* BUDGETS' second block. The card shell, its header and its 10/11/12 body
+   padding are the frame-time ticket's; this is the block's own gap and its
+   label row. */
+.budgets__polyBudget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.budgets__polyBudgetLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.budgets__polyBudgetLabel {
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-muted);
+}
+
+.budgets__polyBudgetValue {
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+/* Desktop default: the mobile stat card has no desktop presence, and
+   [data-mpanel] carries no desktop-hiding rule of its own — layout.css only
+   gates that attribute inside the mobile query. */
+.geometry-stats {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  /* The desktop card has no mobile presentation: BUDGETS' poly block and the
+     stat card replace it between them rather than restyling it. */
+  .geometry {
+    display: none;
+  }
+
+  .budget-bar {
+    border-radius: var(--radius-lg);
+  }
+}
