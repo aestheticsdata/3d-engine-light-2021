@@ -21,6 +21,16 @@ export interface ShapeOption {
   thumbnail: HTMLCanvasElement;
 }
 
+// One section of the list. The picker takes groups rather than a flat array
+// because fourteen names in one column is already a wall to scan, and COS-201
+// adds roughly ten more with near-identical spellings. What it does NOT take is
+// a family: which sections exist and what order they come in is the caller's
+// business, and this class only knows it was handed a heading and some options.
+export interface ShapeOptionGroup {
+  label: string;
+  options: ShapeOption[];
+}
+
 export interface ShapePickerOptions {
   selector: string;
   onPick: (id: string) => void;
@@ -77,16 +87,16 @@ class ShapePicker {
     document.addEventListener("keydown", this.onKeyDown);
   }
 
-  public setOptions(shapes: ShapeOption[]) {
+  // The internals stay flat. `options` and `faces` are keyed by shape id with no
+  // notion of a section, which is what leaves setActive, the closed face and the
+  // Escape path untouched by the grouping.
+  public setOptions(groups: ShapeOptionGroup[]) {
     const fragment = document.createDocumentFragment();
 
     this.options.clear();
     this.faces.clear();
-    shapes.forEach((shape) => {
-      const option = this.buildOption(shape);
-      this.options.set(shape.id, option);
-      this.faces.set(shape.id, shape);
-      fragment.appendChild(option);
+    groups.forEach((group) => {
+      fragment.appendChild(this.buildGroup(group));
     });
 
     this.list.replaceChildren(fragment);
@@ -124,6 +134,38 @@ class ShapePicker {
   public dispose() {
     document.removeEventListener("pointerdown", this.onDocumentPointerDown);
     document.removeEventListener("keydown", this.onKeyDown);
+  }
+
+  // role="group" with an aria-label, wrapping its options — not a heading
+  // element dropped between them. A listbox may contain options and groups of
+  // options and nothing else, so a bare <span> sibling would be announced as
+  // loose text inside the list; the wrapper is what turns the section name into
+  // a label the options are announced *under*.
+  //
+  // The visible heading is therefore the label's second copy, and is hidden from
+  // the accessibility tree and left unfocusable: it is a <span>, so it takes no
+  // tab stop, and aria-hidden keeps the name from being read twice.
+  private buildGroup(group: ShapeOptionGroup): HTMLElement {
+    const wrapper = document.createElement("div");
+
+    wrapper.className = "shape-picker__group";
+    wrapper.setAttribute("role", "group");
+    wrapper.setAttribute("aria-label", group.label);
+
+    const heading = document.createElement("span");
+    heading.className = "shape-picker__group-label";
+    heading.setAttribute("aria-hidden", "true");
+    heading.textContent = group.label;
+    wrapper.appendChild(heading);
+
+    group.options.forEach((shape) => {
+      const option = this.buildOption(shape);
+      this.options.set(shape.id, option);
+      this.faces.set(shape.id, shape);
+      wrapper.appendChild(option);
+    });
+
+    return wrapper;
   }
 
   private buildOption(shape: ShapeOption): HTMLButtonElement {

@@ -11,11 +11,14 @@
 // onTransitionStart for up to 1250ms, so reading the engine first would leave
 // the option the user just chose unmarked for the whole animation.
 
+import shapeFamilies from "@data/shapeFamilies";
+import shapeInfo from "@data/shapeInfo";
 import DOMScope from "@ui/DOMScope";
 import ShapePicker from "@ui/inspector/ShapePicker";
 import { primitiveChipLabel } from "@ui/primitiveChipLabel";
 
 import type { Data3D } from "@data/types";
+import type { ShapeOption } from "@ui/inspector/ShapePicker";
 import type ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 
 export interface PrimitiveSectionOptions {
@@ -45,26 +48,46 @@ class PrimitiveSection {
   // Deferred until the textures resolve: the thumbnails go through the real
   // rasteriser, and the cube's faces are texture keys that resolve to nothing
   // before the registry has loaded.
+  //
+  // The sections come from shapeFamilies and their contents from each shape's
+  // own `family`, so adding a primitive puts it in a section without an edit
+  // here — the same property the flat list had, kept. Registry order is
+  // preserved inside a section because the filter walks `keys` in that order,
+  // which is what keeps the first key the boot shape.
   public paintOptions(thumbnails: ShapeThumbnails) {
     this.picker.setOptions(
-      this.keys.map((key) => ({
-        id: key,
-        label: primitiveChipLabel(key),
-        // Spelled out rather than the scene graph's bare △ glyph. That mark
-        // works in a row already captioned by the panel it sits in; here the
-        // number stands alone beside a shape name, where a raw 240 reads as
-        // anything. The toolbar uses the same word ("tris drawn").
-        //
-        // The registry count, not the drawn one: it says what the shape is made
-        // of, and must not move while culling hides half of it.
-        count: `${this.objects3D[key].triangles.length} tris`,
-        thumbnail: thumbnails.paint(key),
-      })),
+      shapeFamilies
+        .map((family) => ({
+          label: family,
+          options: this.keys
+            .filter((key) => shapeInfo[key].family === family)
+            .map((key) => this.buildOption(key, thumbnails)),
+        }))
+        // A family declared with nothing in it yet would otherwise draw a
+        // heading over an empty gap. Cannot happen with today's fourteen; it can
+        // the moment a section is opened ahead of the shapes that will fill it.
+        .filter((group) => group.options.length > 0),
     );
   }
 
   public setActive(primitive: string | null) {
     this.picker.setActive(primitive);
+  }
+
+  private buildOption(key: string, thumbnails: ShapeThumbnails): ShapeOption {
+    return {
+      id: key,
+      label: primitiveChipLabel(key),
+      // Spelled out rather than the scene graph's bare △ glyph. That mark works
+      // in a row already captioned by the panel it sits in; here the number
+      // stands alone beside a shape name, where a raw 240 reads as anything. The
+      // toolbar uses the same word ("tris drawn").
+      //
+      // The registry count, not the drawn one: it says what the shape is made
+      // of, and must not move while culling hides half of it.
+      count: `${this.objects3D[key].triangles.length} tris`,
+      thumbnail: thumbnails.paint(key),
+    };
   }
 }
 

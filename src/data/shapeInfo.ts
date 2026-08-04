@@ -1,9 +1,18 @@
+import type data from "@data/data";
+import type { ShapeFamily } from "@data/shapeFamilies";
+
 export interface ShapeReference {
   label: string;
   url: string;
 }
 
 export interface ShapeInfo {
+  // Which section of the primitive picker the shape is listed under. Required
+  // for the same reason `generator` below is, and the reason this record was
+  // chosen as the family's home over a separate key-to-family map: a second list
+  // of registry keys can drift from the registry, and a shape missing from it
+  // would silently vanish from the picker instead of failing loudly.
+  family: ShapeFamily;
   title: string;
   description: string;
   geometricFeature: string;
@@ -18,8 +27,16 @@ export interface ShapeInfo {
   references?: ShapeReference[];
 }
 
-const shapeInfo: Record<string, ShapeInfo> = {
+// Checked against the registry, exported widened. The `satisfies` clause is what
+// makes a shape added to data.ts and left unclassified here a compile error —
+// a missing key, a missing `family` and a mistyped family name all fail at this
+// line. The export is deliberately widened back to a string key afterwards:
+// every consumer looks a shape up by a name it got at runtime (Main takes it
+// from the shape switcher), and narrowing the export would push the fourteen
+// literals through the whole call chain to buy nothing.
+const entries = {
   sphere: {
+    family: "PRIMITIVES",
     title: "Sphere",
     description: "A low-poly sphere built from latitude and longitude bands with a bold checker pattern.",
     geometricFeature: "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
@@ -32,6 +49,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   cube: {
+    family: "PRIMITIVES",
     title: "Cube",
     description: "A hard-edged box mixing flat-colored faces with subdivided textured surfaces.",
     geometricFeature: "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
@@ -44,6 +62,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   pyramid: {
+    family: "PRIMITIVES",
     title: "Pyramid",
     description: "A classic square-based pyramid with strongly contrasted side colors and a sharp apex.",
     geometricFeature: "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
@@ -62,6 +81,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   cross: {
+    family: "PRIMITIVES",
     title: "Cross",
     description: "An extruded cross silhouette that reads like a solid emblem rather than a rounded primitive.",
     geometricFeature: "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
@@ -70,6 +90,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     textureSummary: "No textures",
   },
   donut: {
+    family: "SURFACES",
     title: "Donut",
     description: "A torus primitive with a dense triangulated ring and alternating pastel surface colors.",
     geometricFeature:
@@ -83,6 +104,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   torusKnot: {
+    family: "SURFACES",
     title: "Torus Knot",
     description: "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
     geometricFeature:
@@ -99,6 +121,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   menger: {
+    family: "FRACTALS",
     title: "Menger Sponge",
     description: "A level-2 cube fractal carved by recursively removing center volumes on each axis.",
     geometricFeature:
@@ -118,6 +141,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   cuboctahedron: {
+    family: "POLYHEDRA",
     title: "Cuboctahedron",
     description:
       "An Archimedean solid mixing 8 triangles and 6 squares, coloured by face type in the blues of Conway's plate.",
@@ -138,6 +162,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   rhombicDodecahedron: {
+    family: "POLYHEDRA",
     title: "Rhombic dodecahedron",
     description: "A Catalan solid whose 12 identical rhombic faces are shaded in three tones, one per axis they share.",
     geometricFeature:
@@ -157,6 +182,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   kisRhombicDodecahedron: {
+    family: "POLYHEDRA",
     title: "Kisrhombic dodecahedron",
     description:
       "The disdyakis dodecahedron: 48 identical scalene triangles in two alternating greens, one light and one dark.",
@@ -177,6 +203,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   truncatedCuboctahedron: {
+    family: "POLYHEDRA",
     title: "Truncated cuboctahedron",
     description:
       "An Archimedean solid of 12 squares, 8 hexagons and 6 octagons, in three ambers keyed to the face types.",
@@ -197,6 +224,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   icosidodecahedron: {
+    family: "POLYHEDRA",
     title: "Icosidodecahedron",
     description:
       "An Archimedean solid of 20 triangles and 12 pentagons in two roses, the icosahedral counterpart of the cuboctahedron.",
@@ -217,6 +245,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   rhombicTriacontahedron: {
+    family: "POLYHEDRA",
     title: "Rhombic triacontahedron",
     description:
       "A Catalan solid of 30 identical golden rhombi, shaded in five tones — one per cube inscribed in the dodecahedron.",
@@ -237,6 +266,7 @@ const shapeInfo: Record<string, ShapeInfo> = {
     ],
   },
   kisRhombicTriacontahedron: {
+    family: "POLYHEDRA",
     title: "Kisrhombic triacontahedron",
     description:
       "The disdyakis triacontahedron: 120 identical scalene triangles in two alternating tones, the densest solid of the family.",
@@ -256,6 +286,8 @@ const shapeInfo: Record<string, ShapeInfo> = {
       },
     ],
   },
-};
+} satisfies Record<keyof typeof data, ShapeInfo>;
+
+const shapeInfo: Record<string, ShapeInfo> = entries;
 
 export default shapeInfo;
