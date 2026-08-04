@@ -1,0 +1,23 @@
+/* Owns: the CAMERA card's mobile overflow behaviour, and nothing else.
+   Must not own: the card, its header, or the stat-list/stat-row recipe
+   (panel.css, rows.css) — every row on this card is the primitives' own, and
+   both body paddings come from panel.css's two stacked modifiers. */
+
+@media (max-width: 899px) {
+  /* SPIN RATE is the longest value in the mobile stats stack after SYSTEM's
+     buffer triple, and the number is the row's content — so the number wins
+     and the label is what gives way. Scoped to this card rather than declared
+     on .stat-row__value, which is rows.css's and not this ticket's to widen;
+     system.css carries the same pair for the same reason. */
+  .camera-stats .stat-row__value {
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .camera-stats .stat-row__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

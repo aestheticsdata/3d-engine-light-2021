@@ -553,55 +553,30 @@
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
                 </div>
                 <div class="panel__body panel__body--pad-4 frame-time__body">
+                  <!-- Three measured phases, three segments. Widths are set
+                       by FrameTimeWidget from real timings; the mount is
+                       repeated in BUDGETS below and both carry the same
+                       data-ft-segment names so one write feeds both. -->
                   <div class="frame-time__bar">
-                    <span
-                      class="frame-time__segment"
-                      data-state="unattributed"
-                      data-placeholder="true"
-                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                      aria-describedby="ph-frame-time"
-                    ></span>
+                    <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
+                    <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                    <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
                   </div>
                   <div class="frame-time__legend">
                     <div class="frame-time__legendRow">
                       <span class="frame-time__swatch frame-time__swatch--transform"></span>
                       <span class="frame-time__legendLabel">TRANSFORM</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__legendValue" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="frame-time__legendRow">
-                      <span class="frame-time__swatch frame-time__swatch--clip"></span>
-                      <span class="frame-time__legendLabel">CLIP / CULL</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__swatch frame-time__swatch--background"></span>
+                      <span class="frame-time__legendLabel">BACKGROUND</span>
+                      <span class="frame-time__legendValue" data-field="ftBackground">&mdash;</span>
                     </div>
                     <div class="frame-time__legendRow">
                       <span class="frame-time__swatch frame-time__swatch--raster"></span>
                       <span class="frame-time__legendLabel">RASTERIZE</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
-                    </div>
-                    <div class="frame-time__legendRow">
-                      <span class="frame-time__swatch frame-time__swatch--present"></span>
-                      <span class="frame-time__legendLabel">PRESENT</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__legendValue" data-field="ftRaster">&mdash;</span>
                     </div>
                   </div>
                   <div class="frame-time__footer">
@@ -609,13 +584,13 @@
                     <span
                       class="frame-time__footerValue"
                       data-placeholder="true"
-                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                      title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
                       aria-describedby="ph-frame-time"
                     >&mdash; px/f</span>
                   </div>
                 </div>
               </section>
-              <span class="placeholder-hint" id="ph-frame-time">Per-phase frame timing is not instrumented yet (de-mock E6).</span>
+              <span class="placeholder-hint" id="ph-frame-time">Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6).</span>
 
               <!-- Mobile-only: BUDGETS' shell and its first block. The
                    geometry ticket appends a POLY BUDGET block inside
@@ -629,16 +604,12 @@
                   <div class="budgets__frameTime">
                     <div class="budgets__frameTimeLabelRow">
                       <span class="budgets__frameTimeLabel">FRAME TIME</span>
-                      <span class="budgets__frameTimeSub">transform &middot; clip &middot; raster &middot; present</span>
+                      <span class="budgets__frameTimeSub">transform &middot; background &middot; raster</span>
                     </div>
                     <div class="frame-time__bar">
-                      <span
-                        class="frame-time__segment"
-                        data-state="unattributed"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      ></span>
+                      <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
+                      <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                      <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
                     </div>
                   </div>
                   <!-- BUDGETS' second block, the mobile half of the desktop
@@ -658,13 +629,11 @@
 
               <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
                    primitives bar its own rows. -->
-              <section
-                class="panel frame-time-stats"
-                data-mpanel="stats"
-                data-placeholder="true"
-                title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                aria-describedby="ph-frame-time"
-              >
+              <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
+                   primitives bar its own rows. No longer marked as a
+                   placeholder — three of the four rows are measured now, and
+                   only FILL RATE still carries the affordance. -->
+              <section class="panel frame-time-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">frame time</span>
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
@@ -673,23 +642,24 @@
                   <div class="stat-list">
                     <div class="stat-row">
                       <span class="stat-row__label">TRANSFORM</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--transform">&mdash;</span>
+                      <span class="stat-row__value stat-row__value--transform" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="stat-row">
-                      <span class="stat-row__label">CLIP / CULL</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--clip">&mdash;</span>
+                      <span class="stat-row__label">BACKGROUND</span>
+                      <span class="stat-row__value stat-row__value--clip" data-field="ftBackground">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">RASTERIZE</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--raster">&mdash;</span>
-                    </div>
-                    <div class="stat-row">
-                      <span class="stat-row__label">PRESENT</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--present-text">&mdash;</span>
+                      <span class="stat-row__value stat-row__value--raster" data-field="ftRaster">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">FILL RATE</span>
-                      <span class="stat-row__value stat-row__value--dim">&mdash; px</span>
+                      <span
+                        class="stat-row__value stat-row__value--dim"
+                        data-placeholder="true"
+                        title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash; px</span>
                     </div>
                   </div>
                 </div>
@@ -784,24 +754,109 @@
               </section>
             </div>
             <div class="telemetryRow">
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches. It leads the second telemetry
+                   row, so the shell's `.telemetryRow > :first-child` already
+                   grants it the design's extra growth — this card restates no
+                   flex of its own. The two body padding modifiers are stacked
+                   rather than chosen: --pad-4 is the desktop 8px and
+                   --pad-chart is declared inside the mobile query, so the
+                   breakpoint picks the winner with no rule of ours. -->
+              <!-- Not a placeholder and not called a z-buffer: the bars are the
+                   real distribution of triangle depths submitted this frame, so
+                   there is nothing here to dim or to caveat. The axis ends are
+                   written from the measured range rather than the design's
+                   0.1 / 1000.0, which were clip planes this engine has not got. -->
+              <section class="panel panel--fill zbuffer" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
-                  <span class="panel__title">z-buffer</span>
+                  <span class="panel__title"
+                    ><span class="zbuffer__title-full">depth distribution</span
+                    ><span class="zbuffer__title-short">depth</span></span
+                  >
+                  <span class="panel__note">near &rarr; far</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-chart zbuffer__body">
+                  <div id="zbufferBars" class="zbuffer__bars"></div>
+                  <!-- Three labels shipped, two shown on mobile: the middle one
+                       is hidden at the breakpoint rather than branched in JS. -->
+                  <div class="zbuffer__axis">
+                    <span id="zbufferNear">&mdash;</span>
+                    <span class="zbuffer__axisMiddle">depth</span>
+                    <span id="zbufferFar">&mdash;</span>
+                  </div>
+                </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches: the rows, the note and the values
+                   are identical, and only the body padding differs — so the two
+                   primitive modifiers are stacked and the breakpoint picks.
+                   SPIN RATE and FOCAL / OFFSET are deliberate relabels of the
+                   design's ROTATION and NEAR / FAR (L388–L415); the reasoning is
+                   in CameraWidget's header. -->
+              <section class="panel panel--fill camera-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">camera</span>
+                  <span class="panel__note">PERSPECTIVE</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">POSITION</span>
+                      <span class="stat-row__value" data-field="camStatPosition">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">SPIN RATE</span>
+                      <span class="stat-row__value" data-field="camStatSpin">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DISTANCE</span>
+                      <span class="stat-row__value" data-field="camStatDistance">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">FOCAL / OFFSET</span>
+                      <span class="stat-row__value" data-field="camStatFocal">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">FOV / ASPECT</span>
+                      <span class="stat-row__value" data-field="camStatFov">&mdash;</span>
+                    </div>
+                  </div>
+                </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches, same as CAMERA above. JS HEAP
+                   ships unmarked: SystemWidget feature-detects at boot and only
+                   the browsers without the API get the placeholder affordance,
+                   so the row count and the card height are identical either
+                   way. -->
+              <section class="panel panel--fill system-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">system</span>
+                  <span class="panel__note">software raster</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">BUFFER</span>
+                      <span class="stat-row__value" data-field="sysBuffer">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">COLOR BUFFER</span>
+                      <span class="stat-row__value" data-field="sysColorBuffer">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">JS HEAP</span>
+                      <span class="stat-row__value" data-field="jsHeap">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DPR</span>
+                      <span class="stat-row__value" data-field="sysDpr">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">UPTIME</span>
+                      <span class="stat-row__value" data-field="uptime">&mdash;</span>
+                    </div>
+                  </div>
+                </div>
               </section>
+              <span class="placeholder-hint" id="ph-js-heap">JS heap size is not exposed by this browser.</span>
             </div>
           </div>
 

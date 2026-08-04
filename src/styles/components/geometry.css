@@ -52,10 +52,19 @@
   background: var(--color-surface-sunken);
 }
 
+/* Same tween as the other telemetry bars: this fill is rewritten on the same
+   90ms gate, and it jumps a visible distance on every shape change. */
 .budget-bar__fill {
   display: block;
   height: 100%;
   background: var(--color-state-ok);
+  transition: width var(--duration-chart) var(--ease-chart);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-bar__fill {
+    transition: none;
+  }
 }
 
 /* BUDGETS' second block. The card shell, its header and its 10/11/12 body

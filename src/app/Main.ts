@@ -44,9 +44,12 @@ import StatusBar from "@ui/StatusBar";
 import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
 import { MESH_ROW_ID } from "@ui/scene/sceneRows";
 import TransportBar from "@ui/TransportBar";
+import CameraWidget from "@ui/telemetry/CameraWidget";
 import FramerateWidget from "@ui/telemetry/FramerateWidget";
 import FrameTimeWidget from "@ui/telemetry/FrameTimeWidget";
 import GeometryWidget from "@ui/telemetry/GeometryWidget";
+import SystemWidget from "@ui/telemetry/SystemWidget";
+import ZBufferWidget from "@ui/telemetry/ZBufferWidget";
 import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
 
@@ -85,6 +88,9 @@ class Main {
   private readonly framerate: FramerateWidget;
   private readonly frameTime: FrameTimeWidget;
   private readonly geometry: GeometryWidget;
+  private readonly zBuffer: ZBufferWidget;
+  private readonly cameraStats: CameraWidget;
+  private readonly system: SystemWidget;
   private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
@@ -156,6 +162,9 @@ class Main {
     this.framerate = new FramerateWidget();
     this.frameTime = new FrameTimeWidget(this.fields);
     this.geometry = new GeometryWidget(this.fields);
+    this.zBuffer = new ZBufferWidget();
+    this.cameraStats = new CameraWidget(this.fields, this.camera, canvas);
+    this.system = new SystemWidget(this.fields, canvas);
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -201,8 +210,12 @@ class Main {
 
     this.picker.populate(this.shapes.names, this.shapes.request);
     // Resolution and the four camera placeholders are written once: none of
-    // them changes while the console is open.
+    // them changes while the console is open. The histogram's 28 bars are the
+    // same kind of write — built once, then only their heights change.
     this.viewportHud.seed();
+    this.zBuffer.mount();
+    this.cameraStats.seed();
+    this.system.seed();
     this.sliders.applyDefaults();
     this.sliders.attach();
     this.sliders.syncFromDom();
@@ -221,6 +234,9 @@ class Main {
   // for the teardown to be possible at all.
   public dispose() {
     this.unsubscribe();
+    // The one collaborator holding a timer and a media-query listener: every
+    // other widget is pure DOM writes and has nothing to release.
+    this.system.dispose();
   }
 
   // Six sliders, enumerated once. The bank owns the mechanism and knows nothing
@@ -342,6 +358,9 @@ class Main {
     this.framerate.render();
     this.frameTime.render();
     this.geometry.render();
+    this.zBuffer.render();
+    this.cameraStats.render();
+    this.system.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -375,10 +394,15 @@ class Main {
     const renderables = this.shapes.getRenderables();
     // Rotated even while hidden, so showing the mesh again resumes the spin
     // where it would have been rather than where it was hidden.
+    //
+    // Timed here rather than inside CameraController: the phase the FRAME TIME
+    // card calls TRANSFORM is this whole loop over the active meshes, and only
+    // the caller of the loop knows where it begins and ends.
+    const transformStartedAt = performance.now();
     renderables.forEach((renderable) => {
       this.camera.rotate(renderable.mesh);
     });
-    this.paint(renderables);
+    this.paint(renderables, performance.now() - transformStartedAt);
   }
 
   private renderPausedFrame() {
@@ -386,9 +410,13 @@ class Main {
       return;
     }
 
-    this.paint(this.shapes.getRenderables());
+    // Zero transform, and that is the truth rather than a gap: a paused repaint
+    // re-paints the frame, it does not re-rotate it.
+    this.paint(this.shapes.getRenderables(), 0);
     this.frameTime.render();
     this.geometry.render();
+    this.zBuffer.render();
+    this.cameraStats.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -400,7 +428,7 @@ class Main {
   // render option that is not a control, and it is required rather than optional
   // so a missing hand-off is a compile error instead of "dog" painted as a CSS
   // colour.
-  private paint(renderables: MeshRenderRequest[]) {
+  private paint(renderables: MeshRenderRequest[], transformMs: number) {
     // The submitted list and the render options are both named rather than
     // inlined because the GEOMETRY card needs them below: it counts what was
     // actually handed to the renderer — a hidden mesh submits nothing — and it
@@ -408,12 +436,20 @@ class Main {
     // the card cannot describe a different frame than the one on screen.
     const submitted = this.sceneGraph.isMeshHidden() ? [] : renderables;
     const options = { ...this.pipeline.getRenderOptions(), textures: this.textures };
-    const startedAt = performance.now();
 
-    this.renderedTriangles = this.surface3D.render(submitted, options);
+    const stats = this.surface3D.render(submitted, options);
 
-    this.frameTime.pushSample(performance.now() - startedAt);
+    this.renderedTriangles = stats.triangles;
+    // The three phases describe one frame because they come from one frame: the
+    // transform this class timed, and the two passes Surface3D timed around its
+    // own boundary.
+    this.frameTime.pushSample({
+      transformMs,
+      backgroundMs: stats.backgroundMs,
+      rasterMs: stats.rasterMs,
+    });
     this.geometry.pushFrame(submitted, this.renderedTriangles, options.cullBackfaces);
+    this.zBuffer.pushFrame(submitted);
   }
 
   private togglePause = () => {

@@ -17,9 +17,13 @@
 //   shell        buildDesktop, buildMobile, fps, trisDrawn
 //   status bar   statusLabel, selectedId, shadingMode, texLabel
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
-//   frame time   frameMs, frameTimeNote
+//   frame time   frameMs, frameTimeNote, ftTransform, ftBackground, ftRaster
 //   geometry     geoVertices, geoEdges, geoTriangles, geoCulled, polyBudget
-//   system       uptime
+//   camera card  camStatPosition, camStatSpin, camStatDistance, camStatFocal,
+//                camStatFov — deliberately not the viewport's camPos / camRot /
+//                camDist above. Those are the HUD's mock camera (COS-218); these
+//                are the engine's real projection, and the two must not collide.
+//   system       sysBuffer, sysColorBuffer, jsHeap, sysDpr, uptime
 
 class FieldWriter {
   public write(name: string, value: string | number) {
