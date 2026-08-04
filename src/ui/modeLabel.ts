@@ -13,3 +13,14 @@
 export type ShadingMode = "WIRE" | "FLAT";
 
 export const modeLabel = (wireframeEnabled: boolean): ShadingMode => (wireframeEnabled ? "WIRE" : "FLAT");
+
+// The six-chip vocabulary the RENDER tab's SHADING MODE grid picks from — the
+// same shading concept as ShadingMode above, at the finer resolution the chip
+// grid needs before the renderer can back all six.
+export type ShadingModeKey = "POINTS" | "WIRE" | "FLAT" | "GOURAUD" | "DEPTH" | "NORMALS";
+
+// The single definition of the shading↔wireframe relationship. Main.ts and
+// ShadingSection.ts both need to agree on which chip means "wireframe" — a
+// second independently-spelled "WIRE" literal in either one is how that
+// agreement drifts silently, with nothing thrown when it does.
+export const impliesWireframe = (mode: ShadingModeKey): boolean => mode === "WIRE";

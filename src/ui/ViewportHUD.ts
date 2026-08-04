@@ -79,7 +79,9 @@ class ViewportHUD {
 
   // Owns the attribute only. The chip's text is the same modeLabel() the status
   // bar pushes through the writer, so the two cannot drift — there is one
-  // derivation and one write.
+  // derivation and one write. The attribute drives no CSS today — it survives
+  // as the seam de-mock E3 will key real shading off, so do not delete this
+  // write because it looks dead.
   public setMode(wireframeEnabled: boolean) {
     this.card.setAttribute("data-shading-mode", modeLabel(wireframeEnabled).toLowerCase());
   }

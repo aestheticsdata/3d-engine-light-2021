@@ -20,9 +20,11 @@ import Viewport from "@primitives/Viewport";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
+import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import MaterialSummary from "@ui/MaterialSummary";
+import { impliesWireframe } from "@ui/modeLabel";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
 import ShapeStoryPanel from "@ui/ShapeStoryPanel";
@@ -66,6 +68,7 @@ class Main {
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
   private readonly pipeline: RenderPipelinePanel;
+  private readonly renderTab: RenderTab;
   private readonly transport: TransportBar;
   private readonly shapeTab: ShapeTab;
   private readonly framerate: FramerateWidget;
@@ -144,6 +147,14 @@ class Main {
       onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
     });
     this.pipeline = new RenderPipelinePanel();
+    this.renderTab = new RenderTab({
+      store: this.uiState,
+      wireframe: this.pipeline.wireframe,
+      cullBackfaces: this.pipeline.cullBackfaces,
+      onShadingSelect: (mode) => this.pipeline.setWireframe(impliesWireframe(mode)),
+      onWireframeToggle: (next) => this.pipeline.setWireframe(next),
+      onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
+    });
     this.transport = new TransportBar();
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
@@ -260,7 +271,8 @@ class Main {
   // toggle rewrites the opacity row with the value it already had.
   private syncPipelineReadouts = () => {
     // One modeLabel() behind all three readouts: the status bar writes the word,
-    // the HUD writes the attribute that keys the canvas filter, and SHAPE INFO's
+    // the HUD writes the data-shading-mode attribute (it drives no styling today
+    // — it is the seam de-mock E3 will key real shading off), and SHAPE INFO's
     // SHADING row prints it. Passing the boolean to the first two is interim and
     // is the whole reason the mapping is a shared function — de-mock E3 publishes
     // a shadingMode slice and the argument goes away, without the label table
@@ -274,6 +286,10 @@ class Main {
     // row follows it rather than holding a second copy.
     this.shapeTab.setOpacityUi(Math.round(this.pipeline.opacity * 100));
     this.shapeTab.setOpacityDisabled(this.pipeline.getRenderOptions().cullBackfaces);
+    // Same reasoning as opacity above, for the RENDER tab's own two real
+    // controls: RenderPipelinePanel owns the booleans, this is the one place
+    // that pushes them out to whichever surface needs to agree with them.
+    this.renderTab.syncPipeline(this.pipeline.wireframe, this.pipeline.cullBackfaces);
     this.renderPausedFrame();
   };
 
@@ -444,6 +460,7 @@ class Main {
     // After resetAll, so the rows read the restored defaults — and it re-applies
     // them to the camera, which is what the slider bank's read-back used to do.
     this.shapeTab.syncFromStore();
+    this.renderTab.syncFromStore();
     this.pipeline.syncOpacityAvailability();
     this.syncPipelineReadouts();
     this.framerate.reset();

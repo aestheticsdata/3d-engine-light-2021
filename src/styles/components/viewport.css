@@ -65,45 +65,6 @@
   height: 100%;
 }
 
-/* ---- shading-mode filters -------------------------------------------------
-
-   A COSMETIC MOCK, NOT SHADING. The design fakes the six modes with a CSS
-   filter over the finished frame; none of them touches a normal, a light or a
-   per-face colour. De-mock E3 (COS-241 / COS-243) replaces them with real
-   shading and deletes this block.
-
-   Two of the six are reachable today, so a filter is live in the default state:
-   FLAT is the resting mode and WIRE is one toggle away. That costs a full-frame
-   composite over 1024 x 640 every frame — it is not free, and it is the reason
-   this block is worth deleting rather than keeping as decoration.
-
-   POINTS, GOURAUD, DEPTH and NORMALS are unreachable until the de-mock ticket
-   lands; they are written out so the mapping lives in one place. */
-
-[data-shading-mode="points"] .viewportStage canvas {
-  filter: contrast(1.15) saturate(0.7);
-}
-
-[data-shading-mode="wire"] .viewportStage canvas {
-  filter: saturate(0.5) contrast(1.2);
-}
-
-[data-shading-mode="flat"] .viewportStage canvas {
-  filter: saturate(1.05) contrast(1.05);
-}
-
-[data-shading-mode="gouraud"] .viewportStage canvas {
-  filter: none;
-}
-
-[data-shading-mode="depth"] .viewportStage canvas {
-  filter: grayscale(1) contrast(1.35) brightness(0.9);
-}
-
-[data-shading-mode="normals"] .viewportStage canvas {
-  filter: hue-rotate(155deg) saturate(1.6);
-}
-
 /* ---- hud root -------------------------------------------------------------
 
    Always rendered. `hudOverlays` was a Claude Design preview control with no

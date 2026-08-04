@@ -20,6 +20,8 @@
 // rather than once per slice, so the panels repaint in a single pass. Both are
 // pinned by src/ui/__tests__/UIStateStore.test.ts.
 
+import type { ShadingModeKey } from "@ui/modeLabel";
+
 export interface UIState {
   // Slices are added here by the ticket that owns each value.
 
@@ -50,6 +52,25 @@ export interface UIState {
   texture?: string;
   baseColor?: string;
   uvScale?: number;
+
+  // --- RENDER tab -----------------------------------------------------------
+  // zbuffer / dither / edgeAA and the four light* values are de-mock E3
+  // placeholders, same as SHAPE tab's zoom/scale/texture/baseColor/uvScale
+  // above: no engine sits behind any of them yet, and they are stored only so
+  // RESET can undo the choice. shadingMode is different — it is chip-selection
+  // state that deliberately does NOT feed modeLabel(). The status bar, the HUD
+  // and SHAPE INFO describe what the rasteriser actually does, and printing
+  // GOURAUD there would be the same lie a CSS filter would have been. Do not
+  // wire this field into modeLabel() to make the chip "real" — that is not a
+  // fix, it is de-mock E3's job.
+  shadingMode?: ShadingModeKey;
+  zbuffer?: boolean;
+  dither?: boolean;
+  edgeAA?: boolean;
+  lightAzimuth?: number;
+  lightElevation?: number;
+  lightAmbient?: number;
+  lightSpecular?: number;
 }
 
 // Optional above, and guaranteed below: every field is filled by the owning

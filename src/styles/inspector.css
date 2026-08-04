@@ -1,7 +1,9 @@
-/* Owns: the SHAPE tab's section scaffolding — the header row, the PRIMITIVE
-   scroll cap and its mobile release, and the MATERIAL base row.
-   Must not own: the chip, swatch, slider or range recipes (components/), the
-   card chrome (panel.css) or where the inspector sits (layout.css). */
+/* Owns: the inspector tabs' own section scaffolding — SHAPE's header row, the
+   PRIMITIVE scroll cap and its mobile release, the MATERIAL base row; and
+   RENDER's equivalent card/bare-group wrapper.
+   Must not own: the chip, swatch, slider, toggle or range recipes
+   (components/), the card chrome (panel.css) or where the inspector sits
+   (layout.css). */
 
 /* The gap is what keeps the section title off its own content. The old markup
    got it from .inspectorPanel's gap; these sections are their own flex context
@@ -88,6 +90,49 @@
   }
 }
 
+/* ---- the RENDER tab ------------------------------------------------------- */
+
+/* Same shape as .shape-section above: a card on mobile, a bare group on
+   desktop. A second block rather than a rename, because this file's ownership
+   is per tab (see the file header): a shared .inspector-section would mean a
+   COS-231 change to the WORLD tab's scaffolding silently altering the SHAPE
+   tab's. */
+.render-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.render-section__cardHead {
+  display: none;
+}
+
+.render-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.render-section__body {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 899px) {
+  .render-section__rule,
+  .render-section__head {
+    display: none;
+  }
+
+  .render-section__cardHead {
+    display: flex;
+  }
+
+  .render-section__body--card {
+    padding: var(--space-4-5);
+  }
+}
+
 /* ---- the primitive picker ------------------------------------------------- */
 
 /* A closed control that opens a list, which is what the console had before the
@@ -160,12 +205,45 @@
   top: calc(100% + var(--space-1));
   right: 0;
   left: 0;
+  display: block;
   max-height: var(--size-picker-max-h);
   overflow-y: auto;
   background: var(--color-panel-bg);
   border: var(--size-hairline) solid var(--color-border-panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--elevation-popup, none);
+  opacity: 1;
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    display var(--duration-base) allow-discrete;
+}
+
+/* The cross-fade COS-343 wrote for the native <select>, carried over to the
+   control that replaced it. It was lost with the element it was attached to:
+   ::picker(select) went away when the picker stopped being a <select>, and the
+   hand-built list opened as a hard cut.
+
+   Alpha only. Nothing moves — a slide would read as a menu flying in rather
+   than as part of the panel, which is the same call the select made.
+
+   `display` has to be in the transition with allow-discrete or there is no exit
+   fade at all: `hidden` resolves to `display: none`, and without holding the box
+   open for the duration the element is gone before the opacity has anywhere to
+   travel. @starting-style is the other half — it gives the opening list a value
+   to travel *from*, and with no starting style the open stays instant.
+
+   Deliberately not gated on prefers-reduced-motion, matching the select: that
+   preference targets motion that can trigger vestibular symptoms — travel,
+   parallax, scale — and a cross-fade in place is the standard exception. */
+.shape-picker__list[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+@starting-style {
+  .shape-picker__list:not([hidden]) {
+    opacity: 0;
+  }
 }
 
 .shape-picker__option.is-active {
