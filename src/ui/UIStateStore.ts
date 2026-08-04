@@ -52,12 +52,13 @@ export interface UIState {
   drawnTriangles?: number;
 
   // --- SHAPE tab -----------------------------------------------------------
-  // UI-space rotation rates, signed -100..100 with a real zero. The engine's
-  // own values are off-centre and differ per axis; rotationRates.ts is the only
-  // place that knows the mapping. Registered by TransformSection.
-  pitchRate?: number;
-  yawRate?: number;
-  rollRate?: number;
+  // Absolute degrees, written straight into CameraRig — there is no mapping
+  // between what the row shows and what the engine applies, which is what the
+  // rate sliders these replaced needed a whole module for. spin is degrees per
+  // second on the same rig. Registered by TransformSection.
+  pitch?: number;
+  yaw?: number;
+  roll?: number;
   spin?: number;
   // No engine behind these four yet (de-mock E4). They are stored rather than
   // discarded so the console remembers the choice and RESET can undo it.

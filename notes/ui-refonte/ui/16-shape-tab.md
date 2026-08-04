@@ -58,6 +58,11 @@ roll  angle = (roll / 500) * speedFactor
 
 Ranges today: `#pitchSlider` 0..800 default 400, `#yawSlider` 0..800 default 400, `#rollSlider` −1000..1200 default 200, `#rotationSpeedSlider` 0..2000 default 200. Neutral (no rotation) is 320 for pitch, 512 for yaw, 0 for roll — none of which is the slider midpoint. `Mesh.transformMesh` mutates points in place, so there is no identity to reset to and absolute angles cannot be expressed without keeping a pristine copy of the source points.
 
+> **Superseded by COS-237 (de-mock E1a).** The rate mapping below is gone. The
+> three rows are absolute degrees written straight into `CameraRig`, they carry a
+> `°` suffix, and SPIN is a real °/s. Kept as the record of why the rates were
+> shaped the way they were.
+
 **Decided: the UI epic does not change renderer behaviour.** The engine keeps its rates; the sliders are relabelled honestly and given a real zero. Absolute pitch/yaw/roll belongs to de-mock ticket E1 (camera rig), which is also what makes the WORLD tab's view presets meaningful.
 
 | UI slider | UI range | Engine mapping | Value shown |

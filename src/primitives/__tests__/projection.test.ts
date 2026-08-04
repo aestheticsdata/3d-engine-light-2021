@@ -58,16 +58,12 @@ describe("convert3D2D", () => {
   });
 });
 
-describe("transformPt", () => {
-  // Every row of the rotation reads the unrotated coordinates. Assigning x
-  // before y is computed would feed the second row its own output, which shows
-  // up as a shape that shears instead of turning.
-  it("applies the whole matrix to the coordinates it started with", () => {
-    const matrix = new Matrix3D();
-    matrix.setAngle(90);
-
+describe("setFromSource", () => {
+  it("applies the whole matrix to the coordinates the point was authored with", () => {
+    const matrix3D = new Matrix3D();
     const point = new Point3D(100, 0, 0, viewport());
-    point.transformPt(matrix.yaw);
+
+    point.setFromSource(matrix3D.yawMatrix(90));
 
     // A quarter turn about y sends +x to -z, so the point ends up behind the
     // origin and its projection falls back towards the centre.
@@ -75,25 +71,66 @@ describe("transformPt", () => {
     expect(point.convert3D2D().x).toBeCloseTo(512, 10);
   });
 
+  // The property the whole camera rig rests on. The incremental transform this
+  // replaced destroyed its own operand, so a pose was the product of every frame
+  // that came before it and no angle could be returned to; here the source is
+  // read and never written, so the same matrix always gives the same vertex.
+  it("rebuilds from the source rather than from the current position", () => {
+    const point = new Point3D(100, 0, 0, viewport());
+    const matrix3D = new Matrix3D();
+    const quarterTurn = matrix3D.yawMatrix(90);
+
+    point.setFromSource(quarterTurn);
+    point.setFromSource(quarterTurn);
+
+    expect(point.zValue).toBeCloseTo(-100, 10);
+
+    point.setFromSource(matrix3D.yawMatrix(0));
+
+    expect(point.zValue).toBeCloseTo(0, 10);
+    expect(point.convert3D2D().x).toBeCloseTo(new Point3D(100, 0, 0, viewport()).convert3D2D().x, 10);
+  });
+
   it("mutates in place and returns nothing", () => {
-    const matrix = new Matrix3D();
     const point = new Point3D(10, 20, 30, viewport());
 
-    expect(point.transformPt(matrix.roll)).toBeUndefined();
+    expect(point.setFromSource(new Matrix3D().rollMatrix(0))).toBeUndefined();
     expect(point.zValue).toBe(30);
   });
 });
 
 describe("Matrix3D", () => {
-  it("hands out three usable matrices before any angle is set", () => {
-    const identity = new Matrix3D();
+  // Every builder used to be recomputed from one cos/sin pair, so reading two of
+  // them read one angle twice. Building them independently is what lets the rig
+  // hold three different angles at once.
+  it("builds each axis from its own angle", () => {
+    const matrix3D = new Matrix3D();
+    const point = new Point3D(0, 100, 0, viewport());
+
+    // A quarter turn about x sends +y to +z; the yaw built beside it must leave
+    // that alone rather than turning by 90 as well.
+    point.setFromSource(matrix3D.multiply(matrix3D.yawMatrix(0), matrix3D.pitchMatrix(90)));
+
+    expect(point.zValue).toBeCloseTo(100, 10);
+  });
+
+  it("multiplies right to left, so the second operand is applied first", () => {
+    const matrix3D = new Matrix3D();
+    const point = new Point3D(100, 0, 0, viewport());
+
+    // Pitch about x cannot move a point on the x axis, so this is the yaw alone
+    // — and it is the yaw regardless of which order the product is read in only
+    // if the second operand really did run first.
+    point.setFromSource(matrix3D.multiply(matrix3D.yawMatrix(90), matrix3D.pitchMatrix(37)));
+
+    expect(point.zValue).toBeCloseTo(-100, 10);
+  });
+
+  it("carries a translation in the fourth column", () => {
     const point = new Point3D(10, 20, 30, viewport());
 
-    point.transformPt(identity.pitch);
-    point.transformPt(identity.yaw);
-    point.transformPt(identity.roll);
+    point.setFromSource(new Matrix3D().translation(1, 2, 3));
 
-    expect(point.zValue).toBe(30);
-    expect(point.convert3D2D().x).toBe(new Point3D(10, 20, 30, viewport()).convert3D2D().x);
+    expect(point.zValue).toBe(33);
   });
 });

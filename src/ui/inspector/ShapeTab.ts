@@ -18,10 +18,10 @@ export interface ShapeTabOptions {
   objects3D: Data3D;
   store: UIStateStore;
   onPick: (primitive: string) => void;
-  onPitch: (engineValue: number) => void;
-  onYaw: (engineValue: number) => void;
-  onRoll: (engineValue: number) => void;
-  onSpin: (rotationSpeed: number) => void;
+  onPitch: (degrees: number) => void;
+  onYaw: (degrees: number) => void;
+  onRoll: (degrees: number) => void;
+  onSpin: (degreesPerSecond: number) => void;
   onOpacity: (sliderValue: number) => void;
 }
 

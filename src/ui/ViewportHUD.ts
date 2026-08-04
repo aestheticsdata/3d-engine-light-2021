@@ -1,4 +1,4 @@
-// The viewport HUD's writers, and the home of its placeholder constants.
+// The viewport HUD's writers.
 //
 // Like the status bar, this widget owns no state. Most of what the HUD shows is
 // already published by someone else through the FieldWriter — the shading mode,
@@ -10,40 +10,23 @@
 // write.
 //
 // What is left over, and therefore what this class owns:
-//   * the placeholder constants, each annotated with the de-mock ticket that
-//     replaces it,
 //   * the resolution string, read off the canvas rather than typed,
 //   * the data-shading-mode attribute on the viewport card,
-//   * fov, zoom and dist, the three live camera readouts the engine can
-//     actually feed. All three are handed in rather than derived here — the
-//     camera owns the arithmetic, so the overlay cannot print a projection the
-//     renderer is not using.
+//   * fov, zoom and dist, and the camera readouts the rig feeds.
 //
-// There is deliberately no per-frame update() method, and becoming a class must
-// not tempt anyone into adding one. Everything the HUD shows per frame is
-// already written by Main's own writes, and a second pass over the same nodes
-// would be work that changes nothing.
+// Everything numeric here is handed in rather than derived: the camera owns the
+// projection arithmetic and the rig owns the orientation, so the overlay cannot
+// print a camera the renderer is not using.
+//
+// setCamera rides Main's existing 90ms display gate rather than running per
+// frame: four decimal readouts changing sixty times a second are unreadable, and
+// nothing here is a picture that needs to keep up with a drag.
 
+import { eulerDegreesLabel, vector3Label } from "@ui/cameraLabels";
 import { modeLabel } from "@ui/modeLabel";
 
+import type { EulerDegrees, Vector3 } from "@camera/CameraRig";
 import type FieldWriter from "@ui/FieldWriter";
-
-// Placeholders. Each is a constant, never derived from engine state — a value
-// computed from the wrong source is worse than an obvious mock, because it
-// looks live.
-
-// de-mock E1a (COS-237): the engine rotates the mesh and has no camera
-// transform, so there is no position to read.
-const CAM_POS = "0.0 1.2 12.0";
-
-// de-mock E1a (COS-237): pitch / yaw / roll are rotation *rates* offset from the
-// canvas centre, not camera Euler angles (D9 keeps those semantics). The design
-// draws degrees, so the mock does too — but it must stay a constant. Deriving it
-// from the sliders would print a rate and label it an angle.
-const CAM_ROT = "0.0° 0.0° 0.0°";
-
-// de-mock E1a (COS-237): hardcoded in the design as well.
-const CAM_TARGET = "0.0 1.2 0.0";
 
 // Unit is `u`, not the design's `m`: the engine has no metric scale, and
 // COS-246 (E5a) is what introduces world units.
@@ -71,9 +54,6 @@ class ViewportHUD {
   // buffer, and that is the number worth showing.
   public seed() {
     this.fields.write("resolution", `${this.canvas.width} × ${this.canvas.height}`);
-    this.fields.write("camPos", CAM_POS);
-    this.fields.write("camRot", CAM_ROT);
-    this.fields.write("camTarget", CAM_TARGET);
   }
 
   // FOV left the placeholder list in COS-231. It used to be seeded above as a
@@ -105,6 +85,12 @@ class ViewportHUD {
   public setZoom(sliderValue: number, distance: number) {
     this.fields.write("zoom", `${Math.round(sliderValue)}%`);
     this.fields.write("camDist", `${Math.round(distance)} ${DISTANCE_UNIT}`);
+  }
+
+  public setCamera(position: Vector3, rotation: EulerDegrees, target: Readonly<Vector3>) {
+    this.fields.write("camPos", vector3Label(position));
+    this.fields.write("camRot", eulerDegreesLabel(rotation));
+    this.fields.write("camTarget", vector3Label(target));
   }
 }
 
