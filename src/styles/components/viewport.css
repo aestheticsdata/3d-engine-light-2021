@@ -47,7 +47,7 @@
   container-type: size;
 }
 
-.viewportStage {
+.viewport-stage {
   position: relative;
   aspect-ratio: var(--size-canvas-ratio);
   margin: auto;
@@ -59,7 +59,7 @@
   width: min(100cqw, calc(100cqh * var(--size-canvas-ratio)), var(--size-canvas-w));
 }
 
-.viewportStage canvas {
+.viewport-stage canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -79,7 +79,7 @@
    position: relative stage, so the HUD opens no stacking context and the mobile
    sticky header at --layer-sticky keeps winning over it (D11). */
 
-.viewportHud {
+.viewport-hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -88,7 +88,7 @@
 /* Keys inside a HUD chip. .hud-chip already paints its content in
    --color-text-secondary at --text-sm mono, so only the dimmer label colour
    needs stating. */
-.viewportHud__k {
+.viewport-hud__k {
   color: var(--color-text-hud-label);
 }
 
@@ -110,7 +110,7 @@
    297px card cannot seat both. Two absolutely-positioned corners overlap
    silently there; space-between makes the overlap unrepresentable, and the left
    cluster wraps into the room it actually has. */
-.viewportHud__top {
+.viewport-hud__top {
   position: absolute;
   top: var(--space-5);
   right: var(--space-5);
@@ -121,13 +121,13 @@
   gap: var(--space-2);
 }
 
-.viewportHud__topLeft {
+.viewport-hud__top-left {
   display: flex;
   min-width: 0;
   gap: var(--space-2);
 }
 
-.viewportHud__chipRow {
+.viewport-hud__chip-row {
   display: flex;
   gap: var(--space-2);
 }
@@ -137,11 +137,11 @@
 
 /* ---- top-right camera readout (desktop) ----------------------------------- */
 
-.viewportHud__camera {
+.viewport-hud__camera {
   flex: 0 0 auto;
 }
 
-.viewportHud__camRow {
+.viewport-hud__cam-row {
   display: flex;
   justify-content: space-between;
   gap: var(--space-5);
@@ -152,7 +152,7 @@
    a single camPos chip and dropped cam.rot, target and dist; this restores them
    as two-line chips rather than losing three readouts on every phone. */
 
-.viewportHud__camChips {
+.viewport-hud__cam-chips {
   display: none;
 }
 
@@ -163,21 +163,21 @@
    and 20px mobile values both fall out of the one token. The .5px is a genuine
    sub-pixel offset for a 1px rule, not a missing token. */
 
-.viewportHud__crosshair {
+.viewport-hud__crosshair {
   position: absolute;
   top: 50%;
   left: 50%;
   background: var(--color-crosshair);
 }
 
-.viewportHud__crosshair--v {
+.viewport-hud__crosshair--v {
   width: var(--size-hairline);
   height: var(--size-crosshair);
   margin-top: calc(var(--size-crosshair) / -2);
   margin-left: -0.5px;
 }
 
-.viewportHud__crosshair--h {
+.viewport-hud__crosshair--h {
   width: var(--size-crosshair);
   height: var(--size-hairline);
   margin-top: -0.5px;
@@ -197,7 +197,7 @@
    whose real version will also be a pixel rect. Mobile keeps the design's
    percentages. */
 
-.viewportHud__selection {
+.viewport-hud__selection {
   position: absolute;
   top: 31.9%;
   left: 39.2%;
@@ -205,35 +205,35 @@
   height: var(--size-selection-box);
 }
 
-.viewportHud__corner {
+.viewport-hud__corner {
   position: absolute;
   width: var(--size-selection-corner);
   height: var(--size-selection-corner);
 }
 
 /* Each corner draws only the two edges that face it. */
-.viewportHud__corner--tl {
+.viewport-hud__corner--tl {
   top: 0;
   left: 0;
   border-top: var(--size-mark) solid var(--color-accent);
   border-left: var(--size-mark) solid var(--color-accent);
 }
 
-.viewportHud__corner--tr {
+.viewport-hud__corner--tr {
   top: 0;
   right: 0;
   border-top: var(--size-mark) solid var(--color-accent);
   border-right: var(--size-mark) solid var(--color-accent);
 }
 
-.viewportHud__corner--bl {
+.viewport-hud__corner--bl {
   bottom: 0;
   left: 0;
   border-bottom: var(--size-mark) solid var(--color-accent);
   border-left: var(--size-mark) solid var(--color-accent);
 }
 
-.viewportHud__corner--br {
+.viewport-hud__corner--br {
   bottom: 0;
   right: 0;
   border-bottom: var(--size-mark) solid var(--color-accent);
@@ -242,7 +242,7 @@
 
 /* Sits above the box by its own height plus a small gap, rather than by a
    literal -20px that stops meaning anything if the badge is ever resized. */
-.viewportHud__selectionLabel {
+.viewport-hud__selection-label {
   position: absolute;
   top: calc(-1 * (var(--size-selection-label-h) + var(--space-1-5)));
   left: 0;
@@ -264,7 +264,7 @@
    makes them follow the rig. The small insets below are the design's own and
    stay literal rather than becoming tokens for a placeholder. */
 
-.viewportHud__gizmo {
+.viewport-hud__gizmo {
   position: absolute;
   bottom: var(--space-5);
   left: var(--space-5);
@@ -275,25 +275,25 @@
   border-radius: var(--radius-sm);
 }
 
-.viewportHud__axis {
+.viewport-hud__axis {
   position: absolute;
   bottom: 14px;
   left: 14px;
 }
 
-.viewportHud__axis--x {
+.viewport-hud__axis--x {
   width: var(--size-gizmo-axis-xy);
   height: var(--size-mark);
   background: var(--color-axis-x);
 }
 
-.viewportHud__axis--y {
+.viewport-hud__axis--y {
   width: var(--size-mark);
   height: var(--size-gizmo-axis-xy);
   background: var(--color-axis-y);
 }
 
-.viewportHud__axis--z {
+.viewport-hud__axis--z {
   bottom: 15px;
   left: 15px;
   width: var(--size-mark);
@@ -303,24 +303,24 @@
   transform: rotate(215deg);
 }
 
-.viewportHud__axisLabel {
+.viewport-hud__axis-label {
   position: absolute;
   font: var(--font-weight-bold) var(--text-2xs) / var(--leading-none) var(--font-mono);
 }
 
-.viewportHud__axisLabel--x {
+.viewport-hud__axis-label--x {
   right: 6px;
   bottom: 8px;
   color: var(--color-axis-x);
 }
 
-.viewportHud__axisLabel--y {
+.viewport-hud__axis-label--y {
   top: 4px;
   left: 8px;
   color: var(--color-axis-y);
 }
 
-.viewportHud__axisLabel--z {
+.viewport-hud__axis-label--z {
   top: 20px;
   right: 8px;
   color: var(--color-axis-z);
@@ -328,7 +328,7 @@
 
 /* ---- bottom-right chips (desktop) ----------------------------------------- */
 
-.viewportHud__bottomRight {
+.viewport-hud__bottom-right {
   position: absolute;
   right: var(--space-5);
   bottom: var(--space-5);
@@ -341,16 +341,16 @@
    asymmetry is reproduced locally rather than "fixed" in the .hud-chip recipe,
    which stays untouched (D1). backdrop-filter does not inherit, so the override
    has to land on the chips themselves, not on the cluster. */
-.viewportHud__bottomRight .hud-chip,
-.viewportHud__hint {
+.viewport-hud__bottom-right .hud-chip,
+.viewport-hud__hint {
   backdrop-filter: none;
 }
 
-.viewportHud__chipStatus {
+.viewport-hud__chip-status {
   border-color: var(--color-state-ok-border);
 }
 
-.viewportHud__ok {
+.viewport-hud__ok {
   font-weight: var(--font-weight-medium);
   color: var(--color-state-ok);
 }
@@ -361,7 +361,7 @@
    that needs about 139px, and it still does not fit at 390px. The mobile
    gestures documentation is the GESTURES card the shortcuts ticket adds. */
 
-.viewportHud__hint {
+.viewport-hud__hint {
   position: absolute;
   bottom: var(--space-5);
   left: 50%;
@@ -371,19 +371,19 @@
   white-space: nowrap;
 }
 
-.viewportHud__hintId {
+.viewport-hud__hint-id {
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
 }
 
-.viewportHud__hintDim {
+.viewport-hud__hint-dim {
   font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
 }
 
 /* ---- bottom-right chip (mobile) ------------------------------------------- */
 
-.viewportHud__bottomChip {
+.viewport-hud__bottom-chip {
   display: none;
 }
 
@@ -397,7 +397,7 @@
    "not in mockup" is new spec restoring something the mobile design dropped. */
 
 @media (max-width: 899px) {
-  .viewportHud__top {
+  .viewport-hud__top {
     top: var(--space-4);
     right: var(--space-4);
     left: var(--space-4);
@@ -405,7 +405,7 @@
 
   /* 8px inset + the 22px mode chip + the 6px column gap puts the second band at
      exactly the design's top: 36px, without either number being written down. */
-  .viewportHud__topLeft {
+  .viewport-hud__top-left {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-2-5);
@@ -415,28 +415,28 @@
      it rather than running underneath. At 430 the three chips still sit on one
      line, which is the design; below that the resolution chip drops to a third
      line instead of disappearing. */
-  .viewportHud__chipRow {
+  .viewport-hud__chip-row {
     flex-wrap: wrap;
   }
 
   /* The mockup's mode chip drops the tracking the desktop one carries. */
-  .viewportHud__topLeft .hud-chip--accent {
+  .viewport-hud__top-left .hud-chip--accent {
     letter-spacing: normal;
   }
 
   /* not in mockup — the resolution chip is restored, and the mobile band reads
      projection, texture, resolution rather than the desktop order. */
-  .viewportHud__chipRes {
+  .viewport-hud__chip-res {
     order: 1;
   }
 
   /* The four-row readout is a desktop shape: at 148px minimum it would eat a
      third of a 300px card. */
-  .viewportHud__camera {
+  .viewport-hud__camera {
     display: none;
   }
 
-  .viewportHud__camChips {
+  .viewport-hud__cam-chips {
     display: flex;
     flex: 0 0 auto;
     flex-direction: column;
@@ -447,7 +447,7 @@
   /* Two readouts per chip, right-aligned, so cam.rot / target / dist survive on
      a card that has no room for the desktop panel. Height budget against a
      16/10 card ~188px tall at a 320px device: 22 + ~30 + ~34 + two 4px gaps. */
-  .viewportHud__chipStack {
+  .viewport-hud__chip-stack {
     height: auto;
     flex-direction: column;
     align-items: flex-end;
@@ -455,19 +455,19 @@
     padding: var(--space-2) var(--space-4);
   }
 
-  .viewportHud__stackLine {
+  .viewport-hud__stack-line {
     display: flex;
     align-items: center;
     gap: var(--space-2-5);
   }
 
-  .viewportHud__crosshair {
+  .viewport-hud__crosshair {
     background: var(--color-crosshair-dim);
   }
 
   /* The design's percentages rather than the desktop square: on a card this
      small a fixed 190px box would be wider than the picture. */
-  .viewportHud__selection {
+  .viewport-hud__selection {
     width: 22.4%;
     height: 35.8%;
   }
@@ -479,22 +479,22 @@
      box top is 31.9% of the card, about 60px at a 320px device, so the badge
      always clears the card edge. 9px rather than the desktop 8px so it stays
      legible at arm's length; the gap above the box tightens to match. */
-  .viewportHud__selectionLabel {
+  .viewport-hud__selection-label {
     top: calc(-1 * (var(--size-selection-label-h) + var(--space-0-5)));
     font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-mono);
   }
 
-  .viewportHud__gizmo {
+  .viewport-hud__gizmo {
     bottom: var(--space-4);
     left: var(--space-4);
   }
 
-  .viewportHud__axis {
+  .viewport-hud__axis {
     bottom: 11px;
     left: 11px;
   }
 
-  .viewportHud__axis--z {
+  .viewport-hud__axis--z {
     bottom: 12px;
     left: 12px;
   }
@@ -502,33 +502,33 @@
   /* not in mockup — the X/Y/Z letters are restored, one step up from the
      desktop 7px so they survive inside a 52px box. Positions are the desktop
      ones scaled by 52/66 and rounded. */
-  .viewportHud__axisLabel {
+  .viewport-hud__axis-label {
     font-size: var(--text-xs);
   }
 
-  .viewportHud__axisLabel--x {
+  .viewport-hud__axis-label--x {
     right: 5px;
     bottom: 6px;
   }
 
-  .viewportHud__axisLabel--y {
+  .viewport-hud__axis-label--y {
     top: 3px;
     left: 6px;
   }
 
-  .viewportHud__axisLabel--z {
+  .viewport-hud__axis-label--z {
     top: 16px;
     right: 6px;
   }
 
   /* fov and zoom move into the top-right column, and the status segment folds
      into the bottom chip, so the desktop trio has nothing left to show. */
-  .viewportHud__bottomRight,
-  .viewportHud__hint {
+  .viewport-hud__bottom-right,
+  .viewport-hud__hint {
     display: none;
   }
 
-  .viewportHud__bottomChip {
+  .viewport-hud__bottom-chip {
     position: absolute;
     right: var(--space-4);
     bottom: var(--space-4);

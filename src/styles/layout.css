@@ -52,7 +52,7 @@
 
 /* ---- main row ------------------------------------------------------------- */
 
-.appMain {
+.app-main {
   display: flex;
   flex: 1;
   gap: var(--size-stack-gap);
@@ -61,7 +61,7 @@
 
 /* Preferred width from the token, allowed to shrink, floored by --size-sidebar-min
    so the column narrows with the window instead of forcing a horizontal scroll. */
-.colLeft {
+.col-left {
   display: flex;
   flex: 0 1 var(--size-sidebar-w);
   flex-direction: column;
@@ -70,12 +70,12 @@
   min-height: 0;
 }
 
-.sceneGraph,
-.shapeInfo {
+.scene-graph,
+.shape-info {
   flex: 0 0 auto;
 }
 
-.colCenter {
+.col-center {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -100,7 +100,7 @@
 
 /* The canvas fit that used to live here was the shell's interim measure, kept
    only so the branch booted before the viewport ticket landed. The picture now
-   has its own box — .viewportStage in components/viewport.css — because the
+   has its own box — .viewport-stage in components/viewport.css — because the
    HUD has to anchor to the image rather than to the card. The 1024x640 cap and
    the sunken matte around it moved there with it. */
 
@@ -114,7 +114,7 @@
 
 /* Wraps rather than crushing: below roughly three card minimums the row breaks
    instead of squeezing every card past legibility. */
-.telemetryRow {
+.telemetry-row {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
@@ -122,17 +122,17 @@
   min-height: 0;
 }
 
-.telemetryRow > * {
+.telemetry-row > * {
   flex: 1 1 var(--size-card-min-w);
   min-width: var(--size-card-min-w);
 }
 
 /* The design gives the first card of each telemetry row a little more room. */
-.telemetryRow > :first-child {
+.telemetry-row > :first-child {
   flex-grow: 1.15;
 }
 
-.colRight {
+.col-right {
   flex: 0 1 var(--size-inspector-w);
   min-width: var(--size-inspector-min);
   min-height: 0;
@@ -147,7 +147,7 @@
   overflow: auto;
 }
 
-.inspectorPanel {
+.inspector-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-2-5);
@@ -163,7 +163,7 @@
 }
 
 /* Row now, so the status-bar ticket does not rediscover the column trap. */
-.statusBar {
+.status-bar {
   display: flex;
   flex: 0 0 var(--size-statusbar-h);
   flex-direction: row;
@@ -188,11 +188,11 @@
    key chips go and the gesture card arrives — and the two gates are each other's
    mirror image, which is why they live together here rather than one of them
    sitting in a component sheet. */
-.appBar,
+.app-bar,
 .mtabs,
-.quickToggles,
+.quick-toggles,
 .gestures,
-.mobileResetSlot {
+.mobile-reset-slot {
   display: none;
 }
 
@@ -206,17 +206,17 @@
      tree, no JS at the breakpoint, no listener re-attached. Items sharing an
      order value keep DOM order. */
   .toolbar,
-  .appMain,
-  .colLeft,
-  .colCenter,
-  .colRight,
+  .app-main,
+  .col-left,
+  .col-center,
+  .col-right,
   .telemetry,
-  .telemetryRow,
+  .telemetry-row,
   .inspector__body {
     display: contents;
   }
 
-  .appBar {
+  .app-bar {
     display: flex;
     order: 0;
     position: sticky;
@@ -266,7 +266,7 @@
     min-height: 0;
   }
 
-  .quickToggles {
+  .quick-toggles {
     display: grid;
     order: 3;
     grid-template-columns: repeat(5, 1fr);
@@ -317,12 +317,12 @@
     display: flex;
   }
 
-  .statusBar {
+  .status-bar {
     order: 7;
     flex: none;
   }
 
-  .mobileResetSlot {
+  .mobile-reset-slot {
     display: block;
     order: 8;
   }

@@ -7,7 +7,7 @@
    (layout.css). */
 
 /* The gap is what keeps the section title off its own content. The old markup
-   got it from .inspectorPanel's gap; these sections are their own flex context
+   got it from .inspector-panel's gap; these sections are their own flex context
    and have to state it. It stays smaller than the 13px above the title, so the
    heading still reads as belonging to what follows it and not to the group
    above — COS-354's ruling, which this tab must not undo. */
@@ -19,7 +19,7 @@
 
 /* The card header is mobile's headline; on desktop the .section-title below it
    does that job, so exactly one of the two is ever displayed. */
-.shape-section__cardHead {
+.shape-section__card-head {
   display: none;
 }
 
@@ -45,14 +45,14 @@
   margin-bottom: var(--space-4);
 }
 
-.shape-section__baseRow {
+.shape-section__base-row {
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
   margin-bottom: var(--space-4);
 }
 
-.shape-section__baseLabel {
+.shape-section__base-label {
   flex: 0 0 var(--size-slider-label-col);
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-lg);
@@ -72,7 +72,7 @@
     display: none;
   }
 
-  .shape-section__cardHead {
+  .shape-section__card-head {
     display: flex;
   }
 
@@ -80,12 +80,12 @@
     margin-bottom: var(--space-5);
   }
 
-  .shape-section__baseRow {
+  .shape-section__base-row {
     gap: var(--space-4);
     margin-bottom: var(--space-2-5);
   }
 
-  .shape-section__baseLabel {
+  .shape-section__base-label {
     font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
     letter-spacing: var(--tracking-md);
   }
@@ -104,7 +104,7 @@
   gap: var(--space-2-5);
 }
 
-.render-section__cardHead {
+.render-section__card-head {
   display: none;
 }
 
@@ -125,7 +125,7 @@
     display: none;
   }
 
-  .render-section__cardHead {
+  .render-section__card-head {
     display: flex;
   }
 
@@ -144,7 +144,7 @@
   gap: var(--space-2-5);
 }
 
-.world-section__cardHead {
+.world-section__card-head {
   display: none;
 }
 
@@ -173,7 +173,7 @@
     display: none;
   }
 
-  .world-section__cardHead {
+  .world-section__card-head {
     display: flex;
   }
 

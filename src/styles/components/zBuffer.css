@@ -87,7 +87,7 @@
     font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
   }
 
-  .zbuffer__axisMiddle {
+  .zbuffer__axis-middle {
     display: none;
   }
 

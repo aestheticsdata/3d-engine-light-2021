@@ -178,7 +178,7 @@ class Main {
     // What genuinely has to follow is syncPipelineReadouts() below — that call
     // is the only thing that seeds the WIRE and CULL pills.
     this.quickToggles = new QuickToggles({
-      mounts: [".quickToggleBand", ".quickToggles"],
+      mounts: [".quick-toggle-band", ".quick-toggles"],
       store: this.uiState,
       wireframe: this.pipeline.wireframe,
       cullBackfaces: this.pipeline.cullBackfaces,
