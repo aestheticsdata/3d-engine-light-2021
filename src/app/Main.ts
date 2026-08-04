@@ -521,6 +521,9 @@ class Main {
     const transformMs = this.applyRigToActiveMeshes();
 
     this.paint(this.shapes.getRenderables(), transformMs);
+    // Every frame, not on the 90ms gate the numeric readouts ride: the gizmo is
+    // a picture rather than a number, and E1b makes the viewport draggable.
+    this.viewportHud.setGizmo(this.rig.axisScreenDirections());
   }
 
   private renderPausedFrame() {
@@ -539,6 +542,9 @@ class Main {
     this.geometry.render();
     this.zBuffer.render();
     this.publishCameraReadouts();
+    // The gizmo has no clock of its own while the loop is stopped, so a slider
+    // would leave it pointing at the attitude the shape had before.
+    this.viewportHud.setGizmo(this.rig.axisScreenDirections());
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 

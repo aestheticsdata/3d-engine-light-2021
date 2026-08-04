@@ -11,8 +11,9 @@
 // compose the way a turntable does: whatever moves the viewpoint moves it, and
 // the spin keeps running from wherever it was left.
 //
-// Angles are degrees everywhere, in and out. Matrix3D converts internally, so a
-// `180 / Math.PI` anywhere in this file or its readers is a bug.
+// Angles are degrees everywhere, in and out. Matrix3D converts internally and
+// the gizmo hands CSS the radians atan2 already returns, so a `180 / Math.PI`
+// anywhere in this file or its readers is a bug.
 
 import Matrix3D from "@primitives/Matrix3D";
 
@@ -30,6 +31,14 @@ export interface EulerDegrees {
 
 // Every value a control can write. Partial at the call site so one slider moves
 // one number without the caller having to restate the other three.
+// One axis of the gizmo: where it points on screen, and how much of its length
+// survives the projection. Radians because that is what atan2 returns and what
+// CSS accepts as `rad`.
+export interface AxisScreenDirection {
+  angleRadians: number;
+  foreshortening: number;
+}
+
 export interface RigAngles {
   pitch: number;
   yaw: number;
@@ -40,6 +49,10 @@ export interface RigAngles {
 const PITCH_LIMIT_DEGREES = 89;
 const HALF_TURN_DEGREES = 180;
 const FULL_TURN_DEGREES = 360;
+// The three object axes, as column indices into R. Named rather than written as
+// a literal at both call sites, because the gizmo's X/Y/Z order is the same
+// order and the two must not drift.
+const AXIS_COLUMNS = [0, 1, 2];
 
 // Into (-180, 180], not the [-180, 180) the usual
 // `((d + 180) % 360 + 360) % 360 - 180` gives: BACK is a yaw of exactly 180 and
@@ -138,10 +151,23 @@ class CameraRig {
     };
   }
 
+  // R · e_j is column j of R, and the gizmo draws an orthographic view of that
+  // basis — so the screen direction of an axis is the column's first two rows
+  // and its foreshortening is their length: 1 when the axis lies in the screen
+  // plane, 0 when it points straight at the eye.
+  public axisScreenDirections(): AxisScreenDirection[] {
+    const rotation = this.rotation();
+
+    return AXIS_COLUMNS.map((column) => ({
+      angleRadians: Math.atan2(rotation[1][column], rotation[0][column]),
+      foreshortening: Math.hypot(rotation[0][column], rotation[1][column]),
+    }));
+  }
+
   // Rebuilt per call rather than cached. Twice a frame at worst — the matrix and
-  // the eye position — against roughly 200 flops each, next to the 48k the
-  // vertex pass costs on the largest mesh. A cache would have to be invalidated
-  // by spin, sliders, RESET and, once E1b lands, every pointer move.
+  // the gizmo — against roughly 200 flops each, next to the 48k the vertex pass
+  // costs on the largest mesh. A cache would have to be invalidated by spin,
+  // sliders, RESET and, once E1b lands, every pointer move.
   private rotation(): number[][] {
     const pitch = this.matrix3D.pitchMatrix(this.pitchDegrees);
     const yaw = this.matrix3D.yawMatrix(this.yawDegrees + this.spinDegrees);
