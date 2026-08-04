@@ -112,8 +112,12 @@ rules are in `notes/ui-refonte/`.
 ## Work in progress
 
 **Tickets live in Linear**, project **3D engine**, team `COS` — not in this repo.
-Open epics: **COS-356** (restoring the OOP convention across `src/`), **COS-213** (the
-console rebuild) and **COS-234** (de-mock, the engine behind it).
+Open epics: **COS-234** (de-mock, the engine behind the console) and **COS-201**
+(the polyhedra of *The Symmetries of Things*).
+
+**COS-356** (restoring the OOP convention across `src/`) and **COS-213** (the console
+rebuild) are both closed. Their *rules* are not: everything above this section came
+out of them, and new code still answers to it.
 
 `notes/` holds only what a ticket cannot: the rules and the rulings.
 
@@ -123,4 +127,5 @@ console rebuild) and **COS-234** (de-mock, the engine behind it).
   should not become a class. Its `README.md` documents `pnpm run snapshot:geometry`,
   the byte-identical dump of all fourteen shapes that every geometry ticket runs
   before QA.
-- `notes/ui-refonte/` — the design-system rules and per-widget layout specs for COS-213.
+- `notes/ui-refonte/` — the design-system rules and per-widget layout specs from
+  COS-213. The widgets are all built; the rules still bind anything that adds UI.
