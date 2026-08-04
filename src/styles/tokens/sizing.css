@@ -36,7 +36,13 @@
   --size-sidebar-min: 200px;
   --size-inspector-min: 232px;
   --size-viewport-min-h: 320px;
-  --size-telemetry-min-h: 176px;
+  /* Two rows of cards, not a guess: the tallest card content in each row is
+     ~135px (FRAME TIME's bar, four legend rows and footer), so 2 x 135 plus the
+     8px stack gap is what the area has to be allowed before anything is asked
+     to shrink. At the old 176 the rows were squeezed to 121 and their cards —
+     which cannot shrink below their own text — spilled over the row below
+     (COS-407). */
+  --size-telemetry-min-h: 290px;
   --size-card-min-w: 160px;
 
   /* NEW — the platform touch-target floor. The design tokenises no such value

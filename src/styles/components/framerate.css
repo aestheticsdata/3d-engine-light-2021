@@ -15,9 +15,17 @@
   min-height: 0;
 }
 
+/* The basis is `0px` and not `flex: 1`'s own `0%`, and the difference is the
+   whole of COS-407. A percentage basis against an indefinite height falls back
+   to the item's content size, and a <canvas> with no height attribute carries
+   an intrinsic 150px — so while the telemetry row is being measured, this chart
+   claimed 150px, the row's flex line took the card's 216px max-content, and
+   every card in the line stretched to it and painted over the row below. A
+   definite 0 basis makes the chart take what is left instead of asking for
+   what it is worth. */
 #fpsChart {
   width: 100%;
-  flex: 1;
+  flex: 1 1 0px;
   display: block;
   min-height: 0;
 }
