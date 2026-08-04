@@ -31,6 +31,13 @@
 .frame-time__segment {
   flex: 0 0 auto;
   width: 0;
+  transition: width var(--duration-chart) var(--ease-chart);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame-time__segment {
+    transition: none;
+  }
 }
 
 .frame-time__segment--transform {

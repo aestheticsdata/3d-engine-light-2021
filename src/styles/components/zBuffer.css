@@ -33,6 +33,7 @@
 .zbuffer__bar {
   flex: 1;
   border-radius: var(--radius-bar-top);
+  transition: height var(--duration-chart) var(--ease-chart);
 }
 
 .zbuffer__bar--near {
@@ -56,6 +57,15 @@
 
 .zbuffer__title-short {
   display: none;
+}
+
+/* Gated, unlike select.css's picker fade: twenty-eight bars moving at once is
+   the many-small-things case the preference exists for. The numbers still
+   update at the same rate — only the interpolation between them goes. */
+@media (prefers-reduced-motion: reduce) {
+  .zbuffer__bar {
+    transition: none;
+  }
 }
 
 @media (max-width: 899px) {

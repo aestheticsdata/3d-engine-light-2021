@@ -16,6 +16,23 @@
   --duration-fast: 120ms;
   --duration-base: 240ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* NEW — the telemetry tween, and the only place in the console where motion
+     exists to hide a cadence rather than to signal a change.
+
+     Every bar in the telemetry row is rewritten on the same 90ms display gate,
+     and at ~11 updates a second a bar that snaps to its new value reads as a
+     stutter rather than as data. Two decisions make it glide:
+
+     the duration is deliberately LONGER than the 90ms gate, so a bar is still
+     travelling when its next target arrives and never settles between updates;
+
+     and the timing is linear, not --ease-standard. An ease restarts its slow-in
+     on every new target, so at this cadence it pulses — twenty-eight bars each
+     accelerating and braking eleven times a second. Constant velocity is what
+     reads as one continuous movement. */
+  --duration-chart: 140ms;
+  --ease-chart: linear;
 }
 
 /* Keep the 45/55 stops exactly — the near-square wave is what makes the dot
