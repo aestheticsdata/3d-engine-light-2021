@@ -29,6 +29,13 @@ import type { ShadingModeKey } from "@ui/modeLabel";
 // because the store is what both the section and its future engine read.
 export type ProjectionKey = "PERSPECTIVE" | "ORTHOGRAPHIC";
 
+// The RENDER LOOP chips. MAX is uncapped rather than a number, because rAF is
+// the only clock the engine has and a cap can only ever remove frames — there
+// is no value that means "faster than the display". Declared here for the same
+// reason ProjectionKey is: the section renders it, the store is what both it and
+// RenderLoop's target read.
+export type FrameRateCapKey = "30" | "60" | "MAX";
+
 export interface UIState {
   // Slices are added here by the ticket that owns each value.
 
@@ -69,7 +76,13 @@ export interface UIState {
   // GOURAUD there would be the same lie a CSS filter would have been. Do not
   // wire this field into modeLabel() to make the chip "real" — that is not a
   // fix, it is de-mock E3's job.
+  //
+  // frameRateCap is the third live value in this tab, alongside wireframe and
+  // culling: it really does gate RenderLoop's onFrame. It is stored rather than
+  // held on the loop so RESET restores it through the same registry as
+  // everything else.
   shadingMode?: ShadingModeKey;
+  frameRateCap?: FrameRateCapKey;
   zbuffer?: boolean;
   dither?: boolean;
   edgeAA?: boolean;

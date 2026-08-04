@@ -7,6 +7,7 @@
 // this store's, so Main pushes them in on every pipeline change, the same
 // way it already pushes opacity to the SHAPE tab.
 
+import FrameRateSection from "@ui/inspector/FrameRateSection";
 import LightingSection from "@ui/inspector/LightingSection";
 import PipelineSection from "@ui/inspector/PipelineSection";
 import ShadingSection from "@ui/inspector/ShadingSection";
@@ -21,11 +22,13 @@ export interface RenderTabOptions {
   onShadingSelect: (mode: ShadingModeKey) => void;
   onWireframeToggle: (next: boolean) => void;
   onCullToggle: (next: boolean) => void;
+  onFrameRateCap: (fps: number | null) => void;
 }
 
 class RenderTab {
   private readonly shading: ShadingSection;
   private readonly pipeline: PipelineSection;
+  private readonly frameRate: FrameRateSection;
   private readonly lighting: LightingSection;
 
   constructor(options: RenderTabOptions) {
@@ -45,6 +48,12 @@ class RenderTab {
       onCullToggle: options.onCullToggle,
     });
 
+    this.frameRate = new FrameRateSection({
+      chipGridSelector: "#frameRateChips",
+      store: options.store,
+      onSelect: options.onFrameRateCap,
+    });
+
     this.lighting = new LightingSection({
       root: "#lightingRows",
       store: options.store,
@@ -56,6 +65,7 @@ class RenderTab {
   public syncFromStore() {
     this.shading.syncFromStore();
     this.pipeline.syncFromStore();
+    this.frameRate.syncFromStore();
     this.lighting.syncFromStore();
   }
 
