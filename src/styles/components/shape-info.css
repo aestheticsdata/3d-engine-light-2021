@@ -50,7 +50,16 @@
 
    The 8px shift is the one raw px literal in this file. It is a motion offset
    rather than a layout measure, and spending --space-4 on it would tie how far
-   the panel travels to the width of the page gutter. */
+   the panel travels to the width of the page gutter.
+
+   The two class names stay camelCase, and they are the second and third
+   exceptions COS-350's sweep left standing. Like .hoverTooltip they have no
+   markup — ShapeInfoPanel adds and removes them by hand — so the sweep, which
+   moved stylesheets and index.html, could not reach them; and COS-221 relocated
+   them here byte-identical rather than renaming them mid-move, which is a
+   promise worth keeping until something else has reason to touch the pair. Note
+   that the @keyframes below carry the same names and are a separate namespace:
+   renaming the classes means renaming four identifiers, not two. */
 
 .panelFadeOut {
   animation: panelFadeOut 180ms ease forwards;

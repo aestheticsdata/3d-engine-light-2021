@@ -14,7 +14,16 @@ import { chartTokens } from "@ui/chartTokens";
 import DOMScope from "@ui/DOMScope";
 
 const HISTORY_LENGTH = 90;
-const DROP_THRESHOLD_FPS = 40;
+// A ratio of the active target rather than an absolute floor. The absolute one
+// was 40fps, which under COS-408's 30fps cap is every single frame — the card
+// would report the cap as a solid wall of dropped frames. Two thirds reproduces
+// that 40 exactly against the uncapped reference below and scales to 20 under a
+// 30 cap, so DROPPED keeps meaning "slower than this loop is meant to run".
+const DROP_THRESHOLD_RATIO = 2 / 3;
+// What MAX is measured against. An uncapped loop has no target of its own — the
+// display sets the rate — and the ratio needs one, so this is the number that
+// keeps the uncapped threshold at the 40fps it has always been.
+const UNCAPPED_REFERENCE_FPS = 60;
 const CHART_MAX_FPS = 68;
 const CHART_DPR = 2;
 const GRIDLINE_VALUES_FPS = [30, 60];
@@ -28,6 +37,7 @@ class FramerateWidget {
   private readonly droppedNode: HTMLElement;
   private readonly history: number[];
   private dropped: number;
+  private targetFps: number;
 
   constructor() {
     const scope = new DOMScope(document);
@@ -47,6 +57,14 @@ class FramerateWidget {
     this.droppedNode = scope.require<HTMLElement>("#framerateDropped", missing);
     this.history = [];
     this.dropped = 0;
+    this.targetFps = UNCAPPED_REFERENCE_FPS;
+  }
+
+  // null is MAX. Told rather than read off the loop: this card counts what it is
+  // handed, and a widget that reached into RenderLoop for the cap would be the
+  // second place the target lives.
+  public setTargetFps(fps: number | null) {
+    this.targetFps = fps ?? UNCAPPED_REFERENCE_FPS;
   }
 
   // Cheap bookkeeping only, safe to call on every rAF frame regardless of the
@@ -58,7 +76,7 @@ class FramerateWidget {
       this.history.shift();
     }
 
-    if (fps < DROP_THRESHOLD_FPS) {
+    if (fps < this.targetFps * DROP_THRESHOLD_RATIO) {
       this.dropped += 1;
     }
   }

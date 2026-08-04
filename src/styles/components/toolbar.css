@@ -93,7 +93,7 @@
 /* ---- strip ---------------------------------------------------------------- */
 
 .toolbar__spacer,
-.appBar__spacer {
+.app-bar__spacer {
   flex: 1;
 }
 
@@ -136,7 +136,7 @@
   /* The strip becomes the action scroller. What the sticky header already shows
      — transport and fps — drops out of it, and RESET drops out because the
      RESET SCENE bar is its only mobile mount. */
-  .toolbar__desktopOnly,
+  .toolbar__desktop-only,
   .toolbar__spacer,
   #playPause,
   #resetControls {

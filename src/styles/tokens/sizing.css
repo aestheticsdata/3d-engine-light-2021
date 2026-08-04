@@ -70,8 +70,7 @@
   --size-chip-quick: 24px;
   --size-hud-chip: 22px;
   --size-hud-chip-sm: 22px;
-  --size-select: 26px; /* NEW — no design equivalent, see components/select.css */
-  --size-picker-max-h: 320px; /* NEW — the select popup, where the engine lets us style it */
+  --size-picker-max-h: 320px; /* NEW — the primitive picker's open list */
   --size-toggle-w: 62px;
   --size-toggle-h: 19px;
   --size-toggle-row: 26px;
@@ -143,7 +142,6 @@
     --size-chip-proj: 40px;
     --size-chip-quick: 46px;
     --size-hud-chip-sm: 20px;
-    --size-select: 44px;
     --size-toggle-w: 88px;
     --size-toggle-h: 32px;
     --size-toggle-row: 48px;

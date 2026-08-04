@@ -1,8 +1,12 @@
 /* Owns: the follow-cursor tooltip's appearance.
    Must not own: when it shows — FollowCursorTooltip drives display, position and the message. */
 
-/* Keeps its camelCase name: src/ui/tooltip.ts assigns this class string
-   directly, so renaming it here would silently unstyle the node. */
+/* Keeps its camelCase name, and is one of the three exceptions COS-350's sweep
+   left standing. COS-215 pinned it when it wrote the kebab-case rule: this class
+   has no markup at all — src/ui/tooltip.ts:18 assigns the string to a node it
+   creates — so it is the one name in the console that a stylesheet-and-markup
+   sweep cannot see. It is renamed by whatever ticket next touches that file, not
+   by a pass that never opens it. */
 .hoverTooltip {
   position: fixed;
   z-index: 1000;

@@ -34,13 +34,13 @@
            one DOM tree, and neither can be moved out of the desktop strip into
            this header, so both are two mounts driven by one handler. FieldWriter
            writes every [data-field] node, which keeps the pair in sync. -->
-      <header class="appBar panel">
+      <header class="app-bar panel">
         <span class="brand__mark"></span>
         <span class="brand__text">
           <span class="brand__name">1991COMPUTER</span>
           <span class="brand__build" data-field="buildMobile"></span>
         </span>
-        <span class="appBar__spacer"></span>
+        <span class="app-bar__spacer"></span>
         <span class="readout readout--pill" aria-live="off">
           <span class="readout__dot"></span>
           <span class="readout__value" data-field="fps">0</span>
@@ -79,9 +79,9 @@
           >STEP</button>
           <button id="resetControls" class="btn btn--secondary" type="button" data-action="reset">RESET</button>
 
-          <span class="divider-v divider-v--toolbar toolbar__desktopOnly"></span>
+          <span class="divider-v divider-v--toolbar toolbar__desktop-only"></span>
 
-          <span class="readout toolbar__desktopOnly" aria-live="off">
+          <span class="readout toolbar__desktop-only" aria-live="off">
             <span class="readout__dot"></span>
             <span class="readout__label">RENDER LOOP</span>
             <span class="readout__value" data-field="fps">0</span>
@@ -140,14 +140,14 @@
         </div>
       </div>
 
-      <div class="appMain">
-        <div class="colLeft">
+      <div class="app-main">
+        <div class="col-left">
 
           <!-- The rows are built by sceneGraph.ts, not written here: three are
                a fixed table and the fourth follows the active primitive and the
                renderer, so one builder keeps them from drifting apart. The note
                is filled from the same table's length. -->
-          <section class="panel sceneGraph" data-mpanel="scene">
+          <section class="panel scene-graph" data-mpanel="scene">
             <div class="panel__header">
               <span class="panel__title">scene graph</span>
               <span class="panel__note"></span>
@@ -170,7 +170,7 @@
                story card's flex: 1 fight an auto-height box. -->
           <div id="shapeInfoPanelContent" data-mpanel="scene">
 
-            <section class="panel shapeInfo" data-mpanel="scene">
+            <section class="panel shape-info" data-mpanel="scene">
               <div class="panel__header">
                 <span class="panel__title">shape info</span>
                 <!-- Constant, and written here rather than pushed from JS: the
@@ -284,7 +284,7 @@
 
         </div>
 
-        <div class="colCenter">
+        <div class="col-center">
 
           <!-- data-shading-mode is written by ViewportHUD from the one exported
                modeLabel(), the same helper the status bar reads, so the chip,
@@ -298,19 +298,19 @@
                  shape, and letterboxing is invisible to layout — a HUD anchored
                  to the card would inset itself from the bars instead of from
                  the image. Everything below is anchored to the stage. -->
-            <div class="viewportStage">
+            <div class="viewport-stage">
               <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
 
               <!-- Always on. `hudOverlays` was a Claude Design preview control
                    with no production surface and is dropped (D10): no master
                    gate, no per-layer gate, no z-index. -->
-              <div class="viewportHud">
+              <div class="viewport-hud">
 
                 <!-- The quick toggles' desktop mount, in the band reserved at
                      top:40px. Its mobile twin is the .quickToggles row below the
                      viewport card; both are in the DOM at once and CSS hides the
                      wrong one, so nothing reads the breakpoint in JS. -->
-                <div class="quickToggleBand"></div>
+                <div class="quick-toggle-band"></div>
 
                 <!-- The two top clusters share one row rather than being
                      anchored to opposite corners independently. The design
@@ -319,14 +319,14 @@
                      about 176px, which will not both fit across a 297px card.
                      Two absolutely-positioned corners overlap silently at that
                      width; one flex row with space-between cannot. -->
-                <div class="viewportHud__top">
+                <div class="viewport-hud__top">
 
                   <!-- One cluster for both branches: a row of four chips on
                        desktop, and on mobile a column whose nested row falls to
                        the design's second band. -->
-                  <div class="viewportHud__topLeft">
+                  <div class="viewport-hud__top-left">
                     <span class="hud-chip hud-chip--accent" data-field="shadingMode">FLAT</span>
-                    <span class="viewportHud__chipRow">
+                    <span class="viewport-hud__chip-row">
                       <span
                         class="hud-chip hud-chip--sm"
                         data-placeholder="true"
@@ -335,14 +335,14 @@
                       >PERSPECTIVE</span>
                       <!-- The backing store, not the CSS box: that is the
                            resolution the rasteriser actually works at. -->
-                      <span class="hud-chip hud-chip--sm viewportHud__chipRes" data-field="resolution">&mdash;</span>
+                      <span class="hud-chip hud-chip--sm viewport-hud__chip-res" data-field="resolution">&mdash;</span>
                       <span class="hud-chip hud-chip--sm" data-field="texLabel">SOLID</span>
                     </span>
                   </div>
 
                   <!-- desktop camera readout -->
-                  <div class="hud-panel viewportHud__camera">
-                    <div class="viewportHud__camRow">
+                  <div class="hud-panel viewport-hud__camera">
+                    <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">cam.pos</span>
                       <span
                         class="hud-panel__value"
@@ -352,7 +352,7 @@
                         aria-describedby="ph-vp-camera"
                       >&mdash;</span>
                     </div>
-                    <div class="viewportHud__camRow">
+                    <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">cam.rot</span>
                       <span
                         class="hud-panel__value"
@@ -362,7 +362,7 @@
                         aria-describedby="ph-vp-camera"
                       >&mdash;</span>
                     </div>
-                    <div class="viewportHud__camRow">
+                    <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">target</span>
                       <span
                         class="hud-panel__value"
@@ -372,7 +372,7 @@
                         aria-describedby="ph-vp-camera"
                       >&mdash;</span>
                     </div>
-                    <div class="viewportHud__camRow">
+                    <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">dist</span>
                       <span class="hud-panel__value" data-field="camDist">&mdash;</span>
                     </div>
@@ -381,15 +381,15 @@
                   <!-- mobile camera readout: the four rows above as three chips.
                        Same data-field names, so FieldWriter keeps the two mounts
                        in sync without either branch knowing about the other. -->
-                  <div class="viewportHud__camChips">
+                  <div class="viewport-hud__cam-chips">
                     <span class="hud-chip">
-                      <span class="viewportHud__k">frame</span>
+                      <span class="viewport-hud__k">frame</span>
                       <span data-field="frameMs">&mdash;</span>
-                      <span class="viewportHud__k">ms</span>
+                      <span class="viewport-hud__k">ms</span>
                     </span>
-                    <span class="hud-chip viewportHud__chipStack">
-                      <span class="viewportHud__stackLine">
-                        <span class="viewportHud__k">pos</span>
+                    <span class="hud-chip viewport-hud__chip-stack">
+                      <span class="viewport-hud__stack-line">
+                        <span class="viewport-hud__k">pos</span>
                         <span
                           data-field="camPos"
                           data-placeholder="true"
@@ -397,8 +397,8 @@
                           aria-describedby="ph-vp-camera"
                         >&mdash;</span>
                       </span>
-                      <span class="viewportHud__stackLine">
-                        <span class="viewportHud__k">rot</span>
+                      <span class="viewport-hud__stack-line">
+                        <span class="viewport-hud__k">rot</span>
                         <span
                           data-field="camRot"
                           data-placeholder="true"
@@ -407,22 +407,22 @@
                         >&mdash;</span>
                       </span>
                     </span>
-                    <span class="hud-chip viewportHud__chipStack">
-                      <span class="viewportHud__stackLine">
-                        <span class="viewportHud__k">fov</span>
+                    <span class="hud-chip viewport-hud__chip-stack">
+                      <span class="viewport-hud__stack-line">
+                        <span class="viewport-hud__k">fov</span>
                         <span data-field="fov">&mdash;</span>
-                        <span class="viewportHud__k">zoom</span>
+                        <span class="viewport-hud__k">zoom</span>
                         <span data-field="zoom">&mdash;</span>
                       </span>
-                      <span class="viewportHud__stackLine">
-                        <span class="viewportHud__k">target</span>
+                      <span class="viewport-hud__stack-line">
+                        <span class="viewport-hud__k">target</span>
                         <span
                           data-field="camTarget"
                           data-placeholder="true"
                           title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
                           aria-describedby="ph-vp-camera"
                         >&mdash;</span>
-                        <span class="viewportHud__k">dist</span>
+                        <span class="viewport-hud__k">dist</span>
                         <span data-field="camDist">&mdash;</span>
                       </span>
                     </span>
@@ -432,8 +432,8 @@
 
                 <!-- Decoration, not a readout, and hidden from assistive tech
                      for the same reason: it marks the centre of the picture. -->
-                <span class="viewportHud__crosshair viewportHud__crosshair--v" aria-hidden="true"></span>
-                <span class="viewportHud__crosshair viewportHud__crosshair--h" aria-hidden="true"></span>
+                <span class="viewport-hud__crosshair viewport-hud__crosshair--v" aria-hidden="true"></span>
+                <span class="viewport-hud__crosshair viewport-hud__crosshair--h" aria-hidden="true"></span>
 
                 <!-- A fixed rectangle: nothing projects the mesh bounds into
                      canvas space yet (de-mock E7). aria-hidden rather than
@@ -441,61 +441,61 @@
                      and the id it labels is already read out by the status bar
                      and the hint strip. -->
                 <div
-                  class="viewportHud__selection"
+                  class="viewport-hud__selection"
                   data-placeholder="true"
                   title="The selection bounds are a fixed rectangle; projected bounds are not wired to the engine yet (de-mock E7)."
                   aria-hidden="true"
                 >
-                  <span class="viewportHud__selectionLabel" data-field="selectedId">&mdash;</span>
-                  <span class="viewportHud__corner viewportHud__corner--tl"></span>
-                  <span class="viewportHud__corner viewportHud__corner--tr"></span>
-                  <span class="viewportHud__corner viewportHud__corner--bl"></span>
-                  <span class="viewportHud__corner viewportHud__corner--br"></span>
+                  <span class="viewport-hud__selection-label" data-field="selectedId">&mdash;</span>
+                  <span class="viewport-hud__corner viewport-hud__corner--tl"></span>
+                  <span class="viewport-hud__corner viewport-hud__corner--tr"></span>
+                  <span class="viewport-hud__corner viewport-hud__corner--bl"></span>
+                  <span class="viewport-hud__corner viewport-hud__corner--br"></span>
                 </div>
 
                 <div
-                  class="viewportHud__gizmo"
+                  class="viewport-hud__gizmo"
                   data-placeholder="true"
                   title="The axis gizmo does not follow the scene yet (de-mock E1a)."
                   aria-hidden="true"
                 >
-                  <span class="viewportHud__axis viewportHud__axis--x"></span>
-                  <span class="viewportHud__axis viewportHud__axis--y"></span>
-                  <span class="viewportHud__axis viewportHud__axis--z"></span>
-                  <span class="viewportHud__axisLabel viewportHud__axisLabel--x">X</span>
-                  <span class="viewportHud__axisLabel viewportHud__axisLabel--y">Y</span>
-                  <span class="viewportHud__axisLabel viewportHud__axisLabel--z">Z</span>
+                  <span class="viewport-hud__axis viewport-hud__axis--x"></span>
+                  <span class="viewport-hud__axis viewport-hud__axis--y"></span>
+                  <span class="viewport-hud__axis viewport-hud__axis--z"></span>
+                  <span class="viewport-hud__axis-label viewport-hud__axis-label--x">X</span>
+                  <span class="viewport-hud__axis-label viewport-hud__axis-label--y">Y</span>
+                  <span class="viewport-hud__axis-label viewport-hud__axis-label--z">Z</span>
                 </div>
 
                 <!-- desktop bottom-right cluster -->
-                <div class="viewportHud__bottomRight">
+                <div class="viewport-hud__bottom-right">
                   <!-- Real since COS-231: the WORLD tab's FOV slider drives the
                        focal length, so this readout is live and carries no
                        placeholder affordance. -->
                   <span class="hud-chip">
-                    <span class="viewportHud__k">fov</span>
+                    <span class="viewport-hud__k">fov</span>
                     <span data-field="fov">&mdash;</span>
                   </span>
                   <span class="hud-chip">
-                    <span class="viewportHud__k">zoom</span>
+                    <span class="viewport-hud__k">zoom</span>
                     <span data-field="zoom">&mdash;</span>
                   </span>
-                  <span class="hud-chip viewportHud__chipStatus">
-                    <span class="viewportHud__ok" data-field="statusLabel">RUNNING</span>
+                  <span class="hud-chip viewport-hud__chip-status">
+                    <span class="viewport-hud__ok" data-field="statusLabel">RUNNING</span>
                   </span>
                 </div>
 
                 <!-- desktop hint strip; the mobile equivalent is the GESTURES
                      card the shortcuts ticket adds, not a layer here. -->
-                <span class="hud-chip viewportHud__hint">
-                  <span class="viewportHud__hintId" data-field="selectedId">&mdash;</span>
+                <span class="hud-chip viewport-hud__hint">
+                  <span class="viewport-hud__hint-id" data-field="selectedId">&mdash;</span>
                   <span class="divider-v divider-v--hud"></span>
-                  <span class="viewportHud__hintDim">
+                  <span class="viewport-hud__hint-dim">
                     <span data-field="trisDrawn">0</span> tris drawn
                   </span>
                   <span class="divider-v divider-v--hud"></span>
                   <span
-                    class="viewportHud__hintDim"
+                    class="viewport-hud__hint-dim"
                     data-placeholder="true"
                     title="The canvas has no pointer handlers yet (de-mock E1b)."
                     aria-describedby="ph-vp-gestures"
@@ -504,8 +504,8 @@
 
                 <!-- mobile bottom-right chip: the desktop status chip and hint
                      strip folded into the one chip that fits. -->
-                <span class="hud-chip viewportHud__bottomChip">
-                  <span class="viewportHud__ok" data-field="statusLabel">RUNNING</span>
+                <span class="hud-chip viewport-hud__bottom-chip">
+                  <span class="viewport-hud__ok" data-field="statusLabel">RUNNING</span>
                   <span class="divider-v divider-v--hud"></span>
                   <span data-field="selectedId">&mdash;</span>
                   <span class="divider-v divider-v--hud"></span>
@@ -532,10 +532,10 @@
           </div>
 
           <!-- order 3 — mobile only -->
-          <div class="quickToggles"></div>
+          <div class="quick-toggles"></div>
 
           <div class="telemetry">
-            <div class="telemetryRow">
+            <div class="telemetry-row">
               <!-- No data-mpanel: on mobile this card sits above the tab bar at
                    order 4, outside the STATS tab. -->
               <section class="panel panel--fill framerate">
@@ -586,26 +586,26 @@
                     <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
                   </div>
                   <div class="frame-time__legend">
-                    <div class="frame-time__legendRow">
+                    <div class="frame-time__legend-row">
                       <span class="frame-time__swatch frame-time__swatch--transform"></span>
-                      <span class="frame-time__legendLabel">TRANSFORM</span>
-                      <span class="frame-time__legendValue" data-field="ftTransform">&mdash;</span>
+                      <span class="frame-time__legend-label">TRANSFORM</span>
+                      <span class="frame-time__legend-value" data-field="ftTransform">&mdash;</span>
                     </div>
-                    <div class="frame-time__legendRow">
+                    <div class="frame-time__legend-row">
                       <span class="frame-time__swatch frame-time__swatch--background"></span>
-                      <span class="frame-time__legendLabel">BACKGROUND</span>
-                      <span class="frame-time__legendValue" data-field="ftBackground">&mdash;</span>
+                      <span class="frame-time__legend-label">BACKGROUND</span>
+                      <span class="frame-time__legend-value" data-field="ftBackground">&mdash;</span>
                     </div>
-                    <div class="frame-time__legendRow">
+                    <div class="frame-time__legend-row">
                       <span class="frame-time__swatch frame-time__swatch--raster"></span>
-                      <span class="frame-time__legendLabel">RASTERIZE</span>
-                      <span class="frame-time__legendValue" data-field="ftRaster">&mdash;</span>
+                      <span class="frame-time__legend-label">RASTERIZE</span>
+                      <span class="frame-time__legend-value" data-field="ftRaster">&mdash;</span>
                     </div>
                   </div>
                   <div class="frame-time__footer">
-                    <span class="frame-time__footerLabel">FILL RATE</span>
+                    <span class="frame-time__footer-label">FILL RATE</span>
                     <span
-                      class="frame-time__footerValue"
+                      class="frame-time__footer-value"
                       data-placeholder="true"
                       title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
                       aria-describedby="ph-frame-time"
@@ -624,10 +624,10 @@
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
                 </div>
                 <div class="panel__body budgets__body">
-                  <div class="budgets__frameTime">
-                    <div class="budgets__frameTimeLabelRow">
-                      <span class="budgets__frameTimeLabel">FRAME TIME</span>
-                      <span class="budgets__frameTimeSub">transform &middot; background &middot; raster</span>
+                  <div class="budgets__frame-time">
+                    <div class="budgets__frame-time-label-row">
+                      <span class="budgets__frame-time-label">FRAME TIME</span>
+                      <span class="budgets__frame-time-sub">transform &middot; background &middot; raster</span>
                     </div>
                     <div class="frame-time__bar">
                       <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
@@ -638,10 +638,10 @@
                   <!-- BUDGETS' second block, the mobile half of the desktop
                        GEOMETRY card's footer. The card, its header and its
                        padding are the frame-time ticket's. -->
-                  <div class="budgets__polyBudget">
-                    <div class="budgets__polyBudgetLabelRow">
-                      <span class="budgets__polyBudgetLabel">POLY BUDGET</span>
-                      <span class="budgets__polyBudgetValue" data-field="polyBudget">&mdash;</span>
+                  <div class="budgets__poly-budget">
+                    <div class="budgets__poly-budget-label-row">
+                      <span class="budgets__poly-budget-label">POLY BUDGET</span>
+                      <span class="budgets__poly-budget-value" data-field="polyBudget">&mdash;</span>
                     </div>
                     <div class="budget-bar">
                       <span id="budgetsPolyFill" class="budget-bar__fill"></span>
@@ -726,9 +726,9 @@
                     </div>
                   </div>
                   <div class="geometry__footer">
-                    <div class="geometry__footerRow">
-                      <span class="geometry__footerLabel">POLY BUDGET</span>
-                      <span class="geometry__footerValue" data-field="polyBudget">&mdash;</span>
+                    <div class="geometry__footer-row">
+                      <span class="geometry__footer-label">POLY BUDGET</span>
+                      <span class="geometry__footer-value" data-field="polyBudget">&mdash;</span>
                     </div>
                     <div class="budget-bar">
                       <span id="geometryBudgetFill" class="budget-bar__fill"></span>
@@ -776,7 +776,7 @@
                 </div>
               </section>
             </div>
-            <div class="telemetryRow">
+            <div class="telemetry-row">
               <!-- One card for both branches. It leads the second telemetry
                    row, so the shell's `.telemetryRow > :first-child` already
                    grants it the design's extra growth — this card restates no
@@ -803,7 +803,7 @@
                        is hidden at the breakpoint rather than branched in JS. -->
                   <div class="zbuffer__axis">
                     <span id="zbufferNear">&mdash;</span>
-                    <span class="zbuffer__axisMiddle">depth</span>
+                    <span class="zbuffer__axis-middle">depth</span>
                     <span id="zbufferFar">&mdash;</span>
                   </div>
                 </div>
@@ -885,7 +885,7 @@
 
         </div>
 
-        <div class="colRight panel">
+        <div class="col-right panel">
           <!-- desktop tab strip; the mobile bar below replaces it under 900 -->
           <div id="inspectorTabs" class="tabs" role="tablist" aria-label="Inspector">
             <button class="tabs__tab" type="button" role="tab" data-tab-id="shape" aria-controls="panelShape">SHAPE</button>
@@ -895,7 +895,7 @@
 
           <div class="inspector__body panel__body">
 
-            <section id="panelShape" class="inspectorPanel" role="tabpanel" data-panel="shape" data-mpanel="shape">
+            <section id="panelShape" class="inspector-panel" role="tabpanel" data-panel="shape" data-mpanel="shape">
 
               <!-- Three sections on desktop, three cards on mobile: the same
                    elements either way. `.panel--seam` is what strips the card
@@ -903,7 +903,7 @@
                    `.section-title` on desktop and the card's own
                    `.panel__header` below it — one DOM, no duplicated controls. -->
               <section class="panel panel--seam shape-section">
-                <div class="panel__header panel__header--card shape-section__cardHead">
+                <div class="panel__header panel__header--card shape-section__card-head">
                   <span class="panel__title">primitive</span>
                 </div>
                 <div class="shape-section__head">
@@ -924,7 +924,7 @@
               <div class="divider shape-section__rule"></div>
 
               <section class="panel panel--seam shape-section">
-                <div class="panel__header panel__header--card shape-section__cardHead">
+                <div class="panel__header panel__header--card shape-section__card-head">
                   <span class="panel__title">transform</span>
                 </div>
                 <div class="shape-section__head">
@@ -936,7 +936,7 @@
               <div class="divider shape-section__rule"></div>
 
               <section class="panel panel--seam shape-section">
-                <div class="panel__header panel__header--card shape-section__cardHead">
+                <div class="panel__header panel__header--card shape-section__card-head">
                   <span class="panel__title">material</span>
                 </div>
                 <div class="shape-section__head">
@@ -944,8 +944,8 @@
                 </div>
                 <div class="shape-section__body panel__body--pad-form">
                   <div class="chip-grid shape-section__textures" id="textureGrid"></div>
-                  <div class="shape-section__baseRow">
-                    <span class="shape-section__baseLabel">BASE</span>
+                  <div class="shape-section__base-row">
+                    <span class="shape-section__base-label">BASE</span>
                     <span class="shape-section__swatches" id="baseSwatches"></span>
                   </div>
                   <div id="materialRows"></div>
@@ -954,10 +954,10 @@
 
             </section>
 
-            <section id="panelRender" class="inspectorPanel" role="tabpanel" data-panel="render" data-mpanel="render">
+            <section id="panelRender" class="inspector-panel" role="tabpanel" data-panel="render" data-mpanel="render">
 
               <section class="panel panel--seam render-section">
-                <div class="panel__header panel__header--card render-section__cardHead">
+                <div class="panel__header panel__header--card render-section__card-head">
                   <span class="panel__title">shading mode</span>
                 </div>
                 <div class="render-section__head">
@@ -970,7 +970,7 @@
               </section>
 
               <section class="panel panel--seam render-section">
-                <div class="panel__header panel__header--card render-section__cardHead">
+                <div class="panel__header panel__header--card render-section__card-head">
                   <span class="panel__title">pipeline</span>
                 </div>
                 <div class="render-section__head">
@@ -979,10 +979,22 @@
                 <div class="render-section__body panel__body--pad-list" id="pipelineToggles"></div>
               </section>
 
+              <section class="panel panel--seam render-section">
+                <div class="panel__header panel__header--card render-section__card-head">
+                  <span class="panel__title">render loop</span>
+                </div>
+                <div class="render-section__head">
+                  <span class="section-title">RENDER LOOP</span>
+                </div>
+                <div class="render-section__body render-section__body--card">
+                  <div class="chip-grid" id="frameRateChips"></div>
+                </div>
+              </section>
+
               <div class="divider render-section__rule"></div>
 
               <section class="panel panel--seam render-section">
-                <div class="panel__header panel__header--card render-section__cardHead">
+                <div class="panel__header panel__header--card render-section__card-head">
                   <span class="panel__title">lighting</span>
                 </div>
                 <div class="render-section__head">
@@ -993,7 +1005,7 @@
 
             </section>
 
-            <section id="panelWorld" class="inspectorPanel" role="tabpanel" data-panel="world" data-mpanel="world">
+            <section id="panelWorld" class="inspector-panel" role="tabpanel" data-panel="world" data-mpanel="world">
 
               <!-- Desktop reads CAMERA then ENVIRONMENT; mobile reverses the
                    two with `order` alone, so there is one DOM and no duplicated
@@ -1003,7 +1015,7 @@
                    `.world-section__body` would take this file's `display:flex`
                    over chip.css's `display:grid`. -->
               <section class="panel panel--seam world-section world-section--camera">
-                <div class="panel__header panel__header--card world-section__cardHead">
+                <div class="panel__header panel__header--card world-section__card-head">
                   <span class="panel__title">camera</span>
                 </div>
                 <div class="world-section__head">
@@ -1019,7 +1031,7 @@
               <div class="divider world-section__rule"></div>
 
               <section class="panel panel--seam world-section world-section--environment">
-                <div class="panel__header panel__header--card world-section__cardHead">
+                <div class="panel__header panel__header--card world-section__card-head">
                   <span class="panel__title">environment</span>
                 </div>
                 <div class="world-section__head">
@@ -1052,16 +1064,16 @@
       <!-- Six segments in three groups, so mobile wraps them as units rather
            than breaking mid-group. Dividers are ::before on adjacent items, not
            standalone spans, so a wrapped line can never open with a stray rule. -->
-      <div class="statusBar panel">
-        <span class="statusGroup">
-          <span class="statusItem statusItem--run" data-field="statusLabel">RUNNING</span>
-          <span class="statusItem statusItem--selected">
+      <div class="status-bar panel">
+        <span class="status-group">
+          <span class="status-item status-item--run" data-field="statusLabel">RUNNING</span>
+          <span class="status-item status-item--selected">
             <span data-field="selectedId">&mdash;</span> selected
           </span>
         </span>
 
-        <span class="statusGroup">
-          <span class="statusItem">
+        <span class="status-group">
+          <span class="status-item">
             <span data-field="shadingMode">&mdash;</span>
             &middot;
             <span data-field="texLabel">&mdash;</span>
@@ -1073,16 +1085,16 @@
             >PERSPECTIVE</span>
           </span>
           <span
-            class="statusItem"
+            class="status-item"
             data-placeholder="true"
             title="The engine has no world-unit concept yet (de-mock E5)."
             aria-describedby="ph-units"
           >units: metres</span>
         </span>
 
-        <span class="statusGroup statusGroup--right">
-          <span class="statusItem statusItem--url">1991computer.com/3dengine</span>
-          <span class="statusItem">
+        <span class="status-group status-group--right">
+          <span class="status-item status-item--url">1991computer.com/3dengine</span>
+          <span class="status-item">
             <span data-field="uptime">&mdash;</span> uptime
           </span>
         </span>
@@ -1094,7 +1106,7 @@
       <!-- order 8 — RESET's only mobile mount. Same handler as #resetControls,
            bound through data-action; there is no second code path and no
            mobile-only subset of what RESET restores. -->
-      <div class="mobileResetSlot">
+      <div class="mobile-reset-slot">
         <button class="btn btn--secondary btn--block" type="button" data-action="reset">RESET SCENE</button>
       </div>
 

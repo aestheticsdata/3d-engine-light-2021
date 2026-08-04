@@ -7,7 +7,7 @@
    (layout.css). */
 
 /* The gap is what keeps the section title off its own content. The old markup
-   got it from .inspectorPanel's gap; these sections are their own flex context
+   got it from .inspector-panel's gap; these sections are their own flex context
    and have to state it. It stays smaller than the 13px above the title, so the
    heading still reads as belonging to what follows it and not to the group
    above — COS-354's ruling, which this tab must not undo. */
@@ -19,7 +19,7 @@
 
 /* The card header is mobile's headline; on desktop the .section-title below it
    does that job, so exactly one of the two is ever displayed. */
-.shape-section__cardHead {
+.shape-section__card-head {
   display: none;
 }
 
@@ -45,14 +45,14 @@
   margin-bottom: var(--space-4);
 }
 
-.shape-section__baseRow {
+.shape-section__base-row {
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
   margin-bottom: var(--space-4);
 }
 
-.shape-section__baseLabel {
+.shape-section__base-label {
   flex: 0 0 var(--size-slider-label-col);
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-lg);
@@ -72,7 +72,7 @@
     display: none;
   }
 
-  .shape-section__cardHead {
+  .shape-section__card-head {
     display: flex;
   }
 
@@ -80,12 +80,12 @@
     margin-bottom: var(--space-5);
   }
 
-  .shape-section__baseRow {
+  .shape-section__base-row {
     gap: var(--space-4);
     margin-bottom: var(--space-2-5);
   }
 
-  .shape-section__baseLabel {
+  .shape-section__base-label {
     font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
     letter-spacing: var(--tracking-md);
   }
@@ -104,7 +104,7 @@
   gap: var(--space-2-5);
 }
 
-.render-section__cardHead {
+.render-section__card-head {
   display: none;
 }
 
@@ -125,7 +125,7 @@
     display: none;
   }
 
-  .render-section__cardHead {
+  .render-section__card-head {
     display: flex;
   }
 
@@ -144,7 +144,7 @@
   gap: var(--space-2-5);
 }
 
-.world-section__cardHead {
+.world-section__card-head {
   display: none;
 }
 
@@ -173,7 +173,7 @@
     display: none;
   }
 
-  .world-section__cardHead {
+  .world-section__card-head {
     display: flex;
   }
 
@@ -239,8 +239,9 @@
   color: var(--color-text-dim);
 }
 
-/* The same chevron the native select wears, so the two controls read as the
-   same family — select.css owns the skin of that one, this is its geometry. */
+/* Two borders rather than an inline SVG, which is the recipe the native select
+   wore before COS-229 replaced it: a data URI would carry a literal colour past
+   the token rule, and a border pair takes --color-text-muted directly. */
 .shape-picker__chevron {
   flex: 0 0 auto;
   width: var(--space-2);
@@ -256,7 +257,21 @@
 
 /* Floating, and capped: fourteen options today and more coming, so the list
    scrolls rather than running off the panel. --size-picker-max-h was tokenised
-   for exactly this. */
+   for exactly this.
+
+   The surface is --color-panel-bg, which is the colour of the inspector body
+   the list floats over, and that is a deliberate departure from the ruling the
+   native select reached. That select's popup stepped to --color-tab-active-bg
+   instead, for two reasons worth keeping now that COS-415 has deleted the file
+   they were written in: painting a floating surface its parent's own colour
+   made it read as a hole cut in the panel rather than a layer above it, and it
+   made the cross-fade below all but invisible — a fade between two shades five
+   luminance levels apart out of 256 runs correctly and looks like nothing
+   happened, where the step to --color-tab-active-bg opens that to fourteen.
+   Neither argument fully carries here: this list is opaque over inspector rows
+   rather than over bare panel, so the fade has content to mask and the hairline
+   --color-border-panel is what draws the edge. Revisit it as a design call, not
+   as a bug. */
 .shape-picker__list {
   position: absolute;
   z-index: var(--layer-sticky);
@@ -304,6 +319,25 @@
   }
 }
 
+/* The section heading inside the open list, and deliberately not .section-title:
+   that is the tab's own heading voice, PRIMITIVE wears it directly above the
+   closed control, and a second one two rows down would compete with it rather
+   than subordinate to it. This is quieter on every axis — smaller, dimmer, mono
+   — so it reads as a divider with a name on it. */
+.shape-picker__group-label {
+  display: block;
+  padding: var(--space-1-5) var(--space-3) var(--space-1);
+  font: var(--font-weight-medium) var(--text-xs) / var(--leading-none) var(--font-mono);
+  letter-spacing: var(--tracking-lg);
+  color: var(--color-text-dim);
+}
+
+/* The first heading sits against the list's own top edge; every later one earns
+   the gap that makes the sections read as separate blocks. */
+.shape-picker__group + .shape-picker__group .shape-picker__group-label {
+  margin-top: var(--space-2);
+}
+
 .shape-picker__option.is-active {
   background: var(--color-surface-sunken);
 }
@@ -321,5 +355,16 @@
 @media (hover: hover) {
   .shape-picker__option:hover {
     background: var(--color-surface-sunken);
+  }
+}
+
+@media (max-width: 899px) {
+  /* --text-xs is a caption size and reads as one on a phone. The heading steps
+     up to the count column's size and keeps its distance from the option labels
+     on colour and tracking alone, which is the same trade every other mobile
+     caption in the console makes. The inline padding does not move: it is what
+     lines the heading up with the option text below it. */
+  .shape-picker__group-label {
+    font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
   }
 }

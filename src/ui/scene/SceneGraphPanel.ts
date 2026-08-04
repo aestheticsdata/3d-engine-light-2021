@@ -22,7 +22,7 @@ class SceneGraphPanel {
   private meshId: string;
 
   constructor(store: UIStateStore) {
-    const card = new DOMScope(document).require<HTMLElement>(".sceneGraph", "Scene graph card is missing.");
+    const card = new DOMScope(document).require<HTMLElement>(".scene-graph", "Scene graph card is missing.");
     const scope = new DOMScope(card);
 
     this.store = store;

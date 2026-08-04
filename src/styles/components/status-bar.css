@@ -1,12 +1,12 @@
 /* Owns: the status bar's layout, its wrapping behaviour and the one truncation it allows.
    Must not own: the panel surface, border or radius (panel.css), or the divider recipe (divider.css) — the rule below only reuses those metrics. */
 
-.statusBar {
+.status-bar {
   gap: var(--space-5);
   padding: 0 var(--space-5);
 }
 
-.statusGroup {
+.status-group {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -15,11 +15,11 @@
 
 /* Replaces the design's flex:1 spacer element — the same result with nothing
    extra in the DOM to strand when the bar wraps. */
-.statusGroup--right {
+.status-group--right {
   margin-left: auto;
 }
 
-.statusItem {
+.status-item {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -29,19 +29,19 @@
   white-space: nowrap;
 }
 
-.statusItem--run {
+.status-item--run {
   font-weight: var(--font-weight-medium);
   color: var(--color-state-ok);
 }
 
-.statusItem--url,
-.statusGroup--right .statusItem {
+.status-item--url,
+.status-group--right .status-item {
   color: var(--color-text-dim);
 }
 
 /* Drawn on the item rather than as its own element, so a divider cannot end up
    alone at the start of a wrapped line. Geometry mirrors .divider-v--status. */
-.statusItem + .statusItem::before {
+.status-item + .status-item::before {
   content: "";
   flex: none;
   width: var(--size-hairline);
@@ -51,7 +51,7 @@
 }
 
 /* The design puts its spacer at this boundary, so it carries no rule. */
-.statusGroup--right::before {
+.status-group--right::before {
   content: none;
 }
 
@@ -63,27 +63,27 @@
      instead: every segment survives and the bar wraps. --size-statusbar-h has
      no mobile override, so the fixed desktop height has to be released here or
      the wrapped rows clip. */
-  .statusBar {
+  .status-bar {
     flex-wrap: wrap;
     height: auto;
     gap: var(--space-4);
     padding: var(--space-4-5) var(--space-5);
   }
 
-  .statusGroup {
+  .status-group {
     margin-left: 0;
   }
 
-  .statusItem {
+  .status-item {
     font: var(--font-weight-regular) var(--text-base) / var(--leading-none) var(--font-mono);
   }
 
-  .statusItem--run {
+  .status-item--run {
     font-weight: var(--font-weight-medium);
   }
 
   /* The URL is the first thing allowed to lose characters. */
-  .statusItem--url {
+  .status-item--url {
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -98,19 +98,19 @@
      the mono face loaded, and over it with any fallback.
      Ellipsizing the id span rather than the word "selected" keeps the label
      readable and, more importantly, keeps the page from scrolling sideways. */
-  .statusItem--selected {
+  .status-item--selected {
     flex: 0 1 auto;
     min-width: 0;
   }
 
-  .statusItem--selected [data-field="selectedId"] {
+  .status-item--selected [data-field="selectedId"] {
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   /* Groups separate by gap alone once they wrap, so the inter-group rule goes
      away and only intra-group dividers remain. */
-  .statusGroup + .statusGroup::before {
+  .status-group + .status-group::before {
     content: none;
   }
 }

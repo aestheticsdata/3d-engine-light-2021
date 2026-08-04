@@ -164,6 +164,7 @@ class Main {
       onShadingSelect: (mode) => this.pipeline.setWireframe(impliesWireframe(mode)),
       onWireframeToggle: (next) => this.pipeline.setWireframe(next),
       onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
+      onFrameRateCap: (fps) => this.applyFrameRateCap(fps),
     });
     this.worldTab = new WorldTab({
       store: this.uiState,
@@ -177,7 +178,7 @@ class Main {
     // What genuinely has to follow is syncPipelineReadouts() below — that call
     // is the only thing that seeds the WIRE and CULL pills.
     this.quickToggles = new QuickToggles({
-      mounts: [".quickToggleBand", ".quickToggles"],
+      mounts: [".quick-toggle-band", ".quick-toggles"],
       store: this.uiState,
       wireframe: this.pipeline.wireframe,
       cullBackfaces: this.pipeline.cullBackfaces,
@@ -429,6 +430,19 @@ class Main {
     this.cameraStats.render();
     this.system.render();
     this.publishDrawnTriangles(this.renderedTriangles);
+  }
+
+  // The cap reaches the loop and the framerate card on the same call. The card's
+  // DROPPED threshold is a ratio of the target, so a cap the card did not know
+  // about would have it counting every frame under the old absolute 40fps floor
+  // as dropped — which at a 30fps cap is all of them.
+  //
+  // Safe to reach this.loop from a RenderTab callback even though the tab is
+  // constructed first: nothing calls it until a chip is clicked, and both fields
+  // are assigned by the time the constructor returns.
+  private applyFrameRateCap(fps: number | null) {
+    this.loop.setFrameRateCap(fps);
+    this.framerate.setTargetFps(fps);
   }
 
   // The drawn count reaches the readouts, the telemetry card and the scene

@@ -22,13 +22,13 @@
   border-top: var(--size-hairline) solid var(--color-border-subtle);
 }
 
-.geometry__footerRow {
+.geometry__footer-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.geometry__footerLabel {
+.geometry__footer-label {
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-sm);
   color: var(--color-text-muted);
@@ -37,7 +37,7 @@
 /* 9px mono, where every other desktop value in the card is 10px: the design
    sets the ratio a step smaller so it reads as meta rather than as a sixth
    stat row. */
-.geometry__footerValue {
+.geometry__footer-value {
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
   color: var(--color-text-tertiary);
 }
@@ -70,25 +70,25 @@
 /* BUDGETS' second block. The card shell, its header and its 10/11/12 body
    padding are the frame-time ticket's; this is the block's own gap and its
    label row. */
-.budgets__polyBudget {
+.budgets__poly-budget {
   display: flex;
   flex-direction: column;
   gap: var(--space-2-5);
 }
 
-.budgets__polyBudgetLabelRow {
+.budgets__poly-budget-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.budgets__polyBudgetLabel {
+.budgets__poly-budget-label {
   font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-md);
   color: var(--color-text-muted);
 }
 
-.budgets__polyBudgetValue {
+.budgets__poly-budget-value {
   font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
   color: var(--color-text-tertiary);
 }
