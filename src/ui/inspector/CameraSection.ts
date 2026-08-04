@@ -7,18 +7,19 @@
 // two constants that have to agree is how the opening frame ends up describing a
 // camera the sliders do not.
 //
-// The view presets are inert, and not because they are unfinished. The mockup's
-// presets set absolute yaw/pitch pairs; this engine's pitch and yaw are per-frame
-// rotation *rates* offset from the canvas centre, so "set yaw to 180" would set a
-// spin speed rather than a viewpoint. They become real with de-mock E1's camera
-// rig, and they stay momentary and unlit after that too — the design never draws
-// one selected.
+// The view presets became real with the camera rig: a chip eases the rig to an
+// absolute pitch/yaw/roll over 350ms. They stay momentary and unlit, which is
+// not a leftover from when they were inert — the design never draws one
+// selected, because a preset is a one-shot write and not a mode the camera stays
+// in. The first drag after one leaves the viewpoint somewhere no chip names.
 
 import { DEFAULT_FOV, DEFAULT_ZOOM_SLIDER_VALUE } from "@app/CameraController";
+import viewPresets from "@camera/viewPresets";
 import DOMScope from "@ui/DOMScope";
 import ChipGrid from "@ui/inspector/controls/ChipGrid";
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
+import type { ViewPresetKey } from "@camera/viewPresets";
 import type UIStateStore from "@ui/UIStateStore";
 import type { ProjectionKey } from "@ui/UIStateStore";
 
@@ -29,11 +30,10 @@ const FOV_MAX = 120;
 const ZOOM_MIN = 0;
 const ZOOM_MAX = 100;
 
-const VIEW_PRESETS = ["FRNT", "BACK", "TOP", "SIDE", "ISO"];
+// Off the preset table rather than a second list of five labels here: the chip
+// order is the table's declaration order, so adding a view is one edit.
+const VIEW_PRESETS = Object.keys(viewPresets) as ViewPresetKey[];
 const PROJECTIONS: ProjectionKey[] = ["PERSPECTIVE", "ORTHOGRAPHIC"];
-
-const VIEW_HINT_ID = "ph-view-preset";
-const VIEW_HINT_TEXT = "Rotation is rate-based, so there is no viewpoint to jump to yet (de-mock E1).";
 
 // The markup already carries this exact sentence twice, for the status bar's
 // PERSPECTIVE segment and the viewport HUD's. A third node saying the same thing
@@ -50,6 +50,7 @@ export interface CameraSectionOptions {
   store: UIStateStore;
   onFov: (degrees: number) => void;
   onZoom: (sliderValue: number) => void;
+  onViewPreset: (key: ViewPresetKey) => void;
 }
 
 class CameraSection {
@@ -76,13 +77,13 @@ class CameraSection {
       modifier: "chip--view",
       columns: VIEW_PRESETS.length,
       momentary: true,
-      placeholder: { title: VIEW_HINT_TEXT, describedBy: VIEW_HINT_ID },
-      // Nothing to do, and nothing stored either: a preset is a jump, so there
-      // is no state a reset would have to undo. The chip exists so the control
-      // surface is complete and the affordance says why it is quiet.
-      onPick: () => {},
+      // Nothing is stored: a preset is a jump, and the three angles it writes
+      // are already RESET-covered as the TRANSFORM tab's own slices. Remembering
+      // which chip was last pressed would be remembering a mode the camera is
+      // not in the moment anything else moves it.
+      onPick: (id) => options.onViewPreset(id as ViewPresetKey),
     });
-    viewGrid.setChips(VIEW_PRESETS.map((label) => ({ id: label, label })));
+    viewGrid.setChips(VIEW_PRESETS.map((key) => ({ id: key, label: key })));
 
     this.projectionGrid = new ChipGrid({
       selector: options.projectionGridSelector,
@@ -127,7 +128,7 @@ class CameraSection {
       },
     });
 
-    rows.append(this.fov.element, this.zoom.element, this.buildHint(VIEW_HINT_ID, VIEW_HINT_TEXT));
+    rows.append(this.fov.element, this.zoom.element);
   }
 
   // Writes the store's values into the rows AND pushes them to the camera. Both
@@ -150,16 +151,6 @@ class CameraSection {
   private pickProjection(key: ProjectionKey) {
     this.projectionGrid.setActive(key);
     this.store.setState({ projection: key });
-  }
-
-  private buildHint(id: string, text: string): HTMLElement {
-    const hint = document.createElement("span");
-
-    hint.className = "placeholder-hint";
-    hint.id = id;
-    hint.textContent = text;
-
-    return hint;
   }
 }
 

@@ -344,33 +344,15 @@
                   <div class="hud-panel viewport-hud__camera">
                     <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">cam.pos</span>
-                      <span
-                        class="hud-panel__value"
-                        data-field="camPos"
-                        data-placeholder="true"
-                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                        aria-describedby="ph-vp-camera"
-                      >&mdash;</span>
+                      <span class="hud-panel__value" data-field="camPos">&mdash;</span>
                     </div>
                     <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">cam.rot</span>
-                      <span
-                        class="hud-panel__value"
-                        data-field="camRot"
-                        data-placeholder="true"
-                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                        aria-describedby="ph-vp-camera"
-                      >&mdash;</span>
+                      <span class="hud-panel__value" data-field="camRot">&mdash;</span>
                     </div>
                     <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">target</span>
-                      <span
-                        class="hud-panel__value"
-                        data-field="camTarget"
-                        data-placeholder="true"
-                        title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                        aria-describedby="ph-vp-camera"
-                      >&mdash;</span>
+                      <span class="hud-panel__value" data-field="camTarget">&mdash;</span>
                     </div>
                     <div class="viewport-hud__cam-row">
                       <span class="hud-panel__key">dist</span>
@@ -390,21 +372,11 @@
                     <span class="hud-chip viewport-hud__chip-stack">
                       <span class="viewport-hud__stack-line">
                         <span class="viewport-hud__k">pos</span>
-                        <span
-                          data-field="camPos"
-                          data-placeholder="true"
-                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                          aria-describedby="ph-vp-camera"
-                        >&mdash;</span>
+                        <span data-field="camPos">&mdash;</span>
                       </span>
                       <span class="viewport-hud__stack-line">
                         <span class="viewport-hud__k">rot</span>
-                        <span
-                          data-field="camRot"
-                          data-placeholder="true"
-                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                          aria-describedby="ph-vp-camera"
-                        >&mdash;</span>
+                        <span data-field="camRot">&mdash;</span>
                       </span>
                     </span>
                     <span class="hud-chip viewport-hud__chip-stack">
@@ -416,12 +388,7 @@
                       </span>
                       <span class="viewport-hud__stack-line">
                         <span class="viewport-hud__k">target</span>
-                        <span
-                          data-field="camTarget"
-                          data-placeholder="true"
-                          title="The engine rotates the mesh; there is no camera transform yet (de-mock E1a)."
-                          aria-describedby="ph-vp-camera"
-                        >&mdash;</span>
+                        <span data-field="camTarget">&mdash;</span>
                         <span class="viewport-hud__k">dist</span>
                         <span data-field="camDist">&mdash;</span>
                       </span>
@@ -453,12 +420,7 @@
                   <span class="viewport-hud__corner viewport-hud__corner--br"></span>
                 </div>
 
-                <div
-                  class="viewport-hud__gizmo"
-                  data-placeholder="true"
-                  title="The axis gizmo does not follow the scene yet (de-mock E1a)."
-                  aria-hidden="true"
-                >
+                <div class="viewport-hud__gizmo" aria-hidden="true">
                   <span class="viewport-hud__axis viewport-hud__axis--x"></span>
                   <span class="viewport-hud__axis viewport-hud__axis--y"></span>
                   <span class="viewport-hud__axis viewport-hud__axis--z"></span>
@@ -513,7 +475,6 @@
                 </span>
 
                 <span class="placeholder-hint" id="ph-vp-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
-                <span class="placeholder-hint" id="ph-vp-camera">The engine rotates the mesh; there is no camera transform yet (de-mock E1a).</span>
                 <span class="placeholder-hint" id="ph-vp-gestures">The canvas has no pointer handlers yet (de-mock E1b).</span>
                 <!-- The GRID pill's description, and it lives out here rather
                      than beside the pill for a reason: both quick-toggle mounts
@@ -811,9 +772,10 @@
               <!-- One card for both branches: the rows, the note and the values
                    are identical, and only the body padding differs — so the two
                    primitive modifiers are stacked and the breakpoint picks.
-                   SPIN RATE and FOCAL / OFFSET are deliberate relabels of the
-                   design's ROTATION and NEAR / FAR (L388–L415); the reasoning is
-                   in CameraWidget's header. -->
+                   FOCAL / OFFSET is a deliberate relabel of the design's
+                   NEAR / FAR (L388–L415); the reasoning is in CameraWidget's
+                   header. ROTATION was SPIN RATE until the camera rig gave the
+                   scene real Euler angles to print. -->
               <section class="panel panel--fill camera-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">camera</span>
@@ -826,8 +788,8 @@
                       <span class="stat-row__value" data-field="camStatPosition">&mdash;</span>
                     </div>
                     <div class="stat-row">
-                      <span class="stat-row__label">SPIN RATE</span>
-                      <span class="stat-row__value" data-field="camStatSpin">&mdash;</span>
+                      <span class="stat-row__label">ROTATION</span>
+                      <span class="stat-row__value" data-field="camStatRotation">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">DISTANCE</span>

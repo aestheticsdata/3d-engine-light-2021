@@ -259,10 +259,26 @@
 }
 
 /* ---- axis gizmo -----------------------------------------------------------
-   Static. The engine rotates the mesh and has no camera transform, so nothing
-   drives the axes — they sit at the design's angles. De-mock E1a (COS-237)
-   makes them follow the rig. The small insets below are the design's own and
-   stay literal rather than becoming tokens for a placeholder. */
+   Driven by the camera rig. ViewportHUD writes one angle and one foreshortening
+   per axis onto the gizmo element every frame; every length, the floor an axis
+   pointing at the eye collapses to, and the mobile step stay here — so neither
+   side has to know the other's numbers.
+
+   The angle arrives in radians because that is what atan2 produces and what CSS
+   takes as `rad`; converting it would put a `180 / Math.PI` in a widget. Screen
+   y points down, which is the direction a positive CSS rotation turns, so the
+   angle is usable as written.
+
+   All three axes are the same bar now, pointing along +x and rotated about the
+   gizmo origin. The design drew them as three differently-shaped elements at
+   three fixed angles, which only worked while nothing moved.
+
+   That origin has moved from the box's bottom-left corner to its centre, and
+   the corner was not a style choice to preserve: it worked only because X went
+   right and Y went up and neither could ever do anything else. A live basis
+   points anywhere, so a corner origin sends an axis straight out of the box the
+   first time the scene pitches past level. The box itself, its position and its
+   size are all untouched — this is the inside of the gizmo, not the layout. */
 
 .viewport-hud__gizmo {
   position: absolute;
@@ -277,52 +293,73 @@
 
 .viewport-hud__axis {
   position: absolute;
-  bottom: 14px;
-  left: 14px;
+  top: calc(50% - var(--size-mark) / 2);
+  left: 50%;
+  width: var(--axis-length);
+  height: var(--size-mark);
+  transform-origin: 0 50%;
+  transform: rotate(var(--axis-angle));
+}
+
+/* A zero-height box, so its own centre line is the gizmo's centre and the letter
+   turns about the point the bars do rather than about its own half-height. The
+   pair of opposed rotations is what carries it out to the tip and leaves it
+   upright there. */
+.viewport-hud__axis-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  height: 0;
+  font: var(--font-weight-bold) var(--text-2xs) / var(--leading-none) var(--font-mono);
+  transform-origin: 0 50%;
+  transform: rotate(var(--axis-angle)) translateX(calc(var(--axis-length) + var(--space-1)))
+    rotate(calc(-1 * var(--axis-angle)));
+}
+
+/* The three pairs the JS writes, resolved once per axis so the bar and its
+   letter read the same two numbers. The fallbacks are the identity pose, which
+   is what the gizmo shows for the frame before the first update. */
+.viewport-hud__axis--x,
+.viewport-hud__axis-label--x {
+  --axis-angle: var(--axis-x-angle, 0rad);
+  --axis-length: max(var(--size-mark), calc(var(--size-gizmo-axis) * var(--axis-x-foreshorten, 1)));
+}
+
+.viewport-hud__axis--y,
+.viewport-hud__axis-label--y {
+  --axis-angle: var(--axis-y-angle, 0rad);
+  --axis-length: max(var(--size-mark), calc(var(--size-gizmo-axis) * var(--axis-y-foreshorten, 1)));
+}
+
+.viewport-hud__axis--z,
+.viewport-hud__axis-label--z {
+  --axis-angle: var(--axis-z-angle, 0rad);
+  --axis-length: max(var(--size-mark), calc(var(--size-gizmo-axis) * var(--axis-z-foreshorten, 1)));
 }
 
 .viewport-hud__axis--x {
-  width: var(--size-gizmo-axis-xy);
-  height: var(--size-mark);
   background: var(--color-axis-x);
 }
 
 .viewport-hud__axis--y {
-  width: var(--size-mark);
-  height: var(--size-gizmo-axis-xy);
   background: var(--color-axis-y);
 }
 
 .viewport-hud__axis--z {
-  bottom: 15px;
-  left: 15px;
-  width: var(--size-mark);
-  height: var(--size-gizmo-axis-z);
   background: var(--color-axis-z);
-  transform-origin: bottom center;
-  transform: rotate(215deg);
-}
-
-.viewport-hud__axis-label {
-  position: absolute;
-  font: var(--font-weight-bold) var(--text-2xs) / var(--leading-none) var(--font-mono);
 }
 
 .viewport-hud__axis-label--x {
-  right: 6px;
-  bottom: 8px;
   color: var(--color-axis-x);
 }
 
 .viewport-hud__axis-label--y {
-  top: 4px;
-  left: 8px;
   color: var(--color-axis-y);
 }
 
 .viewport-hud__axis-label--z {
-  top: 20px;
-  right: 8px;
   color: var(--color-axis-z);
 }
 
@@ -489,36 +526,13 @@
     left: var(--space-4);
   }
 
-  .viewport-hud__axis {
-    bottom: 11px;
-    left: 11px;
-  }
-
-  .viewport-hud__axis--z {
-    bottom: 12px;
-    left: 12px;
-  }
+  /* The origin inset and the bar length are both tokens now, so the smaller box
+     needs nothing here beyond their mobile values in sizing.css. */
 
   /* not in mockup — the X/Y/Z letters are restored, one step up from the
-     desktop 7px so they survive inside a 52px box. Positions are the desktop
-     ones scaled by 52/66 and rounded. */
+     desktop 7px so they survive inside a 52px box. */
   .viewport-hud__axis-label {
     font-size: var(--text-xs);
-  }
-
-  .viewport-hud__axis-label--x {
-    right: 5px;
-    bottom: 6px;
-  }
-
-  .viewport-hud__axis-label--y {
-    top: 3px;
-    left: 6px;
-  }
-
-  .viewport-hud__axis-label--z {
-    top: 16px;
-    right: 6px;
   }
 
   /* fov and zoom move into the top-right column, and the status segment folds

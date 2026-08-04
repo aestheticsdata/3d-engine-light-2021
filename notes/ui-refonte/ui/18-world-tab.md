@@ -53,6 +53,11 @@ Add `changeFov` mirroring `changeZoom` — recompute `this.focal`, call `applyCa
 
 ## View presets are inert here
 
+> **Superseded by COS-237 (de-mock E1a).** The camera rig landed, and the five
+> chips now ease to absolute angles. What survives of this section is the last
+> sentence: they stay momentary and never render active. The placeholder
+> affordance and its hint are gone.
+
 The mockup's presets set absolute angle pairs (L1498–L1501): yaw `[0, 180, 137, 90, 45]` and pitch `[0, 0, 78, 0, 30]` for FRNT / BACK / TOP / SIDE / ISO. This engine's pitch and yaw are per-frame rotation *rates* offset from the canvas centre (`rotateMesh`, `src/index.ts` L423–L440), and the epic keeps them that way — "set yaw to 180" would set a spin rate, not a viewpoint.
 
 The five preset chips are therefore placeholders in this ticket: they render, are momentary, are keyboard reachable, carry the primitives placeholder affordance, and do nothing. They become real in de-mock E1 (camera rig), which introduces absolute pitch/yaw/roll. They stay momentary and stateless after that too — the design never renders them active.

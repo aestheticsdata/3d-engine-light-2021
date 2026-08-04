@@ -17,6 +17,14 @@ class Point3D {
   public zOffset: number = 0;
   private readonly vpX: number;
   private readonly vpY: number;
+  // The vertex as the registry authored it, kept for the life of the mesh. It is
+  // what makes an orientation absolute rather than accumulated: every frame
+  // rebuilds x/y/z from these three, so a pose is a matrix rather than a history
+  // and the shape can be returned to exactly. Three doubles per vertex, which on
+  // the largest mesh in the registry — the torus knot's 3960 — is about 95 KB.
+  private readonly sx: number;
+  private readonly sy: number;
+  private readonly sz: number;
 
   // The viewport is read once here and its two numbers copied, not held. That is
   // today's behaviour kept exactly: a mesh already on screen keeps projecting
@@ -27,6 +35,9 @@ class Point3D {
     this.x = x;
     this.y = y;
     this.z = z;
+    this.sx = x;
+    this.sy = y;
+    this.sz = z;
     this.vpX = viewport.x;
     this.vpY = viewport.y;
   }
@@ -43,17 +54,15 @@ class Point3D {
     return new Point2D(tmpX, tmpY);
   }
 
-  // Mutates in place and returns nothing. The three coordinates are read into
-  // locals first because the second row of the rotation needs the unrotated x,
-  // so assigning as we go would feed each row the previous row's output.
-  public transformPt(rot: number[][]) {
-    const x = rot[0][0] * this.x + rot[0][1] * this.y + rot[0][2] * this.z + rot[0][3];
-    const y = rot[1][0] * this.x + rot[1][1] * this.y + rot[1][2] * this.z + rot[1][3];
-    const z = rot[2][0] * this.x + rot[2][1] * this.y + rot[2][2] * this.z + rot[2][3];
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
+  // Mutates in place and returns nothing. No temporaries, and that is the
+  // difference from the incremental transform this replaces: the operands are
+  // the source fields, which nothing ever writes, so a row cannot be fed the
+  // previous row's output. Reading column 3 is what lets the matrix carry a
+  // translation as well as a rotation — the rig's orbit target rides in it.
+  public setFromSource(transform: number[][]) {
+    this.x = transform[0][0] * this.sx + transform[0][1] * this.sy + transform[0][2] * this.sz + transform[0][3];
+    this.y = transform[1][0] * this.sx + transform[1][1] * this.sy + transform[1][2] * this.sz + transform[1][3];
+    this.z = transform[2][0] * this.sx + transform[2][1] * this.sy + transform[2][2] * this.sz + transform[2][3];
   }
 }
 

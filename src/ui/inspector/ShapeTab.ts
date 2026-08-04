@@ -9,6 +9,7 @@ import MaterialSection from "@ui/inspector/MaterialSection";
 import PrimitiveSection from "@ui/inspector/PrimitiveSection";
 import TransformSection from "@ui/inspector/TransformSection";
 
+import type { EulerDegrees } from "@camera/CameraRig";
 import type { Data3D } from "@data/types";
 import type SliderRow from "@ui/inspector/controls/SliderRow";
 import type ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
@@ -18,10 +19,10 @@ export interface ShapeTabOptions {
   objects3D: Data3D;
   store: UIStateStore;
   onPick: (primitive: string) => void;
-  onPitch: (engineValue: number) => void;
-  onYaw: (engineValue: number) => void;
-  onRoll: (engineValue: number) => void;
-  onSpin: (rotationSpeed: number) => void;
+  onPitch: (degrees: number) => void;
+  onYaw: (degrees: number) => void;
+  onRoll: (degrees: number) => void;
+  onSpin: (degreesPerSecond: number) => void;
   onOpacity: (sliderValue: number) => void;
 }
 
@@ -64,6 +65,13 @@ class ShapeTab {
 
   public setOpacityUi(value: number) {
     this.material.opacityRow.setValue(value);
+  }
+
+  // The TRANSFORM rows following the rig rather than driving it, which is what a
+  // view preset needs: the chips live in the WORLD tab and move angles this tab
+  // owns the controls for.
+  public setTransformUi(angles: EulerDegrees) {
+    this.transform.setAngleUi(angles);
   }
 
   public setOpacityDisabled(disabled: boolean) {

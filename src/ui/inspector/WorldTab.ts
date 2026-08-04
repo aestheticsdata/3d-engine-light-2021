@@ -10,12 +10,14 @@
 import CameraSection from "@ui/inspector/CameraSection";
 import EnvironmentSection from "@ui/inspector/EnvironmentSection";
 
+import type { ViewPresetKey } from "@camera/viewPresets";
 import type UIStateStore from "@ui/UIStateStore";
 
 export interface WorldTabOptions {
   store: UIStateStore;
   onFov: (degrees: number) => void;
   onZoom: (sliderValue: number) => void;
+  onViewPreset: (key: ViewPresetKey) => void;
   onLayersChange: () => void;
 }
 
@@ -31,6 +33,7 @@ class WorldTab {
       store: options.store,
       onFov: options.onFov,
       onZoom: options.onZoom,
+      onViewPreset: options.onViewPreset,
     });
 
     this.environment = new EnvironmentSection({

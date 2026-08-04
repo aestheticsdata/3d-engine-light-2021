@@ -94,8 +94,7 @@
   --size-fps-canvas: auto; /* flex:1 inside the card on desktop */
   --size-zbuf-h: auto; /* flex:1 inside the card on desktop */
   --size-gizmo: 66px;
-  --size-gizmo-axis-xy: 34px;
-  --size-gizmo-axis-z: 24px;
+  --size-gizmo-axis: 24px; /* every axis at full length, from the box centre; the rig foreshortens it */
   --size-crosshair: 24px;
   --size-selection-box: 190px;
   --size-selection-corner: 14px;
@@ -160,8 +159,7 @@
     --size-fps-canvas: 64px;
     --size-zbuf-h: 76px;
     --size-gizmo: 52px;
-    --size-gizmo-axis-xy: 26px;
-    --size-gizmo-axis-z: 18px;
+    --size-gizmo-axis: 17px;
     --size-crosshair: 20px;
     --size-selection-corner: 12px;
     --size-divider-hud: 9px;

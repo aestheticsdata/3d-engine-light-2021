@@ -1,4 +1,4 @@
-// The viewport HUD's writers, and the home of its placeholder constants.
+// The viewport HUD's writers.
 //
 // Like the status bar, this widget owns no state. Most of what the HUD shows is
 // already published by someone else through the FieldWriter — the shading mode,
@@ -10,49 +10,42 @@
 // write.
 //
 // What is left over, and therefore what this class owns:
-//   * the placeholder constants, each annotated with the de-mock ticket that
-//     replaces it,
 //   * the resolution string, read off the canvas rather than typed,
 //   * the data-shading-mode attribute on the viewport card,
-//   * fov, zoom and dist, the three live camera readouts the engine can
-//     actually feed. All three are handed in rather than derived here — the
-//     camera owns the arithmetic, so the overlay cannot print a projection the
-//     renderer is not using.
+//   * fov, zoom and dist, and the camera readouts the rig feeds,
+//   * the axis gizmo.
 //
-// There is deliberately no per-frame update() method, and becoming a class must
-// not tempt anyone into adding one. Everything the HUD shows per frame is
-// already written by Main's own writes, and a second pass over the same nodes
-// would be work that changes nothing.
+// Everything numeric here is handed in rather than derived: the camera owns the
+// projection arithmetic and the rig owns the orientation, so the overlay cannot
+// print a camera the renderer is not using.
+//
+// Two update rates, and the split is deliberate. setCamera rides Main's existing
+// 90ms display gate, because four decimal readouts changing sixty times a second
+// are unreadable. setGizmo runs every frame: it is a picture rather than a
+// number, and once E1b makes the viewport draggable it has to track the drag
+// without a tenth of a second of lag.
 
+import { eulerDegreesLabel, vector3Label } from "@ui/cameraLabels";
+import DOMScope from "@ui/DOMScope";
 import { modeLabel } from "@ui/modeLabel";
 
+import type { AxisScreenDirection, EulerDegrees, Vector3 } from "@camera/CameraRig";
 import type FieldWriter from "@ui/FieldWriter";
-
-// Placeholders. Each is a constant, never derived from engine state — a value
-// computed from the wrong source is worse than an obvious mock, because it
-// looks live.
-
-// de-mock E1a (COS-237): the engine rotates the mesh and has no camera
-// transform, so there is no position to read.
-const CAM_POS = "0.0 1.2 12.0";
-
-// de-mock E1a (COS-237): pitch / yaw / roll are rotation *rates* offset from the
-// canvas centre, not camera Euler angles (D9 keeps those semantics). The design
-// draws degrees, so the mock does too — but it must stay a constant. Deriving it
-// from the sliders would print a rate and label it an angle.
-const CAM_ROT = "0.0° 0.0° 0.0°";
-
-// de-mock E1a (COS-237): hardcoded in the design as well.
-const CAM_TARGET = "0.0 1.2 0.0";
 
 // Unit is `u`, not the design's `m`: the engine has no metric scale, and
 // COS-246 (E5a) is what introduces world units.
 const DISTANCE_UNIT = "u";
 
+// The gizmo's three bars, in the order CameraRig hands out its axis columns.
+// viewport.css reads --axis-<key>-angle and --axis-<key>-foreshorten, so this
+// list is the contract between the two files.
+const AXIS_KEYS = ["x", "y", "z"];
+
 class ViewportHUD {
   private readonly card: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly fields: FieldWriter;
+  private readonly gizmo: HTMLElement;
 
   constructor(canvas: HTMLCanvasElement, fields: FieldWriter) {
     const card = canvas.closest<HTMLElement>(".viewport");
@@ -64,6 +57,7 @@ class ViewportHUD {
     this.card = card;
     this.canvas = canvas;
     this.fields = fields;
+    this.gizmo = new DOMScope(card).require<HTMLElement>(".viewport-hud__gizmo", "Viewport gizmo is missing.");
   }
 
   // The backing store, not the CSS box. The design's 848 x 530 is the size of
@@ -71,9 +65,6 @@ class ViewportHUD {
   // buffer, and that is the number worth showing.
   public seed() {
     this.fields.write("resolution", `${this.canvas.width} × ${this.canvas.height}`);
-    this.fields.write("camPos", CAM_POS);
-    this.fields.write("camRot", CAM_ROT);
-    this.fields.write("camTarget", CAM_TARGET);
   }
 
   // FOV left the placeholder list in COS-231. It used to be seeded above as a
@@ -105,6 +96,26 @@ class ViewportHUD {
   public setZoom(sliderValue: number, distance: number) {
     this.fields.write("zoom", `${Math.round(sliderValue)}%`);
     this.fields.write("camDist", `${Math.round(distance)} ${DISTANCE_UNIT}`);
+  }
+
+  public setCamera(position: Vector3, rotation: EulerDegrees, target: Readonly<Vector3>) {
+    this.fields.write("camPos", vector3Label(position));
+    this.fields.write("camRot", eulerDegreesLabel(rotation));
+    this.fields.write("camTarget", vector3Label(target));
+  }
+
+  // Custom properties rather than a computed `transform` string, and that is
+  // what keeps the layout in the styles layer: the bar length, its 2px floor and
+  // the mobile step are all CSS, so this method never learns a pixel value. The
+  // angle goes out in radians because atan2 produces radians and CSS accepts
+  // them — converting would put a `180 / Math.PI` in a widget.
+  public setGizmo(axes: AxisScreenDirection[]) {
+    AXIS_KEYS.forEach((key, index) => {
+      const axis = axes[index];
+
+      this.gizmo.style.setProperty(`--axis-${key}-angle`, `${axis.angleRadians}rad`);
+      this.gizmo.style.setProperty(`--axis-${key}-foreshorten`, String(axis.foreshortening));
+    });
   }
 }
 

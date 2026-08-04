@@ -62,7 +62,7 @@ class ShapeThumbnails {
     }
 
     const mesh = new MeshFactory(new Viewport(canvas)).build(object3D);
-    const matrix = new Matrix3D();
+    const matrix3D = new Matrix3D();
 
     mesh.changeFocal(FOCAL);
     // Pushed back far enough that the widest solid in the registry still fits
@@ -70,10 +70,12 @@ class ShapeThumbnails {
     // polyhedron does not overflow its own thumbnail.
     mesh.changeOffsetZ(this.offsetFor(object3D.points));
 
-    matrix.setAngle(VIEW_PITCH_DEGREES);
-    mesh.transformMesh(matrix.pitch);
-    matrix.setAngle(VIEW_YAW_DEGREES);
-    mesh.transformMesh(matrix.yaw);
+    // Yaw times pitch, in that order, which is the single matrix equivalent of
+    // the two sequential passes this replaces. A thumbnail is painted once and
+    // never re-posed, so it needs none of the rig — only the same builders.
+    mesh.setTransform(
+      matrix3D.multiply(matrix3D.yawMatrix(VIEW_YAW_DEGREES), matrix3D.pitchMatrix(VIEW_PITCH_DEGREES)),
+    );
 
     mesh.renderMesh(context, 0, 0, { textures: this.textures, cullBackfaces: true, opacity: 1 });
 

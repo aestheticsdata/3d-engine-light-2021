@@ -67,9 +67,14 @@ class Mesh {
     }
   }
 
-  public transformMesh(rot: number[][]) {
+  // Idempotent, unlike the incremental transform it replaces: applying the same
+  // matrix twice leaves the mesh where it was. That is what lets a transition
+  // hand the same matrix to both the outgoing and the incoming mesh and get one
+  // shared attitude, and it removes a whole class of drift — the geometry is
+  // never the product of the frames that came before it.
+  public setTransform(transform: number[][]) {
     for (const point of this.points) {
-      point.transformPt(rot);
+      point.setFromSource(transform);
     }
   }
 

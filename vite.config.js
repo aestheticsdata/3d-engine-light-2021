@@ -18,6 +18,7 @@ export default defineConfig({
     alias: {
       "@animations": path.resolve(__dirname, "src/animations"),
       "@app": path.resolve(__dirname, "src/app"),
+      "@camera": path.resolve(__dirname, "src/camera"),
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
       "@img": path.resolve(__dirname, "src/img"),

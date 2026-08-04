@@ -1,19 +1,20 @@
-// The camera: where it sits, how fast the shape turns under it, and the two
-// policies that map a slider position onto the projection — zoom to a z offset,
-// and field of view to a focal length.
+// The camera's projection: the two policies that map a slider position onto it —
+// zoom to a z offset, and field of view to a focal length — and the numbers
+// those two produce.
 //
 // Neither curve is a generic helper. The first encodes this camera's reach —
-// 260 at the far end to -220 at the near end — and the second encodes the fact
-// that the canvas is a fixed 1024x640, which is what makes degrees convertible
-// to a focal length at all. Both belong to the object whose projection they are,
-// not to module scope beside a rasteriser.
-
-import Matrix3D from "@primitives/Matrix3D";
+// 260 at the far end to -220 at the near end — and the second encodes the
+// canvas half-height, which is what makes degrees convertible to a focal length
+// at all. Both belong to the object whose projection they are, not to module
+// scope beside a rasteriser.
+//
+// Where the camera is *pointing* is not here. That is CameraRig, which owns the
+// scene's absolute orientation and derives the eye position from the same
+// matrix the frame is drawn with; this class owns only how far away the eye is
+// and how wide it sees.
 
 import type Mesh from "@primitives/Mesh";
 
-const PITCH_YAW_ROTATION_DIVISOR = 110;
-const ROLL_ROTATION_DIVISOR = 500;
 const ZOOM_SLIDER_MIN = 0;
 const ZOOM_SLIDER_MAX = 100;
 const ZOOM_ZOFFSET_FAR = 260;
@@ -39,54 +40,22 @@ export const DEFAULT_ZOOM_SLIDER_VALUE = 50;
 // scale than it used to be. Accepted rather than hidden — the alternative is a
 // fractional default nobody can dial back to.
 export const DEFAULT_FOV = 94;
-export const DEFAULT_PITCH = 400;
-export const DEFAULT_YAW = 400;
-export const DEFAULT_ROLL = 200;
-export const DEFAULT_ROTATION_SPEED = 200;
-export const ROTATION_SPEED_SLIDER_MAX = 2000;
-
-// Degrees per frame, not radians and not absolute angles. Matrix3D.setAngle
-// converts degrees internally, so these are the numbers the renderer actually
-// applies each frame — which is why the CAMERA card reads them from here
-// rather than re-deriving them from the sliders.
-export interface SpinRates {
-  pitch: number;
-  yaw: number;
-  roll: number;
-}
 
 class CameraController {
-  private readonly matrix3D: Matrix3D;
-  private readonly centerX: number;
-  private readonly centerY: number;
-  // Numerically the same as centerY, and deliberately not that field: centerY is
-  // where pitch is measured from, this is the opposite side of the triangle the
-  // FOV mapping solves. They are separate so de-mock E1's absolute camera can
-  // move the rotation origin without silently widening the field of view.
+  // The opposite side of the triangle the FOV mapping solves. The canvas is read
+  // for it once here rather than held, so nothing in this class can start
+  // depending on a live canvas dimension E9b is going to move.
   private readonly halfHeight: number;
   private focal: number;
   private zOffset: number;
-  private pitch: number;
-  private yaw: number;
-  private roll: number;
-  private rotationSpeed: number;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.matrix3D = new Matrix3D();
-    // Pitch and yaw are measured as an offset from the canvas centre, which is
-    // why the controller needs the dimensions rather than the canvas itself.
-    this.centerX = canvas.width >> 1;
-    this.centerY = canvas.height >> 1;
     this.halfHeight = canvas.height / 2;
     // Seeded through the same mapping the slider drives rather than from a
     // second focal-length constant: one derivation means the opening frame and
     // the first drag cannot disagree about what 94° means.
     this.focal = this.focalFor(DEFAULT_FOV);
     this.zOffset = this.zoomOffsetFor(DEFAULT_ZOOM_SLIDER_VALUE);
-    this.pitch = DEFAULT_PITCH;
-    this.yaw = DEFAULT_YAW;
-    this.roll = DEFAULT_ROLL;
-    this.rotationSpeed = DEFAULT_ROTATION_SPEED;
   }
 
   // What the HUD prints, and it is the distance rather than the raw offset: the
@@ -118,42 +87,16 @@ class CameraController {
     return this.zOffset;
   }
 
-  // Read by the CAMERA card, and by rotate() below — one derivation, so the
-  // card cannot print a rate the renderer is not applying. Zero at the canvas
-  // centre for pitch and yaw, and at 0 for roll.
-  public get spinRates(): SpinRates {
-    const speedFactor = this.rotationSpeed / 100;
-
-    return {
-      pitch: ((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-      yaw: (-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
-      roll: (this.roll / ROLL_ROTATION_DIVISOR) * speedFactor,
-    };
-  }
-
   public applyTo(mesh: Mesh) {
     mesh.changeFocal(this.focal);
     mesh.changeOffsetZ(this.zOffset);
   }
 
-  public rotate(mesh: Mesh) {
-    const rates = this.spinRates;
-
-    this.matrix3D.setAngle(rates.pitch);
-    mesh.transformMesh(this.matrix3D.pitch);
-
-    this.matrix3D.setAngle(rates.yaw);
-    mesh.transformMesh(this.matrix3D.yaw);
-
-    this.matrix3D.setAngle(rates.roll);
-    mesh.transformMesh(this.matrix3D.roll);
-  }
-
-  // The four setters below take `number | null` because their only other caller
+  // Both setters below take `number | null` because their only other caller
   // reads a slider through Controls.getNumericValue, which returns null for a
-  // missing control. Absorbing that here is what replaces the `?? this.pitch`
+  // missing control. Absorbing that here is what replaces the `?? this.zOffset`
   // fallback the call site used to spell out, and it is why the controller needs
-  // no getters for these four.
+  // no getters for these two.
   public setZoomFromSlider(sliderValue: number | null) {
     if (sliderValue === null) {
       return;
@@ -170,41 +113,9 @@ class CameraController {
     this.focal = this.focalFor(fovDegrees);
   }
 
-  public setPitch(pitch: number | null) {
-    if (pitch === null) {
-      return;
-    }
-
-    this.pitch = pitch;
-  }
-
-  public setYaw(yaw: number | null) {
-    if (yaw === null) {
-      return;
-    }
-
-    this.yaw = yaw;
-  }
-
-  public setRoll(roll: number | null) {
-    if (roll === null) {
-      return;
-    }
-
-    this.roll = roll;
-  }
-
-  public setRotationSpeed(rotationSpeed: number | null) {
-    if (rotationSpeed === null) {
-      return;
-    }
-
-    this.rotationSpeed = rotationSpeed;
-  }
-
-  // The engine has a focal length, not a field of view, and the canvas is a
-  // fixed 1024x640 — so the two are related exactly by the half-height and are
-  // converted here rather than approximated by a table.
+  // The engine has a focal length, not a field of view, so the two are related
+  // exactly by the half-height and are converted here rather than approximated
+  // by a table.
   //
   // There is no dolly compensation: a shorter focal magnifies the subject as
   // well as widening the frame, so this control behaves like a second zoom

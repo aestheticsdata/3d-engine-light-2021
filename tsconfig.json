@@ -9,6 +9,7 @@
     "paths": {
       "@animations/*": ["./src/animations/*"],
       "@app/*": ["./src/app/*"],
+      "@camera/*": ["./src/camera/*"],
       "@primitives/*": ["./src/primitives/*"],
       "@data/*": ["./src/data/*"],
       "@img/*": ["./src/img/*"],
