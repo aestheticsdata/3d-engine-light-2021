@@ -26,6 +26,16 @@ export const DEFAULT_ROLL = 200;
 export const DEFAULT_ROTATION_SPEED = 200;
 export const ROTATION_SPEED_SLIDER_MAX = 2000;
 
+// Degrees per frame, not radians and not absolute angles. Matrix3D.setAngle
+// converts degrees internally, so these are the numbers the renderer actually
+// applies each frame — which is why the CAMERA card reads them from here
+// rather than re-deriving them from the sliders.
+export interface SpinRates {
+  pitch: number;
+  yaw: number;
+  roll: number;
+}
+
 class CameraController {
   private readonly matrix3D: Matrix3D;
   private readonly centerX: number;
@@ -58,21 +68,44 @@ class CameraController {
     return this.focal + this.zOffset;
   }
 
+  // The two numbers that actually define this projection, for the CAMERA card's
+  // FOCAL / OFFSET row. There are no clip planes to report instead.
+  public get focalLength(): number {
+    return this.focal;
+  }
+
+  public get zoomOffset(): number {
+    return this.zOffset;
+  }
+
+  // Read by the CAMERA card, and by rotate() below — one derivation, so the
+  // card cannot print a rate the renderer is not applying. Zero at the canvas
+  // centre for pitch and yaw, and at 0 for roll.
+  public get spinRates(): SpinRates {
+    const speedFactor = this.rotationSpeed / 100;
+
+    return {
+      pitch: ((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
+      yaw: (-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor,
+      roll: (this.roll / ROLL_ROTATION_DIVISOR) * speedFactor,
+    };
+  }
+
   public applyTo(mesh: Mesh) {
     mesh.changeFocal(this.focal);
     mesh.changeOffsetZ(this.zOffset);
   }
 
   public rotate(mesh: Mesh) {
-    const speedFactor = this.rotationSpeed / 100;
+    const rates = this.spinRates;
 
-    this.matrix3D.setAngle(((this.pitch - this.centerY) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor);
+    this.matrix3D.setAngle(rates.pitch);
     mesh.transformMesh(this.matrix3D.pitch);
 
-    this.matrix3D.setAngle((-(this.yaw - this.centerX) / PITCH_YAW_ROTATION_DIVISOR) * speedFactor);
+    this.matrix3D.setAngle(rates.yaw);
     mesh.transformMesh(this.matrix3D.yaw);
 
-    this.matrix3D.setAngle((this.roll / ROLL_ROTATION_DIVISOR) * speedFactor);
+    this.matrix3D.setAngle(rates.roll);
     mesh.transformMesh(this.matrix3D.roll);
   }
 

@@ -19,6 +19,10 @@
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
 //   frame time   frameMs, frameTimeNote
 //   geometry     geoVertices, geoEdges, geoTriangles, geoCulled, polyBudget
+//   camera card  camStatPosition, camStatSpin, camStatDistance, camStatFocal,
+//                camStatFov — deliberately not the viewport's camPos / camRot /
+//                camDist above. Those are the HUD's mock camera (COS-218); these
+//                are the engine's real projection, and the two must not collide.
 //   system       uptime
 
 class FieldWriter {

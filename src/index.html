@@ -815,11 +815,41 @@
                   </div>
                 </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches: the rows, the note and the values
+                   are identical, and only the body padding differs — so the two
+                   primitive modifiers are stacked and the breakpoint picks.
+                   SPIN RATE and FOCAL / OFFSET are deliberate relabels of the
+                   design's ROTATION and NEAR / FAR (L388–L415); the reasoning is
+                   in CameraWidget's header. -->
+              <section class="panel panel--fill camera-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">camera</span>
+                  <span class="panel__note">PERSPECTIVE</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">POSITION</span>
+                      <span class="stat-row__value" data-field="camStatPosition">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">SPIN RATE</span>
+                      <span class="stat-row__value" data-field="camStatSpin">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DISTANCE</span>
+                      <span class="stat-row__value" data-field="camStatDistance">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">FOCAL / OFFSET</span>
+                      <span class="stat-row__value" data-field="camStatFocal">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">FOV / ASPECT</span>
+                      <span class="stat-row__value" data-field="camStatFov">&mdash;</span>
+                    </div>
+                  </div>
+                </div>
               </section>
               <section class="panel panel--fill" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
