@@ -239,8 +239,9 @@
   color: var(--color-text-dim);
 }
 
-/* The same chevron the native select wears, so the two controls read as the
-   same family — select.css owns the skin of that one, this is its geometry. */
+/* Two borders rather than an inline SVG, which is the recipe the native select
+   wore before COS-229 replaced it: a data URI would carry a literal colour past
+   the token rule, and a border pair takes --color-text-muted directly. */
 .shape-picker__chevron {
   flex: 0 0 auto;
   width: var(--space-2);
@@ -256,7 +257,21 @@
 
 /* Floating, and capped: fourteen options today and more coming, so the list
    scrolls rather than running off the panel. --size-picker-max-h was tokenised
-   for exactly this. */
+   for exactly this.
+
+   The surface is --color-panel-bg, which is the colour of the inspector body
+   the list floats over, and that is a deliberate departure from the ruling the
+   native select reached. That select's popup stepped to --color-tab-active-bg
+   instead, for two reasons worth keeping now that COS-415 has deleted the file
+   they were written in: painting a floating surface its parent's own colour
+   made it read as a hole cut in the panel rather than a layer above it, and it
+   made the cross-fade below all but invisible — a fade between two shades five
+   luminance levels apart out of 256 runs correctly and looks like nothing
+   happened, where the step to --color-tab-active-bg opens that to fourteen.
+   Neither argument fully carries here: this list is opaque over inspector rows
+   rather than over bare panel, so the fade has content to mask and the hairline
+   --color-border-panel is what draws the edge. Revisit it as a design call, not
+   as a bug. */
 .shape-picker__list {
   position: absolute;
   z-index: var(--layer-sticky);
