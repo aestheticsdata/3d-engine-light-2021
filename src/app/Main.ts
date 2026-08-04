@@ -8,14 +8,7 @@
 // that widget.
 
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import CameraController, {
-  DEFAULT_PITCH,
-  DEFAULT_ROLL,
-  DEFAULT_ROTATION_SPEED,
-  DEFAULT_YAW,
-  DEFAULT_ZOOM_SLIDER_VALUE,
-  ROTATION_SPEED_SLIDER_MAX,
-} from "@app/CameraController";
+import CameraController from "@app/CameraController";
 import FPSMeter from "@app/FPSMeter";
 import RenderLoop from "@app/RenderLoop";
 import ShapeSwitcher from "@app/ShapeSwitcher";
@@ -27,19 +20,12 @@ import Viewport from "@primitives/Viewport";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
+import ShapeTab from "@ui/inspector/ShapeTab";
+import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import MaterialSummary from "@ui/MaterialSummary";
-import PrimitivePicker from "@ui/PrimitivePicker";
-import RenderPipelinePanel, { DEFAULT_OPACITY_SLIDER_VALUE } from "@ui/RenderPipelinePanel";
+import RenderPipelinePanel from "@ui/RenderPipelinePanel";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
 import ShapeStoryPanel from "@ui/ShapeStoryPanel";
-import SliderBank, {
-  OPACITY_SLIDER,
-  PITCH_SLIDER,
-  ROLL_SLIDER,
-  ROTATION_SPEED_SLIDER,
-  YAW_SLIDER,
-  ZOOM_SLIDER,
-} from "@ui/SliderBank";
 import StatusBar from "@ui/StatusBar";
 import SceneGraphPanel from "@ui/scene/SceneGraphPanel";
 import { MESH_ROW_ID } from "@ui/scene/sceneRows";
@@ -58,10 +44,8 @@ import type { Data3D } from "@data/data";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type FieldWriter from "@ui/FieldWriter";
-import type { SliderBinding } from "@ui/SliderBank";
 
 const TRANSITION_DURATION_MS = 1250;
-const PRIMITIVE_SELECT = "#primitives";
 
 class Main {
   // The console's only store, constructed here rather than exported beside its
@@ -83,8 +67,7 @@ class Main {
   private readonly shapeStory: ShapeStoryPanel;
   private readonly pipeline: RenderPipelinePanel;
   private readonly transport: TransportBar;
-  private readonly sliders: SliderBank;
-  private readonly picker: PrimitivePicker;
+  private readonly shapeTab: ShapeTab;
   private readonly framerate: FramerateWidget;
   private readonly frameTime: FrameTimeWidget;
   private readonly geometry: GeometryWidget;
@@ -139,10 +122,29 @@ class Main {
     this.renderedTriangles = 0;
     this.shapeInfo = new ShapeInfoPanel();
     this.shapeStory = new ShapeStoryPanel();
+    // Before the pipeline panel, and that order is load-bearing: this tab
+    // creates #opacitySlider, and RenderPipelinePanel resolves it in its own
+    // constructor to own the disabled state and the tooltip.
+    this.shapeTab = new ShapeTab({
+      objects3D: this.objects3D,
+      store: this.uiState,
+      // Lit from the click, not from the transition: a pick made while one is
+      // animating is parked in the switcher's queue and does not reach
+      // onTransitionStart for up to 1250ms, which would leave the chip the user
+      // just pressed dark for the whole animation.
+      onPick: (primitive) => {
+        this.shapeTab.setActivePrimitive(primitive);
+        this.shapes.request(primitive);
+      },
+      onPitch: (value) => this.camera.setPitch(value),
+      onYaw: (value) => this.camera.setYaw(value),
+      onRoll: (value) => this.camera.setRoll(value),
+      onSpin: (value) => this.camera.setRotationSpeed(value),
+      onZoom: (value) => this.changeZoom(value),
+      onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
+    });
     this.pipeline = new RenderPipelinePanel();
     this.transport = new TransportBar();
-    this.picker = new PrimitivePicker({ selector: PRIMITIVE_SELECT });
-    this.sliders = new SliderBank({ bindings: this.sliderBindings() });
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
       transitionMachine: new ShapeTransitionMachine({
@@ -156,6 +158,7 @@ class Main {
         // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
         // the object the row describes changes underneath it.
         this.uiState.setState({ sceneSelection: MESH_ROW_ID });
+        this.shapeTab.setActivePrimitive(primitive);
         this.animateShapeInfoPanel(primitive);
       },
     });
@@ -208,7 +211,6 @@ class Main {
       galaxy: galaxyUrl,
     });
 
-    this.picker.populate(this.shapes.names, this.shapes.request);
     // Resolution and the four camera placeholders are written once: none of
     // them changes while the console is open. The histogram's 28 bars are the
     // same kind of write — built once, then only their heights change.
@@ -216,9 +218,10 @@ class Main {
     this.zBuffer.mount();
     this.cameraStats.seed();
     this.system.seed();
-    this.sliders.applyDefaults();
-    this.sliders.attach();
-    this.sliders.syncFromDom();
+    // After the textures resolve: the option thumbnails go through the real
+    // rasteriser, so the cube needs its galaxy face to exist first.
+    this.shapeTab.paintPrimitiveOptions(new ShapeThumbnails(this.objects3D, this.textures));
+    this.shapeTab.syncFromStore();
     this.repaintForPrimitive(primitive);
     // Pushed explicitly rather than relying on the markup's seed, so the bar and
     // the transport have one source of truth from the first paint.
@@ -237,47 +240,6 @@ class Main {
     // The one collaborator holding a timer and a media-query listener: every
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
-  }
-
-  // Six sliders, enumerated once. The bank owns the mechanism and knows nothing
-  // about what a zoom slider is; pairing a selector with its default and its
-  // collaborator is wiring, and wiring lives here.
-  private sliderBindings(): SliderBinding[] {
-    return [
-      {
-        selector: ZOOM_SLIDER,
-        defaultValue: DEFAULT_ZOOM_SLIDER_VALUE,
-        apply: this.changeZoom,
-      },
-      {
-        selector: PITCH_SLIDER,
-        defaultValue: DEFAULT_PITCH,
-        apply: (value) => this.camera.setPitch(value),
-      },
-      {
-        selector: YAW_SLIDER,
-        defaultValue: DEFAULT_YAW,
-        apply: (value) => this.camera.setYaw(value),
-      },
-      {
-        selector: ROLL_SLIDER,
-        defaultValue: DEFAULT_ROLL,
-        apply: (value) => this.camera.setRoll(value),
-      },
-      {
-        selector: OPACITY_SLIDER,
-        defaultValue: DEFAULT_OPACITY_SLIDER_VALUE,
-        apply: this.pipeline.setOpacityFromSlider,
-      },
-      {
-        selector: ROTATION_SPEED_SLIDER,
-        // Clamped because the camera's default knows nothing about the markup's
-        // max: if the two ever disagree the browser pins the value silently and
-        // the read-back then contradicts the camera.
-        defaultValue: Math.min(DEFAULT_ROTATION_SPEED, ROTATION_SPEED_SLIDER_MAX),
-        apply: (value) => this.camera.setRotationSpeed(value),
-      },
-    ];
   }
 
   // The HUD's `dist` is the camera distance, not the raw offset: the offset
@@ -307,6 +269,11 @@ class Main {
     this.viewportHud.setMode(this.pipeline.wireframe);
     this.shapeInfo.setShading(this.pipeline.shadingMode);
     this.shapeInfo.setOpacity(this.pipeline.opacity);
+    // The pipeline owns the opacity value and its availability — culling being
+    // switched on resets it to fully opaque and disables the control — so the
+    // row follows it rather than holding a second copy.
+    this.shapeTab.setOpacityUi(Math.round(this.pipeline.opacity * 100));
+    this.shapeTab.setOpacityDisabled(this.pipeline.getRenderOptions().cullBackfaces);
     this.renderPausedFrame();
   };
 
@@ -473,10 +440,11 @@ class Main {
   // defaults and is restored here without this function being edited.
   private resetControls = () => {
     this.pipeline.reset();
-    this.sliders.applyDefaults();
-    this.sliders.syncFromDom();
-    this.pipeline.syncOpacityAvailability();
     this.uiState.resetAll();
+    // After resetAll, so the rows read the restored defaults — and it re-applies
+    // them to the camera, which is what the slider bank's read-back used to do.
+    this.shapeTab.syncFromStore();
+    this.pipeline.syncOpacityAvailability();
     this.syncPipelineReadouts();
     this.framerate.reset();
   };

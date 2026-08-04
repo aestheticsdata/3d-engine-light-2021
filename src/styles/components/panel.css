@@ -18,6 +18,20 @@
   min-height: 0;
 }
 
+/* A section that is a card on mobile and a bare group on desktop. It lives here
+   rather than in the consuming file because stripping the card is a statement
+   about the card, and panel.css is the one file allowed to make it — the
+   alternative was a second background/border/radius triple somewhere else,
+   which is exactly the duplication this file exists to prevent. */
+@media (min-width: 900px) {
+  .panel--seam {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+}
+
 .panel__header {
   display: flex;
   flex: 0 0 auto;
