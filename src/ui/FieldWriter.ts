@@ -17,7 +17,7 @@
 //   shell        buildDesktop, buildMobile, fps, trisDrawn
 //   status bar   statusLabel, selectedId, shadingMode, texLabel
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
-//   frame time   frameMs, frameTimeNote
+//   frame time   frameMs, frameTimeNote, ftTransform, ftBackground, ftRaster
 //   geometry     geoVertices, geoEdges, geoTriangles, geoCulled, polyBudget
 //   camera card  camStatPosition, camStatSpin, camStatDistance, camStatFocal,
 //                camStatFov — deliberately not the viewport's camPos / camRot /

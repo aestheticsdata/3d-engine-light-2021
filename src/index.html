@@ -553,55 +553,30 @@
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
                 </div>
                 <div class="panel__body panel__body--pad-4 frame-time__body">
+                  <!-- Three measured phases, three segments. Widths are set
+                       by FrameTimeWidget from real timings; the mount is
+                       repeated in BUDGETS below and both carry the same
+                       data-ft-segment names so one write feeds both. -->
                   <div class="frame-time__bar">
-                    <span
-                      class="frame-time__segment"
-                      data-state="unattributed"
-                      data-placeholder="true"
-                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                      aria-describedby="ph-frame-time"
-                    ></span>
+                    <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
+                    <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                    <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
                   </div>
                   <div class="frame-time__legend">
                     <div class="frame-time__legendRow">
                       <span class="frame-time__swatch frame-time__swatch--transform"></span>
                       <span class="frame-time__legendLabel">TRANSFORM</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__legendValue" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="frame-time__legendRow">
-                      <span class="frame-time__swatch frame-time__swatch--clip"></span>
-                      <span class="frame-time__legendLabel">CLIP / CULL</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__swatch frame-time__swatch--background"></span>
+                      <span class="frame-time__legendLabel">BACKGROUND</span>
+                      <span class="frame-time__legendValue" data-field="ftBackground">&mdash;</span>
                     </div>
                     <div class="frame-time__legendRow">
                       <span class="frame-time__swatch frame-time__swatch--raster"></span>
                       <span class="frame-time__legendLabel">RASTERIZE</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
-                    </div>
-                    <div class="frame-time__legendRow">
-                      <span class="frame-time__swatch frame-time__swatch--present"></span>
-                      <span class="frame-time__legendLabel">PRESENT</span>
-                      <span
-                        class="frame-time__legendValue"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash;</span>
+                      <span class="frame-time__legendValue" data-field="ftRaster">&mdash;</span>
                     </div>
                   </div>
                   <div class="frame-time__footer">
@@ -609,13 +584,13 @@
                     <span
                       class="frame-time__footerValue"
                       data-placeholder="true"
-                      title="Per-phase frame timing is not instrumented yet (de-mock E6)."
+                      title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
                       aria-describedby="ph-frame-time"
                     >&mdash; px/f</span>
                   </div>
                 </div>
               </section>
-              <span class="placeholder-hint" id="ph-frame-time">Per-phase frame timing is not instrumented yet (de-mock E6).</span>
+              <span class="placeholder-hint" id="ph-frame-time">Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6).</span>
 
               <!-- Mobile-only: BUDGETS' shell and its first block. The
                    geometry ticket appends a POLY BUDGET block inside
@@ -629,16 +604,12 @@
                   <div class="budgets__frameTime">
                     <div class="budgets__frameTimeLabelRow">
                       <span class="budgets__frameTimeLabel">FRAME TIME</span>
-                      <span class="budgets__frameTimeSub">transform &middot; clip &middot; raster &middot; present</span>
+                      <span class="budgets__frameTimeSub">transform &middot; background &middot; raster</span>
                     </div>
                     <div class="frame-time__bar">
-                      <span
-                        class="frame-time__segment"
-                        data-state="unattributed"
-                        data-placeholder="true"
-                        title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      ></span>
+                      <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
+                      <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                      <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
                     </div>
                   </div>
                   <!-- BUDGETS' second block, the mobile half of the desktop
@@ -658,13 +629,11 @@
 
               <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
                    primitives bar its own rows. -->
-              <section
-                class="panel frame-time-stats"
-                data-mpanel="stats"
-                data-placeholder="true"
-                title="Per-phase frame timing is not instrumented yet (de-mock E6)."
-                aria-describedby="ph-frame-time"
-              >
+              <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
+                   primitives bar its own rows. No longer marked as a
+                   placeholder — three of the four rows are measured now, and
+                   only FILL RATE still carries the affordance. -->
+              <section class="panel frame-time-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">frame time</span>
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
@@ -673,23 +642,24 @@
                   <div class="stat-list">
                     <div class="stat-row">
                       <span class="stat-row__label">TRANSFORM</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--transform">&mdash;</span>
+                      <span class="stat-row__value stat-row__value--transform" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="stat-row">
-                      <span class="stat-row__label">CLIP / CULL</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--clip">&mdash;</span>
+                      <span class="stat-row__label">BACKGROUND</span>
+                      <span class="stat-row__value stat-row__value--clip" data-field="ftBackground">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">RASTERIZE</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--raster">&mdash;</span>
-                    </div>
-                    <div class="stat-row">
-                      <span class="stat-row__label">PRESENT</span>
-                      <span class="stat-row__value stat-row__value--dim stat-row__value--present-text">&mdash;</span>
+                      <span class="stat-row__value stat-row__value--raster" data-field="ftRaster">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">FILL RATE</span>
-                      <span class="stat-row__value stat-row__value--dim">&mdash; px</span>
+                      <span
+                        class="stat-row__value stat-row__value--dim"
+                        data-placeholder="true"
+                        title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
+                        aria-describedby="ph-frame-time"
+                      >&mdash; px</span>
                     </div>
                   </div>
                 </div>

@@ -25,11 +25,32 @@
   background: var(--color-surface-sunken);
 }
 
-/* One unattributed child today — flex:1 fills the bar without a percentage
-   width, since there is only ever one segment until E6 lands. */
+/* Three measured phases now, so the width is a percentage the widget writes
+   rather than a flex share: the segments have to add up to the frame, and a
+   grow factor would redistribute the rounding error instead of showing it. */
 .frame-time__segment {
-  flex: 1;
-  background: var(--color-ft-present);
+  flex: 0 0 auto;
+  width: 0;
+}
+
+.frame-time__segment--transform {
+  background: var(--color-ft-transform);
+}
+
+/* Reuses the CLIP / CULL blue. The token keeps the design's name because
+   colors.css is the tokens ticket's file; what changed is which real phase
+   occupies that slot — this renderer has a background pass and has no
+   separable clip stage. */
+.frame-time__segment--background {
+  background: var(--color-ft-clip);
+}
+
+.frame-time__segment--raster {
+  background: var(--color-ft-raster);
+}
+
+.frame-time__swatch--background {
+  background: var(--color-ft-clip);
 }
 
 .frame-time__legend {
@@ -55,16 +76,8 @@
   background: var(--color-ft-transform);
 }
 
-.frame-time__swatch--clip {
-  background: var(--color-ft-clip);
-}
-
 .frame-time__swatch--raster {
   background: var(--color-ft-raster);
-}
-
-.frame-time__swatch--present {
-  background: var(--color-ft-present);
 }
 
 .frame-time__legendLabel {
@@ -99,12 +112,9 @@
   color: var(--color-text-primary);
 }
 
-/* The mobile-only row colours the statGroups card ships dormant (D-per-row
-   note in COS-224): the de-mock ticket flips them on by dropping --dim from
-   the row's class list, not by touching CSS. The scoped override below is
-   what keeps --dim winning over these today regardless of import order —
-   frame-time.css loads after rows.css, so an unscoped --transform etc. would
-   otherwise outrank rows.css's own --dim rule. */
+/* The mobile statGroups card's phase colours. These carry live numbers now, so
+   they are no longer paired with --dim; the scoped override further down is
+   what keeps --dim winning on FILL RATE, the one row still unmeasured. */
 .stat-row__value--transform {
   color: var(--color-ft-transform);
 }
@@ -117,10 +127,8 @@
   color: var(--color-ft-raster);
 }
 
-.stat-row__value--present-text {
-  color: var(--color-ft-present-text);
-}
-
+/* FILL RATE is the last placeholder in this card, and --dim has to keep
+   winning over the phase colours above regardless of import order. */
 .frame-time-stats .stat-row__value--dim {
   color: var(--color-text-dim);
 }

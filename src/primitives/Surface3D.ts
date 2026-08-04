@@ -8,6 +8,18 @@ export interface MeshRenderRequest {
   offsetY?: number;
 }
 
+// What one call to render() cost, split by the passes this renderer actually
+// has. The design's four phases (TRANSFORM / CLIP-CULL / RASTERIZE / PRESENT)
+// do not map onto it: there is no present step in a 2D canvas, and the backface
+// test lives inside Triangle.render where it cannot be timed separately without
+// instrumenting the inner loop. These two are separable, real, and measured
+// here rather than by the caller — only this class knows where the boundary is.
+export interface RenderStats {
+  triangles: number;
+  backgroundMs: number;
+  rasterMs: number;
+}
+
 class Surface3D {
   private readonly surface3DContainer: CanvasRenderingContext2D;
   private readonly backgroundRenderer: BackgroundRenderer | null;
@@ -17,7 +29,9 @@ class Surface3D {
     this.backgroundRenderer = backgroundRenderer;
   }
 
-  public render(renderables: MeshRenderRequest[], options: TriangleRenderOptions): number {
+  public render(renderables: MeshRenderRequest[], options: TriangleRenderOptions): RenderStats {
+    const backgroundStartedAt = performance.now();
+
     this.backgroundRenderer?.render(this.surface3DContainer);
     if (!this.backgroundRenderer) {
       this.surface3DContainer.clearRect(
@@ -27,6 +41,8 @@ class Surface3D {
         this.surface3DContainer.canvas.height,
       );
     }
+
+    const rasterStartedAt = performance.now();
     let renderedTriangles = 0;
 
     for (const renderable of renderables) {
@@ -38,7 +54,11 @@ class Surface3D {
       );
     }
 
-    return renderedTriangles;
+    return {
+      triangles: renderedTriangles,
+      backgroundMs: rasterStartedAt - backgroundStartedAt,
+      rasterMs: performance.now() - rasterStartedAt,
+    };
   }
 }
 

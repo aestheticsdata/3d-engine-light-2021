@@ -394,10 +394,15 @@ class Main {
     const renderables = this.shapes.getRenderables();
     // Rotated even while hidden, so showing the mesh again resumes the spin
     // where it would have been rather than where it was hidden.
+    //
+    // Timed here rather than inside CameraController: the phase the FRAME TIME
+    // card calls TRANSFORM is this whole loop over the active meshes, and only
+    // the caller of the loop knows where it begins and ends.
+    const transformStartedAt = performance.now();
     renderables.forEach((renderable) => {
       this.camera.rotate(renderable.mesh);
     });
-    this.paint(renderables);
+    this.paint(renderables, performance.now() - transformStartedAt);
   }
 
   private renderPausedFrame() {
@@ -405,7 +410,9 @@ class Main {
       return;
     }
 
-    this.paint(this.shapes.getRenderables());
+    // Zero transform, and that is the truth rather than a gap: a paused repaint
+    // re-paints the frame, it does not re-rotate it.
+    this.paint(this.shapes.getRenderables(), 0);
     this.frameTime.render();
     this.geometry.render();
     this.zBuffer.render();
@@ -421,7 +428,7 @@ class Main {
   // render option that is not a control, and it is required rather than optional
   // so a missing hand-off is a compile error instead of "dog" painted as a CSS
   // colour.
-  private paint(renderables: MeshRenderRequest[]) {
+  private paint(renderables: MeshRenderRequest[], transformMs: number) {
     // The submitted list and the render options are both named rather than
     // inlined because the GEOMETRY card needs them below: it counts what was
     // actually handed to the renderer — a hidden mesh submits nothing — and it
@@ -429,11 +436,18 @@ class Main {
     // the card cannot describe a different frame than the one on screen.
     const submitted = this.sceneGraph.isMeshHidden() ? [] : renderables;
     const options = { ...this.pipeline.getRenderOptions(), textures: this.textures };
-    const startedAt = performance.now();
 
-    this.renderedTriangles = this.surface3D.render(submitted, options);
+    const stats = this.surface3D.render(submitted, options);
 
-    this.frameTime.pushSample(performance.now() - startedAt);
+    this.renderedTriangles = stats.triangles;
+    // The three phases describe one frame because they come from one frame: the
+    // transform this class timed, and the two passes Surface3D timed around its
+    // own boundary.
+    this.frameTime.pushSample({
+      transformMs,
+      backgroundMs: stats.backgroundMs,
+      rasterMs: stats.rasterMs,
+    });
     this.geometry.pushFrame(submitted, this.renderedTriangles, options.cullBackfaces);
     this.zBuffer.pushFrame(submitted);
   }
