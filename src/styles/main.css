@@ -34,6 +34,7 @@
 @import url(components/zBuffer.css);
 @import url(components/cameraStats.css);
 @import url(components/system.css);
+@import url(inspector.css);
 @import url(layout.css);
 
 /* Base rules. These replace the old grey-page body wholesale — the console is

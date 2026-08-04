@@ -8,6 +8,16 @@
   padding: var(--space-0-5) 0;
 }
 
+/* The head groups the label and the value for mobile, where they share a line
+   above the track. Desktop wants them in the row's own three columns instead,
+   so here the wrapper has no box at all and `order` restores the visual
+   sequence the DOM cannot give both branches at once: label, track, value.
+   The mobile block below turns the head back into a real flex line, which also
+   makes these order values inert there. */
+.slider-row__head {
+  display: contents;
+}
+
 .slider-row__label {
   flex: 0 0 var(--size-slider-label-col);
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-snug) var(--font-sans);
@@ -24,11 +34,13 @@ input[type="range"] {
 }
 
 .slider-row input[type="range"] {
+  order: 1;
   flex: 1;
   height: var(--size-slider-input);
 }
 
 .slider-row__value {
+  order: 2;
   flex: 0 0 var(--size-slider-value-col);
   text-align: right;
   font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
@@ -135,7 +147,12 @@ input[type="range"]:focus-visible {
     letter-spacing: var(--tracking-md);
   }
 
+  /* flex:none, and it is not tidying: the desktop rule's `flex: 1` sizes the
+     main axis, and the main axis here is the *height* because the row is a
+     column below the breakpoint. Left alone it collapses the 26px track to the
+     3px the thumb needs, which is a touch target nobody can hit. */
   .slider-row input[type="range"] {
+    flex: none;
     width: 100%;
   }
 

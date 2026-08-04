@@ -15,8 +15,8 @@
 // value and its listener while this class owns `disabled` and the tooltip.
 
 import DOMScope from "@ui/DOMScope";
+import { OPACITY_SLIDER } from "@ui/inspector/MaterialSection";
 import { modeLabel } from "@ui/modeLabel";
-import { OPACITY_SLIDER } from "@ui/SliderBank";
 import FollowCursorTooltip from "@ui/tooltip";
 
 import type { ShadingMode } from "@ui/modeLabel";

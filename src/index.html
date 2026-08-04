@@ -873,48 +873,62 @@
           <div class="inspector__body panel__body">
 
             <section id="panelShape" class="inspectorPanel" role="tabpanel" data-panel="shape" data-mpanel="shape">
-              <div class="section-title">PRIMITIVE</div>
-              <!-- The wrapper carries the chevron and nothing else: a <select>
-                   paints no pseudo-elements of its own. Still a native select
-                   underneath, so keyboard, typeahead and the mobile picker are
-                   unchanged. COS-229 replaces the whole control with a chip
-                   grid. -->
-              <span class="select">
-                <select id="primitives" class="select__input" aria-label="Primitive"></select>
-                <span class="select__chevron" aria-hidden="true"></span>
-              </span>
 
-              <div class="section-title">TRANSFORM</div>
-              <!-- Labels are uppercase in the markup, not text-transformed: the
-                   row label is 9px tracked type and the design sets it as
-                   literal capitals, the same convention the shape info rows
-                   follow. The names themselves are still the engine's own —
-                   COS-229 renames them to the design's PITCH / YAW / ROLL RATE,
-                   SPIN and SCALE when it remaps the sliders to UI space. -->
-              <label class="slider-row" for="zoomSlider">
-                <span class="slider-row__label">ZOOM</span>
-                <input id="zoomSlider" type="range" min="0" max="100" value="50" />
-              </label>
-              <label class="slider-row" for="opacitySlider">
-                <span class="slider-row__label">OPACITY</span>
-                <input id="opacitySlider" type="range" min="0" max="100" value="100" />
-              </label>
-              <label class="slider-row" for="pitchSlider">
-                <span class="slider-row__label">PITCH</span>
-                <input id="pitchSlider" type="range" min="0" max="800" value="400" />
-              </label>
-              <label class="slider-row" for="yawSlider">
-                <span class="slider-row__label">YAW</span>
-                <input id="yawSlider" type="range" min="0" max="800" value="400" />
-              </label>
-              <label class="slider-row" for="rollSlider">
-                <span class="slider-row__label">ROLL</span>
-                <input id="rollSlider" type="range" min="-1000" max="1200" value="200" />
-              </label>
-              <label class="slider-row" for="rotationSpeedSlider">
-                <span class="slider-row__label">ROTATION SPEED</span>
-                <input id="rotationSpeedSlider" type="range" min="0" max="2000" value="100" />
-              </label>
+              <!-- Three sections on desktop, three cards on mobile: the same
+                   elements either way. `.panel--seam` is what strips the card
+                   chrome above the breakpoint, so the section headline is the
+                   `.section-title` on desktop and the card's own
+                   `.panel__header` below it — one DOM, no duplicated controls. -->
+              <section class="panel panel--seam shape-section">
+                <div class="panel__header panel__header--card shape-section__cardHead">
+                  <span class="panel__title">primitive</span>
+                </div>
+                <div class="shape-section__head">
+                  <span class="section-title">PRIMITIVE</span>
+                  <span class="shape-section__count" id="primitiveCount">0</span>
+                </div>
+                <!-- Chips are generated from the registry by PrimitiveSection;
+                     the grid stays four columns at any count and scrolls
+                     internally on desktop past six rows. -->
+                <div class="shape-section__body">
+                  <!-- ShapePicker builds the trigger and the list into this
+                       mount; the options carry a real rendered thumbnail, which
+                       is why a native <select> could not do the job. -->
+                  <div class="shape-picker" id="primitivePicker"></div>
+                </div>
+              </section>
+
+              <div class="divider shape-section__rule"></div>
+
+              <section class="panel panel--seam shape-section">
+                <div class="panel__header panel__header--card shape-section__cardHead">
+                  <span class="panel__title">transform</span>
+                </div>
+                <div class="shape-section__head">
+                  <span class="section-title">TRANSFORM</span>
+                </div>
+                <div class="shape-section__body panel__body--pad-form" id="transformRows"></div>
+              </section>
+
+              <div class="divider shape-section__rule"></div>
+
+              <section class="panel panel--seam shape-section">
+                <div class="panel__header panel__header--card shape-section__cardHead">
+                  <span class="panel__title">material</span>
+                </div>
+                <div class="shape-section__head">
+                  <span class="section-title">MATERIAL</span>
+                </div>
+                <div class="shape-section__body panel__body--pad-form">
+                  <div class="chip-grid shape-section__textures" id="textureGrid"></div>
+                  <div class="shape-section__baseRow">
+                    <span class="shape-section__baseLabel">BASE</span>
+                    <span class="shape-section__swatches" id="baseSwatches"></span>
+                  </div>
+                  <div id="materialRows"></div>
+                </div>
+              </section>
+
             </section>
 
             <section id="panelRender" class="inspectorPanel" role="tabpanel" data-panel="render" data-mpanel="render">

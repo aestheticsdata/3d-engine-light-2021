@@ -34,6 +34,22 @@ export interface UIState {
   // graph subscribes rather than reading the renderer itself, so there is one
   // number behind the row, the toolbar and the telemetry card.
   drawnTriangles?: number;
+
+  // --- SHAPE tab -----------------------------------------------------------
+  // UI-space rotation rates, signed -100..100 with a real zero. The engine's
+  // own values are off-centre and differ per axis; rotationRates.ts is the only
+  // place that knows the mapping. Registered by TransformSection.
+  pitchRate?: number;
+  yawRate?: number;
+  rollRate?: number;
+  spin?: number;
+  // No engine behind these four yet (de-mock E4). They are stored rather than
+  // discarded so the console remembers the choice and RESET can undo it.
+  zoom?: number;
+  scale?: number;
+  texture?: string;
+  baseColor?: string;
+  uvScale?: number;
 }
 
 // Optional above, and guaranteed below: every field is filled by the owning

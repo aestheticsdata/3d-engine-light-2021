@@ -1,0 +1,189 @@
+/* Owns: the SHAPE tab's section scaffolding — the header row, the PRIMITIVE
+   scroll cap and its mobile release, and the MATERIAL base row.
+   Must not own: the chip, swatch, slider or range recipes (components/), the
+   card chrome (panel.css) or where the inspector sits (layout.css). */
+
+/* The gap is what keeps the section title off its own content. The old markup
+   got it from .inspectorPanel's gap; these sections are their own flex context
+   and have to state it. It stays smaller than the 13px above the title, so the
+   heading still reads as belonging to what follows it and not to the group
+   above — COS-354's ruling, which this tab must not undo. */
+.shape-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+/* The card header is mobile's headline; on desktop the .section-title below it
+   does that job, so exactly one of the two is ever displayed. */
+.shape-section__cardHead {
+  display: none;
+}
+
+.shape-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* The primitive count, in the panel note's typography — the same meta voice the
+   telemetry headers use, so the number reads as a caption and not as a value. */
+.shape-section__count {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+.shape-section__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.shape-section__textures {
+  margin-bottom: var(--space-4);
+}
+
+.shape-section__baseRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin-bottom: var(--space-4);
+}
+
+.shape-section__baseLabel {
+  flex: 0 0 var(--size-slider-label-col);
+  font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-lg);
+  color: var(--color-text-muted);
+}
+
+.shape-section__swatches {
+  display: flex;
+  gap: var(--space-1-5);
+}
+
+@media (max-width: 899px) {
+  /* Three cards, so the section rules between them go and the card header
+     replaces the section title. */
+  .shape-section__rule,
+  .shape-section__head {
+    display: none;
+  }
+
+  .shape-section__cardHead {
+    display: flex;
+  }
+
+  .shape-section__textures {
+    margin-bottom: var(--space-5);
+  }
+
+  .shape-section__baseRow {
+    gap: var(--space-4);
+    margin-bottom: var(--space-2-5);
+  }
+
+  .shape-section__baseLabel {
+    font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-md);
+  }
+}
+
+/* ---- the primitive picker ------------------------------------------------- */
+
+/* A closed control that opens a list, which is what the console had before the
+   refonte. The grid of fourteen tiles it briefly replaced was a wall, and it
+   pushed TRANSFORM and MATERIAL off the bottom of the inspector.
+   Anchored, so the list floats over what follows rather than pushing it down. */
+.shape-picker {
+  position: relative;
+}
+
+.shape-picker__trigger,
+.shape-picker__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-sunken);
+  border: var(--size-hairline) solid var(--color-border-panel);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.shape-picker__option {
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+}
+
+.shape-picker__thumb {
+  flex: 0 0 auto;
+  width: var(--size-chip-shape);
+  height: var(--size-chip-shape);
+}
+
+.shape-picker__label {
+  flex: 1;
+  font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-md);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.shape-picker__count {
+  font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+/* The same chevron the native select wears, so the two controls read as the
+   same family — select.css owns the skin of that one, this is its geometry. */
+.shape-picker__chevron {
+  flex: 0 0 auto;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-right: var(--size-mark) solid var(--color-text-muted);
+  border-bottom: var(--size-mark) solid var(--color-text-muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+
+.shape-picker.is-open .shape-picker__chevron {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+/* Floating, and capped: fourteen options today and more coming, so the list
+   scrolls rather than running off the panel. --size-picker-max-h was tokenised
+   for exactly this. */
+.shape-picker__list {
+  position: absolute;
+  z-index: var(--layer-sticky);
+  top: calc(100% + var(--space-1));
+  right: 0;
+  left: 0;
+  max-height: var(--size-picker-max-h);
+  overflow-y: auto;
+  background: var(--color-panel-bg);
+  border: var(--size-hairline) solid var(--color-border-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-popup, none);
+}
+
+.shape-picker__option.is-active {
+  background: var(--color-surface-sunken);
+}
+
+.shape-picker__option.is-active .shape-picker__label {
+  color: var(--color-accent);
+}
+
+.shape-picker__trigger:focus-visible,
+.shape-picker__option:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: calc(-1 * var(--size-mark));
+}
+
+@media (hover: hover) {
+  .shape-picker__option:hover {
+    background: var(--color-surface-sunken);
+  }
+}

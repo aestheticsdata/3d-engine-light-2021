@@ -1,0 +1,106 @@
+// One small rendered picture of each primitive, painted once.
+//
+// It is the real mesh through the real rasteriser, not an icon set: the same
+// MeshFactory, the same Triangle.render, the same baked materials. A drawn
+// thumbnail would be a second source of truth for what a shape looks like, and
+// it would be wrong the day COS-201 adds a solid nobody drew an icon for.
+//
+// Its own MeshFactory and Viewport, because the app's are bound to the 1024x640
+// canvas: Point3D caches the projection centre per point at construction, so a
+// mesh built for the stage cannot be re-aimed at a 44px thumbnail.
+//
+// Rendered after the textures resolve, so the cube shows its galaxy face rather
+// than a hole — which is why Main calls this from init() and not from its
+// constructor.
+
+import Matrix3D from "@primitives/Matrix3D";
+import MeshFactory from "@primitives/MeshFactory";
+import Viewport from "@primitives/Viewport";
+
+import type { Data3D } from "@data/types";
+import type TextureRegistry from "@textures/TextureRegistry";
+
+// The painted size is --size-chip-shape; the backing store is twice that, so
+// the picture is sharp on a 2x display instead of being scaled up from 44
+// device pixels. The CSS box is what the layout sees, this is only resolution.
+const PAINTED_SIZE = 44;
+const SIZE = PAINTED_SIZE * 2;
+// A three-quarter view: enough yaw to show a second face, enough pitch to show
+// the top. Without it a cube is a square and a cross is a plus sign, which is
+// exactly what a flat thumbnail must not look like.
+const VIEW_PITCH_DEGREES = -22;
+const VIEW_YAW_DEGREES = 32;
+const FOCAL = 300;
+// How much of the half-tile the silhouette is allowed to fill. Short of 1 so a
+// shape never touches the edge of its own thumbnail.
+const FIT_MARGIN = 0.82;
+
+class ShapeThumbnails {
+  private readonly objects3D: Data3D;
+  private readonly textures: TextureRegistry;
+
+  constructor(objects3D: Data3D, textures: TextureRegistry) {
+    this.objects3D = objects3D;
+    this.textures = textures;
+  }
+
+  public paint(primitive: string): HTMLCanvasElement {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    canvas.style.width = `${PAINTED_SIZE}px`;
+    canvas.style.height = `${PAINTED_SIZE}px`;
+    canvas.className = "shape-picker__thumb";
+    canvas.setAttribute("aria-hidden", "true");
+
+    const context = canvas.getContext("2d");
+    const object3D = this.objects3D[primitive];
+
+    if (!context || !object3D) {
+      return canvas;
+    }
+
+    const mesh = new MeshFactory(new Viewport(canvas)).build(object3D);
+    const matrix = new Matrix3D();
+
+    mesh.changeFocal(FOCAL);
+    // Pushed back far enough that the widest solid in the registry still fits
+    // the box. Derived from the shape rather than fixed, so a future 10x larger
+    // polyhedron does not overflow its own thumbnail.
+    mesh.changeOffsetZ(this.offsetFor(object3D.points));
+
+    matrix.setAngle(VIEW_PITCH_DEGREES);
+    mesh.transformMesh(matrix.pitch);
+    matrix.setAngle(VIEW_YAW_DEGREES);
+    mesh.transformMesh(matrix.yaw);
+
+    mesh.renderMesh(context, 0, 0, { textures: this.textures, cullBackfaces: true, opacity: 1 });
+
+    return canvas;
+  }
+
+  // The bounding SPHERE, not the per-axis extent, and the difference is what was
+  // clipping the corners off: the mesh is rotated before it is drawn, and a cube
+  // whose faces sit at ±h has corners at h·√3. Only a radius is rotation
+  // invariant, so only a radius can bound the silhouette at every view angle.
+  //
+  // Then the perspective divide: scale = focal / (focal + z + offset), so the
+  // nearest point of the sphere projects largest. Solving R·focal/(focal + offset
+  // − R) ≤ target for the offset gives the bound below. It assumes a point can be
+  // at full radius laterally *and* at nearest depth at once, which it cannot —
+  // so it errs slightly wide, which is the direction to err in.
+  private offsetFor(points: number[][]): number {
+    let radius = 1;
+
+    points.forEach((point) => {
+      radius = Math.max(radius, Math.hypot(point[0], point[1], point[2]));
+    });
+
+    const target = (SIZE / 2) * FIT_MARGIN;
+
+    return (radius * FOCAL) / target + radius - FOCAL;
+  }
+}
+
+export default ShapeThumbnails;
