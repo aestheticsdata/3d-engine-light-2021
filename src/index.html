@@ -784,11 +784,36 @@
               </section>
             </div>
             <div class="telemetryRow">
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches. It leads the second telemetry
+                   row, so the shell's `.telemetryRow > :first-child` already
+                   grants it the design's extra growth — this card restates no
+                   flex of its own. The two body padding modifiers are stacked
+                   rather than chosen: --pad-4 is the desktop 8px and
+                   --pad-chart is declared inside the mobile query, so the
+                   breakpoint picks the winner with no rule of ours. -->
+              <!-- Not a placeholder and not called a z-buffer: the bars are the
+                   real distribution of triangle depths submitted this frame, so
+                   there is nothing here to dim or to caveat. The axis ends are
+                   written from the measured range rather than the design's
+                   0.1 / 1000.0, which were clip planes this engine has not got. -->
+              <section class="panel panel--fill zbuffer" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
-                  <span class="panel__title">z-buffer</span>
+                  <span class="panel__title"
+                    ><span class="zbuffer__title-full">depth distribution</span
+                    ><span class="zbuffer__title-short">depth</span></span
+                  >
+                  <span class="panel__note">near &rarr; far</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-chart zbuffer__body">
+                  <div id="zbufferBars" class="zbuffer__bars"></div>
+                  <!-- Three labels shipped, two shown on mobile: the middle one
+                       is hidden at the breakpoint rather than branched in JS. -->
+                  <div class="zbuffer__axis">
+                    <span id="zbufferNear">&mdash;</span>
+                    <span class="zbuffer__axisMiddle">depth</span>
+                    <span id="zbufferFar">&mdash;</span>
+                  </div>
+                </div>
               </section>
               <section class="panel panel--fill" data-mpanel="stats">
                 <div class="panel__header panel__header--card">

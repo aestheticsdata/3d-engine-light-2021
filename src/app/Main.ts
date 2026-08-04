@@ -47,6 +47,7 @@ import TransportBar from "@ui/TransportBar";
 import FramerateWidget from "@ui/telemetry/FramerateWidget";
 import FrameTimeWidget from "@ui/telemetry/FrameTimeWidget";
 import GeometryWidget from "@ui/telemetry/GeometryWidget";
+import ZBufferWidget from "@ui/telemetry/ZBufferWidget";
 import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
 
@@ -85,6 +86,7 @@ class Main {
   private readonly framerate: FramerateWidget;
   private readonly frameTime: FrameTimeWidget;
   private readonly geometry: GeometryWidget;
+  private readonly zBuffer: ZBufferWidget;
   private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
@@ -156,6 +158,7 @@ class Main {
     this.framerate = new FramerateWidget();
     this.frameTime = new FrameTimeWidget(this.fields);
     this.geometry = new GeometryWidget(this.fields);
+    this.zBuffer = new ZBufferWidget();
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -201,8 +204,10 @@ class Main {
 
     this.picker.populate(this.shapes.names, this.shapes.request);
     // Resolution and the four camera placeholders are written once: none of
-    // them changes while the console is open.
+    // them changes while the console is open. The histogram's 28 bars are the
+    // same kind of write — built once, then only their heights change.
     this.viewportHud.seed();
+    this.zBuffer.mount();
     this.sliders.applyDefaults();
     this.sliders.attach();
     this.sliders.syncFromDom();
@@ -342,6 +347,7 @@ class Main {
     this.framerate.render();
     this.frameTime.render();
     this.geometry.render();
+    this.zBuffer.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -389,6 +395,7 @@ class Main {
     this.paint(this.shapes.getRenderables());
     this.frameTime.render();
     this.geometry.render();
+    this.zBuffer.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -414,6 +421,7 @@ class Main {
 
     this.frameTime.pushSample(performance.now() - startedAt);
     this.geometry.pushFrame(submitted, this.renderedTriangles, options.cullBackfaces);
+    this.zBuffer.pushFrame(submitted);
   }
 
   private togglePause = () => {

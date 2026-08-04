@@ -1,0 +1,91 @@
+/* Owns: the depth histogram's bar area, its bars, its axis row and the two
+   breakpoint swaps the card makes (the title and the middle axis label).
+   Must not own: the card or its header (panel.css), or the body padding
+   (panel.css supplies both --pad-4 and --pad-chart).
+   Nothing here dims: the card reports measured triangle depths and carries no
+   placeholder affordance. */
+
+/* One card serves both branches. The desktop bar area flexes with the card and
+   the mobile one is a fixed 76px, the title shortens and the middle axis label
+   drops — all in CSS, so there is no JS branch and no second set of 28 bars to
+   keep in step. */
+.zbuffer__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.zbuffer__bars {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: var(--space-0-5);
+  min-height: 0;
+}
+
+/* No min-height here on purpose. The widget floors *occupied* bins so a bin
+   holding two triangles against a peak of six hundred still reads, and leaves
+   empty bins at 0 — a CSS floor cannot tell the two apart and would draw a stub
+   under every empty bin, which says "a few triangles here" where there are
+   none. */
+.zbuffer__bar {
+  flex: 1;
+  border-radius: var(--radius-bar-top);
+}
+
+.zbuffer__bar--near {
+  background: var(--color-zbuf-near);
+}
+
+.zbuffer__bar--mid {
+  background: var(--color-zbuf-mid);
+}
+
+.zbuffer__bar--far {
+  background: var(--color-zbuf-far);
+}
+
+.zbuffer__axis {
+  display: flex;
+  justify-content: space-between;
+  font: var(--font-weight-regular) var(--text-xs) / var(--leading-none) var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+.zbuffer__title-short {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .zbuffer__body {
+    gap: var(--space-2-5);
+  }
+
+  /* Fixed, not flex: on mobile the card is sized by its content rather than by
+     a row it has to fill, so the chart states its own height. */
+  .zbuffer__bars {
+    flex: none;
+    height: var(--size-zbuf-h);
+    min-height: auto;
+  }
+
+  /* One step larger than desktop, with only two labels left to carry — the
+     design drops the middle one where the axis is narrower. */
+  .zbuffer__axis {
+    font: var(--font-weight-regular) var(--text-sm) / var(--leading-none) var(--font-mono);
+  }
+
+  .zbuffer__axisMiddle {
+    display: none;
+  }
+
+  .zbuffer__title-full {
+    display: none;
+  }
+
+  .zbuffer__title-short {
+    display: inline;
+  }
+}

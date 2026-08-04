@@ -26,6 +26,16 @@ class Mesh {
     return this.triangles.length;
   }
 
+  // A visitor rather than a `depths` getter, and that is the point: the
+  // histogram walks this every frame over as many as 7920 triangles, and
+  // returning an array would allocate one per mesh per frame for a caller that
+  // only ever reads it once.
+  public forEachTriangleDepth(visit: (depth: number) => void) {
+    for (const triangle of this.triangles) {
+      visit(triangle.depth);
+    }
+  }
+
   public renderMesh(
     context: CanvasRenderingContext2D,
     offsetX: number = 0,
