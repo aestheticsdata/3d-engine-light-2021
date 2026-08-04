@@ -851,12 +851,42 @@
                   </div>
                 </div>
               </section>
-              <section class="panel panel--fill" data-mpanel="stats">
+              <!-- One card for both branches, same as CAMERA above. JS HEAP
+                   ships unmarked: SystemWidget feature-detects at boot and only
+                   the browsers without the API get the placeholder affordance,
+                   so the row count and the card height are identical either
+                   way. -->
+              <section class="panel panel--fill system-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">system</span>
+                  <span class="panel__note">software raster</span>
                 </div>
-                <div class="panel__body panel__body--pad-4"></div>
+                <div class="panel__body panel__body--pad-4 panel__body--pad-stats">
+                  <div class="stat-list">
+                    <div class="stat-row">
+                      <span class="stat-row__label">BUFFER</span>
+                      <span class="stat-row__value" data-field="sysBuffer">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">COLOR BUFFER</span>
+                      <span class="stat-row__value" data-field="sysColorBuffer">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">JS HEAP</span>
+                      <span class="stat-row__value" data-field="jsHeap">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">DPR</span>
+                      <span class="stat-row__value" data-field="sysDpr">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-row__label">UPTIME</span>
+                      <span class="stat-row__value" data-field="uptime">&mdash;</span>
+                    </div>
+                  </div>
+                </div>
               </section>
+              <span class="placeholder-hint" id="ph-js-heap">JS heap size is not exposed by this browser.</span>
             </div>
           </div>
 

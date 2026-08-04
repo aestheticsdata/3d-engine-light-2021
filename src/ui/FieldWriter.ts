@@ -23,7 +23,7 @@
 //                camStatFov — deliberately not the viewport's camPos / camRot /
 //                camDist above. Those are the HUD's mock camera (COS-218); these
 //                are the engine's real projection, and the two must not collide.
-//   system       uptime
+//   system       sysBuffer, sysColorBuffer, jsHeap, sysDpr, uptime
 
 class FieldWriter {
   public write(name: string, value: string | number) {

@@ -48,6 +48,7 @@ import CameraWidget from "@ui/telemetry/CameraWidget";
 import FramerateWidget from "@ui/telemetry/FramerateWidget";
 import FrameTimeWidget from "@ui/telemetry/FrameTimeWidget";
 import GeometryWidget from "@ui/telemetry/GeometryWidget";
+import SystemWidget from "@ui/telemetry/SystemWidget";
 import ZBufferWidget from "@ui/telemetry/ZBufferWidget";
 import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
@@ -89,6 +90,7 @@ class Main {
   private readonly geometry: GeometryWidget;
   private readonly zBuffer: ZBufferWidget;
   private readonly cameraStats: CameraWidget;
+  private readonly system: SystemWidget;
   private readonly fpsMeter: FPSMeter;
   private readonly loop: RenderLoop;
   private readonly objects3D: Data3D;
@@ -162,6 +164,7 @@ class Main {
     this.geometry = new GeometryWidget(this.fields);
     this.zBuffer = new ZBufferWidget();
     this.cameraStats = new CameraWidget(this.fields, this.camera, canvas);
+    this.system = new SystemWidget(this.fields, canvas);
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -212,6 +215,7 @@ class Main {
     this.viewportHud.seed();
     this.zBuffer.mount();
     this.cameraStats.seed();
+    this.system.seed();
     this.sliders.applyDefaults();
     this.sliders.attach();
     this.sliders.syncFromDom();
@@ -230,6 +234,9 @@ class Main {
   // for the teardown to be possible at all.
   public dispose() {
     this.unsubscribe();
+    // The one collaborator holding a timer and a media-query listener: every
+    // other widget is pure DOM writes and has nothing to release.
+    this.system.dispose();
   }
 
   // Six sliders, enumerated once. The bank owns the mechanism and knows nothing
@@ -353,6 +360,7 @@ class Main {
     this.geometry.render();
     this.zBuffer.render();
     this.cameraStats.render();
+    this.system.render();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
