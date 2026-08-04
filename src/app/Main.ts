@@ -47,6 +47,7 @@ import ViewportHUD from "@ui/ViewportHUD";
 
 import type { BootContext } from "@app/Bootstrapper";
 import type { RigAngles } from "@camera/CameraRig";
+import type { ViewPresetKey } from "@camera/viewPresets";
 import type { Data3D } from "@data/data";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
@@ -141,10 +142,10 @@ class Main {
     this.background = backgroundRenderer;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.camera = new CameraController(canvas);
-    // Before every widget that reads it. The SHAPE tab's sliders write to it,
-    // the CAMERA card and the HUD read from it, and the render path applies its
-    // matrix — so it is one of the few collaborators whose construction order is
-    // load-bearing rather than incidental.
+    // Before every widget that reads it. The SHAPE tab's sliders and the WORLD
+    // tab's presets write to it, the CAMERA card and the HUD read from it, and
+    // the render path applies its matrix — so it is one of the few collaborators
+    // whose construction order is load-bearing rather than incidental.
     this.rig = new CameraRig();
     this.lastFrameTimestamp = performance.now();
     // The projection centre, resolved once from the canvas the Bootstrapper
@@ -189,6 +190,7 @@ class Main {
       store: this.uiState,
       onFov: (degrees) => this.changeFov(degrees),
       onZoom: (value) => this.changeZoom(value),
+      onViewPreset: (key) => this.applyViewPreset(key),
       onLayersChange: () => this.syncWorldLayers(),
     });
     // After the WORLD tab because that is the order they read in, not because
@@ -367,6 +369,20 @@ class Main {
     this.renderPausedFrame();
   }
 
+  // A preset while paused has to repaint, or the chip appears to do nothing —
+  // renderPausedFrame is that repaint, and it already returns early while the
+  // loop is running, where the next frame picks the change up anyway. The run
+  // state goes to the rig as well, which is what decides whether there are
+  // frames for the 350ms ease to happen across.
+  private applyViewPreset(key: ViewPresetKey) {
+    this.rig.applyPreset(key, this.loop.isPlaying);
+    // The paused case, where the rig lands immediately and there is no frame to
+    // carry the write-back. While the loop runs, renderFrame pushes the rows
+    // through the whole ease instead, so the thumbs travel with the shape.
+    this.shapeTab.setTransformUi(this.rig.angles());
+    this.renderPausedFrame();
+  }
+
   // SKY, FLOOR and GRID are single booleans with two surfaces — this tab's rows
   // and the viewport's quick toggles — so neither surface applies anything
   // itself. Both write the store and raise this, which re-reads the store once
@@ -514,7 +530,17 @@ class Main {
 
     this.shapes.update(timestamp);
     this.shapes.syncQueue(timestamp);
+
+    // Read before advance, not after: advance is what clears a finished ease, so
+    // a check made afterwards would skip the one frame carrying the angles the
+    // preset actually landed on and leave the rows a fraction of a degree short.
+    const easingPreset = this.rig.isEasingPreset;
+
     this.rig.advance(this.elapsedSeconds(timestamp));
+
+    if (easingPreset) {
+      this.shapeTab.setTransformUi(this.rig.angles());
+    }
 
     // Posed even while hidden, so showing the mesh again resumes the turn where
     // it would have been rather than where it was hidden.
@@ -532,7 +558,7 @@ class Main {
     }
 
     // A paused repaint really does re-pose the mesh now, which is what lets a
-    // slider move the shape while the loop is stopped. The transform
+    // preset or a slider move the shape while the loop is stopped. The transform
     // it reports is therefore a real measurement rather than the zero the
     // incremental path had to print here.
     const transformMs = this.applyRigToActiveMeshes();
@@ -542,8 +568,8 @@ class Main {
     this.geometry.render();
     this.zBuffer.render();
     this.publishCameraReadouts();
-    // The gizmo has no clock of its own while the loop is stopped, so a slider
-    // would leave it pointing at the attitude the shape had before.
+    // The gizmo has no clock of its own while the loop is stopped, so a preset
+    // or a slider would leave it pointing at the attitude the shape had before.
     this.viewportHud.setGizmo(this.rig.axisScreenDirections());
     this.publishDrawnTriangles(this.renderedTriangles);
   }
@@ -639,10 +665,11 @@ class Main {
   // defaults and is restored here without this function being edited.
   private resetControls = () => {
     this.pipeline.reset();
-    // The one rig value with no slice of its own: the spin the turntable has
-    // wound up. The three angles and the spin rate come back through the store
-    // below, which is what makes RESET return the shape to the pose it opened on
-    // rather than to the same three numbers at a random heading.
+    // The two rig values with no slice of their own: the spin the turntable has
+    // wound up, and any preset ease still in flight. The three angles and the
+    // spin rate come back through the store below, which is what makes RESET
+    // return the shape to the pose it opened on rather than to the same three
+    // numbers at a random heading.
     this.rig.reset();
     this.uiState.resetAll();
     // After resetAll, so the rows read the restored defaults — and it re-applies

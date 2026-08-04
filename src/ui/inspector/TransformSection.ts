@@ -13,6 +13,7 @@
 
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
+import type { EulerDegrees } from "@camera/CameraRig";
 import type UIStateStore from "@ui/UIStateStore";
 
 // Zero, and the console still moves at rest — SPIN is what turns it now. The
@@ -119,6 +120,25 @@ class TransformSection {
       this.scale.element,
       this.buildHint(),
     );
+  }
+
+  // The other direction: the rig moved on its own — a preset today, a drag once
+  // E1b lands — and the three rows follow it. Deliberately does not call back
+  // into the rig, which already holds these values; a round trip here is how a
+  // preset ends up fighting the ease that is writing it.
+  //
+  // Rounded because the rows are integer-stepped: the thumb would snap while the
+  // read-out printed the raw float, which is two surfaces disagreeing about one
+  // number in a space of about four pixels.
+  public setAngleUi(angles: EulerDegrees) {
+    const pitch = Math.round(angles.pitch);
+    const yaw = Math.round(angles.yaw);
+    const roll = Math.round(angles.roll);
+
+    this.pitch.setValue(pitch);
+    this.yaw.setValue(yaw);
+    this.roll.setValue(roll);
+    this.store.setState({ pitch, yaw, roll });
   }
 
   // Writes the store's values into the rows AND pushes them to the rig. Both
