@@ -31,6 +31,13 @@ export interface ChipGridOptions {
   // Marks every chip as unwired: the grid still works and still stores its
   // choice, it simply drives nothing yet.
   placeholder?: { title: string; describedBy: string };
+  // Momentary chips fire and are done: they are actions, not a selection, so
+  // none of them ever lights and setActive is inert. The WORLD tab's five view
+  // presets are the case — a preset moves the camera somewhere, it does not put
+  // the camera into a mode that stays true afterwards, and the design draws them
+  // unlit unconditionally. They also drop aria-pressed, because a button with
+  // no pressed state announcing one is worse than a plain button.
+  momentary?: boolean;
 }
 
 class ChipGrid {
@@ -38,6 +45,7 @@ class ChipGrid {
   private readonly modifier: string;
   private readonly onPick: (id: string) => void;
   private readonly placeholder: { title: string; describedBy: string } | null;
+  private readonly momentary: boolean;
   private readonly chips: Map<string, HTMLButtonElement>;
 
   constructor(options: ChipGridOptions) {
@@ -47,6 +55,7 @@ class ChipGrid {
     this.modifier = options.modifier;
     this.onPick = options.onPick;
     this.placeholder = options.placeholder ?? null;
+    this.momentary = options.momentary ?? false;
     this.chips = new Map();
     // A custom property rather than a class per count: the column count is a
     // number the grid is given, and chip.css already reads --chip-cols.
@@ -69,6 +78,10 @@ class ChipGrid {
   // Idempotent, and it has to be: the active shape is republished on every
   // transition tick, so this runs far more often than the user clicks.
   public setActive(id: string | null) {
+    if (this.momentary) {
+      return;
+    }
+
     this.chips.forEach((chip, chipId) => {
       const active = chipId === id;
       chip.classList.toggle("is-active", active);
@@ -82,7 +95,10 @@ class ChipGrid {
     chip.type = "button";
     chip.className = `chip ${this.modifier}`;
     chip.dataset.chipId = descriptor.id;
-    chip.setAttribute("aria-pressed", "false");
+
+    if (!this.momentary) {
+      chip.setAttribute("aria-pressed", "false");
+    }
 
     const label = document.createElement("span");
     label.className = "chip__label";

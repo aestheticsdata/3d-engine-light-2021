@@ -34,7 +34,6 @@ export const DEFAULT_YAW_RATE = -22;
 export const DEFAULT_ROLL_RATE = 17;
 export const DEFAULT_SPIN = 10;
 export const DEFAULT_SCALE = 100;
-export const DEFAULT_ZOOM = 50;
 
 const SPIN_MIN = 0;
 const SPIN_MAX = 100;
@@ -49,13 +48,11 @@ export interface TransformSectionOptions {
   onYaw: (engineValue: number) => void;
   onRoll: (engineValue: number) => void;
   onSpin: (rotationSpeed: number) => void;
-  onZoom: (sliderValue: number) => void;
 }
 
 class TransformSection {
   private readonly store: UIStateStore;
   private readonly apply: TransformSectionOptions;
-  private readonly zoom: SliderRow;
   private readonly pitch: SliderRow;
   private readonly yaw: SliderRow;
   private readonly roll: SliderRow;
@@ -74,24 +71,6 @@ class TransformSection {
       rollRate: DEFAULT_ROLL_RATE,
       spin: DEFAULT_SPIN,
       scale: DEFAULT_SCALE,
-      zoom: DEFAULT_ZOOM,
-    });
-
-    // ZOOM is not in the design's TRANSFORM group — the mockup puts camera
-    // distance in the WORLD tab. It sits here because it is the one live camera
-    // control the console has, and the shell parked it in this tab; dropping it
-    // before COS-231 builds WORLD would leave the scene at a fixed distance
-    // with no way to change it. COS-231 moves the row, not the behaviour.
-    this.zoom = new SliderRow({
-      label: "ZOOM",
-      min: 0,
-      max: 100,
-      value: DEFAULT_ZOOM,
-      format: (value) => `${value}%`,
-      onInput: (value) => {
-        this.store.setState({ zoom: value });
-        options.onZoom(value);
-      },
     });
 
     this.pitch = this.buildRate("PITCH RATE", DEFAULT_PITCH_RATE, (value) => {
@@ -133,7 +112,6 @@ class TransformSection {
     });
 
     options.root.append(
-      this.zoom.element,
       this.pitch.element,
       this.yaw.element,
       this.roll.element,
@@ -156,16 +134,13 @@ class TransformSection {
     const yawRate = state.yawRate ?? DEFAULT_YAW_RATE;
     const rollRate = state.rollRate ?? DEFAULT_ROLL_RATE;
     const spin = state.spin ?? DEFAULT_SPIN;
-    const zoom = state.zoom ?? DEFAULT_ZOOM;
 
-    this.zoom.setValue(zoom);
     this.pitch.setValue(pitchRate);
     this.yaw.setValue(yawRate);
     this.roll.setValue(rollRate);
     this.spin.setValue(spin);
     this.scale.setValue(state.scale ?? DEFAULT_SCALE);
 
-    this.apply.onZoom(zoom);
     this.apply.onPitch(toEngineRate(pitchRate, PITCH_AXIS));
     this.apply.onYaw(toEngineRate(yawRate, YAW_AXIS));
     this.apply.onRoll(toEngineRate(rollRate, ROLL_AXIS));

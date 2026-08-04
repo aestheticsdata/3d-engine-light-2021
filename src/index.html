@@ -269,6 +269,19 @@
 
           </div>
 
+          <!-- mobile only, and the last card in the SCENE tab: every
+               [data-mpanel] shares one order value, so DOM order alone puts this
+               below SHAPE STORY. It is the touch answer to the desktop shortcuts
+               strip — a phone has no keyboard, so the eight key chips do not
+               render under 900px and these three gestures take their place.
+               ShortcutsPanel fills the body from the same table. -->
+          <section class="panel gestures" data-mpanel="scene">
+            <div class="panel__header panel__header--card">
+              <span class="panel__title">gestures</span>
+            </div>
+            <div class="panel__body panel__body--pad-form" id="gesturesBody"></div>
+          </section>
+
         </div>
 
         <div class="colCenter">
@@ -292,6 +305,12 @@
                    with no production surface and is dropped (D10): no master
                    gate, no per-layer gate, no z-index. -->
               <div class="viewportHud">
+
+                <!-- The quick toggles' desktop mount, in the band reserved at
+                     top:40px. Its mobile twin is the .quickToggles row below the
+                     viewport card; both are in the DOM at once and CSS hides the
+                     wrong one, so nothing reads the breakpoint in JS. -->
+                <div class="quickToggleBand"></div>
 
                 <!-- The two top clusters share one row rather than being
                      anchored to opposite corners independently. The design
@@ -391,12 +410,7 @@
                     <span class="hud-chip viewportHud__chipStack">
                       <span class="viewportHud__stackLine">
                         <span class="viewportHud__k">fov</span>
-                        <span
-                          data-field="fov"
-                          data-placeholder="true"
-                          title="The focal length is fixed and there is no FOV control yet (de-mock E2)."
-                          aria-describedby="ph-vp-fov"
-                        >&mdash;</span>
+                        <span data-field="fov">&mdash;</span>
                         <span class="viewportHud__k">zoom</span>
                         <span data-field="zoom">&mdash;</span>
                       </span>
@@ -455,14 +469,12 @@
 
                 <!-- desktop bottom-right cluster -->
                 <div class="viewportHud__bottomRight">
+                  <!-- Real since COS-231: the WORLD tab's FOV slider drives the
+                       focal length, so this readout is live and carries no
+                       placeholder affordance. -->
                   <span class="hud-chip">
                     <span class="viewportHud__k">fov</span>
-                    <span
-                      data-field="fov"
-                      data-placeholder="true"
-                      title="The focal length is fixed and there is no FOV control yet (de-mock E2)."
-                      aria-describedby="ph-vp-fov"
-                    >&mdash;</span>
+                    <span data-field="fov">&mdash;</span>
                   </span>
                   <span class="hud-chip">
                     <span class="viewportHud__k">zoom</span>
@@ -502,8 +514,18 @@
 
                 <span class="placeholder-hint" id="ph-vp-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
                 <span class="placeholder-hint" id="ph-vp-camera">The engine rotates the mesh; there is no camera transform yet (de-mock E1a).</span>
-                <span class="placeholder-hint" id="ph-vp-fov">The focal length is fixed and there is no FOV control yet (de-mock E2).</span>
                 <span class="placeholder-hint" id="ph-vp-gestures">The canvas has no pointer handlers yet (de-mock E1b).</span>
+                <!-- The GRID pill's description, and it lives out here rather
+                     than beside the pill for a reason: both quick-toggle mounts
+                     are display:none at one breakpoint or the other, and a
+                     display:none subtree is dropped from the accessibility tree
+                     entirely. The WORLD tab's GRID OVERLAY row has its own copy
+                     of this sentence, which is fine because that row is only
+                     reachable when its panel is open — the pill is visible from
+                     every tab, so its hint has to be too. .viewportHud is never
+                     hidden at either breakpoint, which is why the other four
+                     above sit here as well. -->
+                <span class="placeholder-hint" id="ph-quick-grid">This world layer is not drawn by the renderer yet (de-mock E5).</span>
 
               </div>
             </div>
@@ -971,7 +993,45 @@
 
             </section>
 
-            <section id="panelWorld" class="inspectorPanel" role="tabpanel" data-panel="world" data-mpanel="world"></section>
+            <section id="panelWorld" class="inspectorPanel" role="tabpanel" data-panel="world" data-mpanel="world">
+
+              <!-- Desktop reads CAMERA then ENVIRONMENT; mobile reverses the
+                   two with `order` alone, so there is one DOM and no duplicated
+                   controls. The chip grids are nested inside the body rather
+                   than sharing an element with it: inspector.css imports after
+                   chip.css, so a `.chip-grid` that were also a
+                   `.world-section__body` would take this file's `display:flex`
+                   over chip.css's `display:grid`. -->
+              <section class="panel panel--seam world-section world-section--camera">
+                <div class="panel__header panel__header--card world-section__cardHead">
+                  <span class="panel__title">camera</span>
+                </div>
+                <div class="world-section__head">
+                  <span class="section-title">CAMERA</span>
+                </div>
+                <div class="world-section__body panel__body--pad-form">
+                  <div class="chip-grid world-section__views" id="viewPresetChips"></div>
+                  <div class="chip-grid world-section__projection" id="projectionChips"></div>
+                  <div id="cameraRows"></div>
+                </div>
+              </section>
+
+              <div class="divider world-section__rule"></div>
+
+              <section class="panel panel--seam world-section world-section--environment">
+                <div class="panel__header panel__header--card world-section__cardHead">
+                  <span class="panel__title">environment</span>
+                </div>
+                <div class="world-section__head">
+                  <span class="section-title">ENVIRONMENT</span>
+                </div>
+                <div class="world-section__body panel__body--pad-list">
+                  <div id="environmentToggles"></div>
+                  <div id="environmentRows"></div>
+                </div>
+              </section>
+
+            </section>
 
             <!-- desktop only: the shortcuts it lists are not reachable on touch -->
             <div class="shortcuts"></div>

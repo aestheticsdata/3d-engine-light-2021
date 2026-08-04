@@ -4,8 +4,10 @@
 // The mockup derives an orbit camera from the pitch / yaw / zoom sliders
 // (design L1377–L1381) and reports POSITION / ROTATION / DISTANCE / NEAR / FAR
 // against it. Every premise of that is false here. There is no camera
-// transform: Point3D.convert3D2D is a bare perspective divide about a fixed
-// focal length. Zoom is not a distance: the slider moves the *object's* z.
+// transform: Point3D.convert3D2D is a bare perspective divide about a focal
+// length — one the WORLD tab's FOV slider now moves, which is why the FOV row
+// is rendered rather than seeded, but still not a camera that goes anywhere.
+// Zoom is not a distance either: the slider moves the *object's* z.
 // Pitch / yaw / roll are per-frame rotation *rates* offset from the canvas
 // centre, not Euler angles. And there are no clip planes at all.
 //
@@ -31,25 +33,28 @@ import type FieldWriter from "@ui/FieldWriter";
 
 // Engine units. The design says `m`; this engine has no metric scale.
 const DISTANCE_UNIT = "u";
-const DEGREES_PER_RADIAN = 180 / Math.PI;
 
 class CameraWidget {
   private readonly fields: FieldWriter;
   private readonly camera: CameraController;
-  private readonly fovAspect: string;
+  // The two halves of the FOV / ASPECT row have different lifetimes now. Aspect
+  // really is fixed — the canvas is a 1024x640 backing store that
+  // BackgroundRenderer, ShapeTransitionMachine and every Point3D capture at
+  // construction, and COS-250 (E9b) is what makes it recomputable. The half-height
+  // is kept for the same reason: it is the constant the live FOV is derived
+  // against.
+  private readonly aspect: string;
 
   constructor(fields: FieldWriter, camera: CameraController, canvas: HTMLCanvasElement) {
     this.fields = fields;
     this.camera = camera;
-    this.fovAspect = this.deriveFovAspect(canvas);
+    this.aspect = (canvas.width / canvas.height).toFixed(2);
   }
 
-  // FOV and aspect cannot change while the console is open: the canvas is a
-  // fixed 1024x640 backing store that BackgroundRenderer, ShapeTransitionMachine
-  // and every Point3D capture at construction, and the focal length is a
-  // constant. COS-250 (E9b) is what makes this recomputable.
+  // Seeded as well as rendered: render() runs on a frame, and this card is
+  // written once before the loop starts.
   public seed() {
-    this.fields.write("camStatFov", this.fovAspect);
+    this.fields.write("camStatFov", this.fovAspect());
   }
 
   public render() {
@@ -66,17 +71,21 @@ class CameraWidget {
       `${rates.pitch.toFixed(2)}°/f ${rates.yaw.toFixed(2)}°/f ${rates.roll.toFixed(2)}°/f`,
     );
     this.fields.write("camStatDistance", `${distance.toFixed(1)} ${DISTANCE_UNIT}`);
-    this.fields.write("camStatFocal", `${this.camera.focalLength} / ${this.camera.zoomOffset.toFixed(1)}`);
+    // One decimal, because the focal length stopped being an integer when
+    // COS-231 made FOV a control: 94° maps to 298.4, and the raw float would
+    // print seventeen digits into a stat row.
+    this.fields.write("camStatFocal", `${this.camera.focalLength.toFixed(1)} / ${this.camera.zoomOffset.toFixed(1)}`);
+    this.fields.write("camStatFov", this.fovAspect());
   }
 
-  // Vertical, and it has to be said which: the same canvas and focal length
-  // give 119.3° horizontally. Both numbers come off the element rather than
-  // being typed, so a future resize path cannot leave them stale silently.
-  private deriveFovAspect(canvas: HTMLCanvasElement): string {
-    const fov = 2 * Math.atan(canvas.height / 2 / this.camera.focalLength) * DEGREES_PER_RADIAN;
-    const aspect = canvas.width / canvas.height;
-
-    return `${fov.toFixed(1)}° / ${aspect.toFixed(2)}`;
+  // Vertical, and it has to be said which: the same canvas and focal length give
+  // 119.3° horizontally.
+  //
+  // The angle comes off the controller rather than being re-derived here, for
+  // the reason its getter gives: it is the FOV the projection is using, not the
+  // one the slider is showing, and the viewport HUD prints the same number.
+  private fovAspect(): string {
+    return `${this.camera.fieldOfViewDegrees.toFixed(1)}° / ${this.aspect}`;
   }
 }
 

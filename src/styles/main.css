@@ -22,11 +22,13 @@
 @import url(components/scrollbar.css);
 @import url(components/tooltip.css);
 @import url(components/placeholder.css);
+@import url(components/shortcuts.css);
 @import url(components/scene-graph.css);
 @import url(components/shape-info.css);
 @import url(components/shape-story.css);
 @import url(components/toolbar.css);
 @import url(components/viewport.css);
+@import url(components/quick-toggles.css);
 @import url(components/status-bar.css);
 @import url(components/framerate.css);
 @import url(components/frame-time.css);

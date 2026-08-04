@@ -22,6 +22,13 @@
 
 import type { ShadingModeKey } from "@ui/modeLabel";
 
+// The two projection chips. Only PERSPECTIVE has an engine behind it —
+// Point3D.convert3D2D divides by the focal distance and has no orthographic
+// branch — so ORTHOGRAPHIC selects and is remembered and does nothing, until
+// de-mock E2. Declared here rather than beside the section that renders it
+// because the store is what both the section and its future engine read.
+export type ProjectionKey = "PERSPECTIVE" | "ORTHOGRAPHIC";
+
 export interface UIState {
   // Slices are added here by the ticket that owns each value.
 
@@ -47,7 +54,6 @@ export interface UIState {
   spin?: number;
   // No engine behind these four yet (de-mock E4). They are stored rather than
   // discarded so the console remembers the choice and RESET can undo it.
-  zoom?: number;
   scale?: number;
   texture?: string;
   baseColor?: string;
@@ -71,6 +77,30 @@ export interface UIState {
   lightElevation?: number;
   lightAmbient?: number;
   lightSpecular?: number;
+
+  // --- WORLD tab ------------------------------------------------------------
+  // fov and zoom are the two live camera controls: both reach the projection
+  // through CameraController, and zoom moved here from the SHAPE tab, where the
+  // shell had parked it because WORLD did not exist yet.
+  //
+  // sky and floor are live too — they gate real BackgroundRenderer layers — and
+  // they are the first slices with a SECOND surface reading them: the viewport's
+  // quick toggles show the same three booleans as this tab's rows, including
+  // grid. One boolean per switch, never a pair, which is why they sit in the
+  // store rather than on the section that draws them.
+  //
+  // projection, grid, shadow, fog and gridStep have no engine at all
+  // (de-mock E2 for the first, E5 for the rest) and are stored only so the
+  // console remembers the choice and RESET can undo it.
+  fov?: number;
+  zoom?: number;
+  projection?: ProjectionKey;
+  sky?: boolean;
+  floor?: boolean;
+  grid?: boolean;
+  shadow?: boolean;
+  fog?: number;
+  gridStep?: number;
 }
 
 // Optional above, and guaranteed below: every field is filled by the owning

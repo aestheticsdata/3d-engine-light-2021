@@ -1,0 +1,33 @@
+/* Owns: where the quick toggles sit on desktop — the absolute band over the viewport.
+   Must not own: the pill itself (hud.css owns the recipe and both its states) or the mobile five-column row, which is stack placement and belongs to layout.css with the rest of the mobile order. */
+
+/* The band viewport.css reserves and refuses to write into. `top: 40px` clears
+   the top-left HUD chip row — that row sits at 10px and is 22px tall — by 8px,
+   and stays a literal: one-off inline geometry with no second consumer, which
+   the tokens ticket allows.
+   Anchored inside .viewportHud, which is itself anchored to .viewportStage
+   rather than to the viewport card. That is what keeps the 10px inset measured
+   from the picture: the fixed 1024x640 canvas letterboxes inside a card of any
+   other shape, and letterboxing is invisible to layout, so a band anchored to
+   the card would inset itself from the bars instead. */
+.quickToggleBand {
+  position: absolute;
+  top: 40px;
+  left: var(--space-5);
+  display: flex;
+  gap: var(--space-2);
+  /* .viewportHud sets pointer-events:none so the overlay never swallows a click
+     meant for the canvas. These are the only interactive thing inside it, so
+     they have to opt back in. */
+  pointer-events: auto;
+}
+
+/* Exclusive at 900: the pills leave the viewport entirely below the breakpoint
+   and reappear as the five-column row layout.css places under the viewport
+   card. Both mounts stay in the DOM and CSS picks one, so nothing reads a media
+   query in JS. */
+@media (max-width: 899px) {
+  .quickToggleBand {
+    display: none;
+  }
+}

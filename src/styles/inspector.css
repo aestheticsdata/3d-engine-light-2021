@@ -1,6 +1,7 @@
 /* Owns: the inspector tabs' own section scaffolding — SHAPE's header row, the
-   PRIMITIVE scroll cap and its mobile release, the MATERIAL base row; and
-   RENDER's equivalent card/bare-group wrapper.
+   PRIMITIVE scroll cap and its mobile release, the MATERIAL base row; RENDER's
+   equivalent card/bare-group wrapper; and WORLD's, plus its mobile section
+   reordering and the margins under its two chip banks.
    Must not own: the chip, swatch, slider, toggle or range recipes
    (components/), the card chrome (panel.css) or where the inspector sits
    (layout.css). */
@@ -130,6 +131,63 @@
 
   .render-section__body--card {
     padding: var(--space-4-5);
+  }
+}
+
+/* ---- the WORLD tab -------------------------------------------------------- */
+
+/* A third block rather than a shared .inspector-section, for the reason given
+   above .render-section: this file's ownership is per tab. */
+.world-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.world-section__cardHead {
+  display: none;
+}
+
+.world-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.world-section__body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The two chip banks and the separation the design draws under each. Only the
+   margins: the grids themselves, their gaps and their column count are
+   chip.css's and the section's inline --chip-cols. */
+.world-section__views,
+.world-section__projection {
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 899px) {
+  .world-section__rule,
+  .world-section__head {
+    display: none;
+  }
+
+  .world-section__cardHead {
+    display: flex;
+  }
+
+  /* The mobile branch inverts the section order. On a phone the environment
+     toggles are the cheaper, more tappable controls and belong above the fold,
+     so ENVIRONMENT comes first — an `order` flip on the flex column rather than
+     a second DOM. The divider between them is hidden above, which is what keeps
+     the reordering from leaving a rule stranded at the top of the tab. */
+  .world-section--environment {
+    order: -1;
+  }
+
+  .world-section__projection {
+    margin-bottom: var(--space-2-5);
   }
 }
 

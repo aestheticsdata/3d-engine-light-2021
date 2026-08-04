@@ -183,10 +183,15 @@
   display: flex;
 }
 
-/* Mobile-only chrome, absent above the breakpoint. */
+/* Mobile-only chrome, absent above the breakpoint. .gestures is the touch
+   counterpart of the .shortcuts strip below — a phone has no keyboard, so the
+   key chips go and the gesture card arrives — and the two gates are each other's
+   mirror image, which is why they live together here rather than one of them
+   sitting in a component sheet. */
 .appBar,
 .mtabs,
 .quickToggles,
+.gestures,
 .mobileResetSlot {
   display: none;
 }
@@ -289,11 +294,17 @@
   }
 
   /* Undo the desktop data-panel gate before re-gating by data-mtab — the three
-     inspector bodies carry both attributes. */
-  [data-panel] {
-    display: flex;
-  }
+     inspector bodies carry both attributes.
 
+     It takes the id to do it, and that is the bug this replaces. The desktop
+     gate's *show* half is `#app[data-tab="shape"] [data-panel="shape"]`, which a
+     bare `[data-panel]` cannot outrank at any position in the file. The two tab
+     groups are independent and both write their attribute to #app, so data-tab
+     keeps its own selection below the breakpoint — and the desktop panel it
+     named stayed on screen underneath whichever mobile tab was chosen. Tapping
+     WORLD gave you WORLD *and* SHAPE. Matching that specificity and coming later
+     is what closes it. */
+  #app[data-tab] [data-panel],
   [data-mpanel] {
     display: none;
   }

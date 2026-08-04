@@ -4,8 +4,19 @@
 // The clear at the top of render() is the frame's ONLY clear: Surface3D skips
 // its own clearRect whenever a background renderer exists, so removing this one
 // leaves every frame painted over the last.
+//
+// Two switches cover three of the four layers, and the pairing is not arbitrary.
+// Sky and atmosphere go together because the atmosphere is the horizon haze
+// belonging to the sky — dropping the photograph and keeping its glow leaves a
+// bright band floating over a dark frame. The vignette has no switch at all: it
+// is the lens, not the scene.
 
 import GroundProjection from "@rendering/GroundProjection";
+// A @ui import from inside @rendering, which is the wrong direction and is the
+// lesser evil: chartTokens is the one file sanctioned to hand-mirror colors.css
+// for canvas painting, and the alternative is a second mirror here. See its
+// header.
+import { chartTokens } from "@ui/chartTokens";
 
 // How much of the frame the sky photograph covers, and how far above the top
 // edge it starts.
@@ -44,6 +55,14 @@ interface BackgroundRendererOptions {
   skyImage?: HTMLImageElement | null;
 }
 
+// Which scenery layers are drawn. Settable after construction rather than passed
+// in: the renderer is built once at boot from the canvas dimensions and the
+// decoded sky image, long before the WORLD tab exists to have an opinion.
+export interface BackgroundLayers {
+  sky: boolean;
+  floor: boolean;
+}
+
 class BackgroundRenderer {
   private readonly width: number;
   private readonly height: number;
@@ -55,11 +74,19 @@ class BackgroundRenderer {
   private readonly floorCenterX: number;
   private readonly floorFocal: number;
   private readonly floorNearZ: number;
+  private skyEnabled: boolean;
+  private floorEnabled: boolean;
 
   constructor(options: BackgroundRendererOptions) {
     this.width = options.width;
     this.height = options.height;
     this.skyImage = options.skyImage ?? null;
+    // Both on, because both ran unconditionally before they were switchable.
+    // The console's defaults mirror what the renderer actually draws, never the
+    // mockup's — the design ships sky, floor and grid all true, and this engine
+    // has no grid at all.
+    this.skyEnabled = true;
+    this.floorEnabled = true;
     this.atmosphereHorizonY = this.height * ATMOSPHERE_HORIZON_RATIO;
     this.floorHorizonY = this.height * FLOOR_HORIZON_RATIO;
     this.floorCenterX = this.width * FLOOR_CENTER_RATIO;
@@ -68,13 +95,38 @@ class BackgroundRenderer {
       ((CAMERA_HEIGHT * this.floorFocal) / Math.max(1, this.height - this.floorHorizonY)) * NEAR_Z_RATIO;
   }
 
+  public setLayers(layers: BackgroundLayers) {
+    this.skyEnabled = layers.sky;
+    this.floorEnabled = layers.floor;
+  }
+
   public render(context: CanvasRenderingContext2D) {
     context.save();
     context.clearRect(0, 0, this.width, this.height);
 
-    this.renderSky(context);
-    this.renderAtmosphere(context);
-    this.renderFloor(context);
+    if (this.skyEnabled) {
+      this.renderSky(context);
+      this.renderAtmosphere(context);
+    } else {
+      // A flat fill rather than leaving the cleared canvas transparent, so the
+      // frame is a dark image and not a hole. On screen the two are
+      // indistinguishable — what shows through is --color-bg-app, the same
+      // colour this paints — but the canvas is an exportable artefact and a
+      // transparent PNG is not the same thing as a black one.
+      //
+      // It does not survive everywhere: renderFloor's destination-out fade
+      // punches back through it around the horizon, exactly as it already does
+      // to the sky. Backing the frame after the fact with destination-over would
+      // close that, and would also change the sky-on frame, which is not this
+      // ticket's to change.
+      context.fillStyle = chartTokens.bgApp;
+      context.fillRect(0, 0, this.width, this.height);
+    }
+
+    if (this.floorEnabled) {
+      this.renderFloor(context);
+    }
+
     this.renderVignette(context);
 
     context.restore();

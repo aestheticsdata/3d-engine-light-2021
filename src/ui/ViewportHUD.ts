@@ -14,7 +14,10 @@
 //     replaces it,
 //   * the resolution string, read off the canvas rather than typed,
 //   * the data-shading-mode attribute on the viewport card,
-//   * zoom and dist, the two live camera readouts the engine can actually feed.
+//   * fov, zoom and dist, the three live camera readouts the engine can
+//     actually feed. All three are handed in rather than derived here — the
+//     camera owns the arithmetic, so the overlay cannot print a projection the
+//     renderer is not using.
 //
 // There is deliberately no per-frame update() method, and becoming a class must
 // not tempt anyone into adding one. Everything the HUD shows per frame is
@@ -41,9 +44,6 @@ const CAM_ROT = "0.0° 0.0° 0.0°";
 
 // de-mock E1a (COS-237): hardcoded in the design as well.
 const CAM_TARGET = "0.0 1.2 0.0";
-
-// de-mock E2 (COS-236): fixed focal length, no FOV control.
-const FOV = "60°";
 
 // Unit is `u`, not the design's `m`: the engine has no metric scale, and
 // COS-246 (E5a) is what introduces world units.
@@ -74,7 +74,20 @@ class ViewportHUD {
     this.fields.write("camPos", CAM_POS);
     this.fields.write("camRot", CAM_ROT);
     this.fields.write("camTarget", CAM_TARGET);
-    this.fields.write("fov", FOV);
+  }
+
+  // FOV left the placeholder list in COS-231. It used to be seeded above as a
+  // constant "60°" annotated "fixed focal length, no FOV control" — true until
+  // the WORLD tab made the focal length a slider, and a lie the moment it did.
+  //
+  // The angle is passed in rather than read off the slider, for the same reason
+  // distance is: the applied focal is clamped at 260, so above roughly 102° the
+  // slider keeps climbing and the projection does not. The CAMERA card prints
+  // this same number, and two readouts of one camera disagreeing is exactly the
+  // kind of lie this rebuild exists to remove — the slider running ahead of both
+  // is the clamp being visible, which is the honest version.
+  public setFov(degrees: number) {
+    this.fields.write("fov", `${Math.round(degrees)}°`);
   }
 
   // Owns the attribute only. The chip's text is the same modeLabel() the status
