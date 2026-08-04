@@ -8,7 +8,7 @@
 // that widget.
 
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
-import CameraController from "@app/CameraController";
+import CameraController, { DEFAULT_ZOOM_SLIDER_VALUE } from "@app/CameraController";
 import FPSMeter from "@app/FPSMeter";
 import RenderLoop from "@app/RenderLoop";
 import ShapeSwitcher from "@app/ShapeSwitcher";
@@ -20,9 +20,14 @@ import Viewport from "@primitives/Viewport";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
+import { DEFAULT_FLOOR, DEFAULT_SKY } from "@ui/inspector/EnvironmentSection";
+import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
+import WorldTab from "@ui/inspector/WorldTab";
 import MaterialSummary from "@ui/MaterialSummary";
+import { impliesWireframe } from "@ui/modeLabel";
+import QuickToggles from "@ui/QuickToggles";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
 import ShapeStoryPanel from "@ui/ShapeStoryPanel";
@@ -43,6 +48,7 @@ import type { BootContext } from "@app/Bootstrapper";
 import type { Data3D } from "@data/data";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
+import type BackgroundRenderer from "@rendering/BackgroundRenderer";
 import type FieldWriter from "@ui/FieldWriter";
 
 const TRANSITION_DURATION_MS = 1250;
@@ -66,8 +72,15 @@ class Main {
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
   private readonly pipeline: RenderPipelinePanel;
+  private readonly renderTab: RenderTab;
+  private readonly worldTab: WorldTab;
+  private readonly quickToggles: QuickToggles;
   private readonly transport: TransportBar;
   private readonly shapeTab: ShapeTab;
+  // Held as well as handed to Surface3D: the WORLD tab's SKY and FLOOR rows and
+  // the viewport's quick toggles both switch layers on it at runtime, and this
+  // class is the one place that reads the store and pushes the pair.
+  private readonly background: BackgroundRenderer;
   private readonly framerate: FramerateWidget;
   private readonly frameTime: FrameTimeWidget;
   private readonly geometry: GeometryWidget;
@@ -112,6 +125,7 @@ class Main {
     this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.stage = stage;
+    this.background = backgroundRenderer;
     this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.camera = new CameraController(canvas);
     // The projection centre, resolved once from the canvas the Bootstrapper
@@ -140,10 +154,37 @@ class Main {
       onYaw: (value) => this.camera.setYaw(value),
       onRoll: (value) => this.camera.setRoll(value),
       onSpin: (value) => this.camera.setRotationSpeed(value),
-      onZoom: (value) => this.changeZoom(value),
       onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
     });
     this.pipeline = new RenderPipelinePanel();
+    this.renderTab = new RenderTab({
+      store: this.uiState,
+      wireframe: this.pipeline.wireframe,
+      cullBackfaces: this.pipeline.cullBackfaces,
+      onShadingSelect: (mode) => this.pipeline.setWireframe(impliesWireframe(mode)),
+      onWireframeToggle: (next) => this.pipeline.setWireframe(next),
+      onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
+    });
+    this.worldTab = new WorldTab({
+      store: this.uiState,
+      onFov: (degrees) => this.changeFov(degrees),
+      onZoom: (value) => this.changeZoom(value),
+      onLayersChange: () => this.syncWorldLayers(),
+    });
+    // After the WORLD tab because that is the order they read in, not because
+    // the store forces it: the pills fall back to the same exported defaults
+    // EnvironmentSection registers, so an empty store still paints them right.
+    // What genuinely has to follow is syncPipelineReadouts() below — that call
+    // is the only thing that seeds the WIRE and CULL pills.
+    this.quickToggles = new QuickToggles({
+      mounts: [".quickToggleBand", ".quickToggles"],
+      store: this.uiState,
+      wireframe: this.pipeline.wireframe,
+      cullBackfaces: this.pipeline.cullBackfaces,
+      onLayersChange: () => this.syncWorldLayers(),
+      onWireframeToggle: (next) => this.pipeline.setWireframe(next),
+      onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
+    });
     this.transport = new TransportBar();
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
@@ -211,8 +252,9 @@ class Main {
       galaxy: galaxyUrl,
     });
 
-    // Resolution and the four camera placeholders are written once: none of
-    // them changes while the console is open. The histogram's 28 bars are the
+    // Resolution and the three camera placeholders are written once: none of
+    // them changes while the console is open. FOV was the fourth until COS-231
+    // made it a control, and it is written live now. The histogram's 28 bars are the
     // same kind of write — built once, then only their heights change.
     this.viewportHud.seed();
     this.zBuffer.mount();
@@ -222,6 +264,12 @@ class Main {
     // rasteriser, so the cube needs its galaxy face to exist first.
     this.shapeTab.paintPrimitiveOptions(new ShapeThumbnails(this.objects3D, this.textures));
     this.shapeTab.syncFromStore();
+    // The camera already opens at these values — CameraController seeds itself
+    // through the same two mappings — so this is not what puts the first frame
+    // at 94°. What it buys is the readouts: the HUD's fov, zoom and dist are
+    // written by the push, and nothing else writes them before the first drag.
+    this.worldTab.syncFromStore();
+    this.syncWorldLayers();
     this.repaintForPrimitive(primitive);
     // Pushed explicitly rather than relying on the markup's seed, so the bar and
     // the transport have one source of truth from the first paint.
@@ -245,14 +293,57 @@ class Main {
   // The HUD's `dist` is the camera distance, not the raw offset: the offset
   // alone runs 260 -> -220 across the slider and would print a negative
   // distance. Focal plus offset stays positive throughout (560 -> 80).
-  private changeZoom = (sliderValue: number) => {
+  // A plain method, not an arrow property: nothing hands it to a listener, and
+  // R9 spends the bound-this form only where something does.
+  private changeZoom(sliderValue: number) {
     this.camera.setZoomFromSlider(sliderValue);
     this.viewportHud.setZoom(sliderValue, this.camera.distance);
+    this.applyCameraToActiveMeshes();
+  }
+
+  // Mirrors changeZoom, and has to: both write the same two numbers into every
+  // live mesh through applyTo, and the HUD's dist is focal plus offset, so a
+  // focal change moves the distance readout exactly as a zoom change does — which
+  // is why the zoom readout is rewritten here from the slice rather than left to
+  // go stale against a distance that just moved under it.
+  //
+  // The HUD is given the camera's own angle, not the argument: above roughly 102°
+  // the clamp holds the focal and these two part company, and the readout follows
+  // the projection.
+  private changeFov(degrees: number) {
+    this.camera.setFovDegrees(degrees);
+    this.viewportHud.setFov(this.camera.fieldOfViewDegrees);
+    this.viewportHud.setZoom(this.uiState.getState().zoom ?? DEFAULT_ZOOM_SLIDER_VALUE, this.camera.distance);
+    this.applyCameraToActiveMeshes();
+  }
+
+  // The tail both camera controls share: the focal length and the z offset live
+  // on the triangles, not on the camera, so every active mesh has to be written
+  // through — and the frame has to be repainted by hand when the loop is
+  // stopped, or a paused console would show a camera it no longer has.
+  private applyCameraToActiveMeshes() {
     this.shapes.getActiveMeshes().forEach((mesh) => {
       this.camera.applyTo(mesh);
     });
     this.renderPausedFrame();
-  };
+  }
+
+  // SKY, FLOOR and GRID are single booleans with two surfaces — this tab's rows
+  // and the viewport's quick toggles — so neither surface applies anything
+  // itself. Both write the store and raise this, which re-reads the store once
+  // and pushes the result to the renderer and back out to both. That is what
+  // makes a flip from either end land on the other in the same frame.
+  private syncWorldLayers() {
+    const state = this.uiState.getState();
+
+    this.background.setLayers({
+      sky: state.sky ?? DEFAULT_SKY,
+      floor: state.floor ?? DEFAULT_FLOOR,
+    });
+    this.worldTab.syncEnvironmentUi();
+    this.quickToggles.syncFromStore();
+    this.renderPausedFrame();
+  }
 
   // Every pipeline change lands on the same three readouts and the same repaint,
   // so one handler replaces the three near-identical tails the two toggles and
@@ -260,7 +351,8 @@ class Main {
   // toggle rewrites the opacity row with the value it already had.
   private syncPipelineReadouts = () => {
     // One modeLabel() behind all three readouts: the status bar writes the word,
-    // the HUD writes the attribute that keys the canvas filter, and SHAPE INFO's
+    // the HUD writes the data-shading-mode attribute (it drives no styling today
+    // — it is the seam de-mock E3 will key real shading off), and SHAPE INFO's
     // SHADING row prints it. Passing the boolean to the first two is interim and
     // is the whole reason the mapping is a shared function — de-mock E3 publishes
     // a shadingMode slice and the argument goes away, without the label table
@@ -274,6 +366,14 @@ class Main {
     // row follows it rather than holding a second copy.
     this.shapeTab.setOpacityUi(Math.round(this.pipeline.opacity * 100));
     this.shapeTab.setOpacityDisabled(this.pipeline.getRenderOptions().cullBackfaces);
+    // Same reasoning as opacity above, for the RENDER tab's own two real
+    // controls: RenderPipelinePanel owns the booleans, this is the one place
+    // that pushes them out to whichever surface needs to agree with them.
+    this.renderTab.syncPipeline(this.pipeline.wireframe, this.pipeline.cullBackfaces);
+    // The viewport's WIRE and CULL pills are the second surface on those same
+    // two booleans, so they are pushed from here rather than reading the panel
+    // themselves — a flip from either end lands on the other in this frame.
+    this.quickToggles.syncPipeline(this.pipeline.wireframe, this.pipeline.cullBackfaces);
     this.renderPausedFrame();
   };
 
@@ -444,6 +544,9 @@ class Main {
     // After resetAll, so the rows read the restored defaults — and it re-applies
     // them to the camera, which is what the slider bank's read-back used to do.
     this.shapeTab.syncFromStore();
+    this.renderTab.syncFromStore();
+    this.worldTab.syncFromStore();
+    this.syncWorldLayers();
     this.pipeline.syncOpacityAvailability();
     this.syncPipelineReadouts();
     this.framerate.reset();

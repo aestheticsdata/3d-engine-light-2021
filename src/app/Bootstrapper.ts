@@ -14,6 +14,7 @@ import skyUrl from "@img/sky.avif";
 import BackgroundRenderer from "@rendering/BackgroundRenderer";
 import { BUILD_LABEL_DESKTOP, BUILD_LABEL_MOBILE } from "@ui/buildInfo";
 import FieldWriter from "@ui/FieldWriter";
+import ShortcutsPanel from "@ui/ShortcutsPanel";
 import TabGroup from "@ui/TabGroup";
 
 // What boot hands to Main. Three inputs, so a named interface rather than three
@@ -27,6 +28,16 @@ export interface BootContext {
 class Bootstrapper {
   public async run(): Promise<BootContext> {
     this.setupTabGroups();
+
+    // Boot-time and never spoken to again, like the tab groups above: it renders
+    // both documentation surfaces once from a static table and has nothing to
+    // publish, subscribe to or reset. Main owns collaborators it talks to, and
+    // parking a handle there that no method ever uses would only look like an
+    // oversight.
+    new ShortcutsPanel({
+      chipsSelector: ".shortcuts",
+      gesturesSelector: "#gesturesBody",
+    });
 
     // Created here rather than on Main: the build labels are written before Main
     // exists, and every collaborator that writes a field is handed this same

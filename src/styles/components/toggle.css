@@ -1,11 +1,17 @@
 /* Owns: the segmented ON/OFF control — its row, the block that travels between the two halves, and the four colour slots that paint them.
    Must not own: what the toggle switches — widget tickets bind .is-on. The design has no hover here; do not invent one. */
 
+/* The whole row is the hit area, so it must not read as prose: the label would
+   otherwise raise an I-beam over a control, and a drag across it would select
+   the text instead of flipping the switch. The arrow stays the plain default —
+   the .toggle below is the part that advertises itself with a pointer. */
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: var(--size-toggle-row);
+  cursor: default;
+  user-select: none;
 }
 
 .toggle-row__label {

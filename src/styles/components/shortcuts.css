@@ -1,0 +1,81 @@
+/* Owns: the two documentation surfaces — the desktop keyboard chip strip's heading, row and inner type, and the mobile GESTURES card's rows and footer lines.
+   Must not own: the chip surface (badge.css's .pill), the card chrome (panel.css), where either block sits or which branch shows it (layout.css pins the strip and gates both), or the dimming — that is the placeholder affordance's. */
+
+/* The one section heading in the console that is NOT accent-coloured. The right
+   panel's other titles use this exact font at var(--color-accent); muted is what
+   marks the block as reference material rather than a group of controls. */
+.shortcuts__title {
+  font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-sans);
+  letter-spacing: var(--tracking-2xl);
+  color: var(--color-text-muted);
+}
+
+/* Wraps, because eight chips do not fit one line of a 248px panel and the strip
+   is documentation — it is allowed to take the height it needs. */
+.shortcuts__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+/* The chips are not interactive, so they take no cursor, no hover and no focus
+   ring. The design draws none either. */
+.shortcuts__chip {
+  cursor: default;
+  user-select: none;
+}
+
+/* <kbd> carries a UA font-family that reset.css does not clear — it resets the
+   size and the box but not the family — so the element would drop out of the
+   pill's JetBrains Mono into the platform's own monospace. Inheriting is what
+   keeps the key and its action in one typeface, and the colour is deliberately
+   not touched: the design draws both halves of the chip alike, and tinting the
+   key would invent an emphasis it does not have. The <span> beside it needs no
+   rule at all — it inherits everything already. */
+.shortcuts__key {
+  font: inherit;
+}
+
+@media (max-width: 899px) {
+  /* 44px of rhythm rather than of hit area: nothing in this card is tappable.
+     It borrows the scene row's height so the card scans at the same rate as the
+     rows above it, and if de-mock ever makes a row tappable it already clears
+     the touch minimum. */
+  .gestures__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--size-row-scene);
+    border-bottom: var(--size-hairline) solid var(--color-border-row);
+  }
+
+  /* The divider is between rows, not under the block: the footer lines below
+     carry their own top padding and a rule above them would read as a second
+     card starting. */
+  .gestures__row:last-of-type {
+    border-bottom: 0;
+  }
+
+  .gestures__gesture {
+    font: var(--font-weight-medium) var(--text-md) / var(--leading-none) var(--font-sans);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .gestures__effect {
+    font: var(--font-weight-medium) var(--text-md) / var(--leading-none) var(--font-mono);
+    color: var(--color-text-primary);
+  }
+
+  /* Two lines, same voice: where the keyboard-only bindings live, and why none
+     of the three gestures does anything yet. Dimmest type in the card, because
+     they are captions under the table rather than part of it. */
+  .gestures__note {
+    /* .panel__body is a plain block, so two inline spans would share a line and
+       the top padding would not open any space at all. */
+    display: block;
+    padding-top: var(--space-2-5);
+    font: var(--font-weight-regular) var(--text-base) / var(--leading-none) var(--font-mono);
+    color: var(--color-text-dim);
+  }
+}

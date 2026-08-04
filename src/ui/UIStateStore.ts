@@ -20,6 +20,15 @@
 // rather than once per slice, so the panels repaint in a single pass. Both are
 // pinned by src/ui/__tests__/UIStateStore.test.ts.
 
+import type { ShadingModeKey } from "@ui/modeLabel";
+
+// The two projection chips. Only PERSPECTIVE has an engine behind it —
+// Point3D.convert3D2D divides by the focal distance and has no orthographic
+// branch — so ORTHOGRAPHIC selects and is remembered and does nothing, until
+// de-mock E2. Declared here rather than beside the section that renders it
+// because the store is what both the section and its future engine read.
+export type ProjectionKey = "PERSPECTIVE" | "ORTHOGRAPHIC";
+
 export interface UIState {
   // Slices are added here by the ticket that owns each value.
 
@@ -45,11 +54,53 @@ export interface UIState {
   spin?: number;
   // No engine behind these four yet (de-mock E4). They are stored rather than
   // discarded so the console remembers the choice and RESET can undo it.
-  zoom?: number;
   scale?: number;
   texture?: string;
   baseColor?: string;
   uvScale?: number;
+
+  // --- RENDER tab -----------------------------------------------------------
+  // zbuffer / dither / edgeAA and the four light* values are de-mock E3
+  // placeholders, same as SHAPE tab's zoom/scale/texture/baseColor/uvScale
+  // above: no engine sits behind any of them yet, and they are stored only so
+  // RESET can undo the choice. shadingMode is different — it is chip-selection
+  // state that deliberately does NOT feed modeLabel(). The status bar, the HUD
+  // and SHAPE INFO describe what the rasteriser actually does, and printing
+  // GOURAUD there would be the same lie a CSS filter would have been. Do not
+  // wire this field into modeLabel() to make the chip "real" — that is not a
+  // fix, it is de-mock E3's job.
+  shadingMode?: ShadingModeKey;
+  zbuffer?: boolean;
+  dither?: boolean;
+  edgeAA?: boolean;
+  lightAzimuth?: number;
+  lightElevation?: number;
+  lightAmbient?: number;
+  lightSpecular?: number;
+
+  // --- WORLD tab ------------------------------------------------------------
+  // fov and zoom are the two live camera controls: both reach the projection
+  // through CameraController, and zoom moved here from the SHAPE tab, where the
+  // shell had parked it because WORLD did not exist yet.
+  //
+  // sky and floor are live too — they gate real BackgroundRenderer layers — and
+  // they are the first slices with a SECOND surface reading them: the viewport's
+  // quick toggles show the same three booleans as this tab's rows, including
+  // grid. One boolean per switch, never a pair, which is why they sit in the
+  // store rather than on the section that draws them.
+  //
+  // projection, grid, shadow, fog and gridStep have no engine at all
+  // (de-mock E2 for the first, E5 for the rest) and are stored only so the
+  // console remembers the choice and RESET can undo it.
+  fov?: number;
+  zoom?: number;
+  projection?: ProjectionKey;
+  sky?: boolean;
+  floor?: boolean;
+  grid?: boolean;
+  shadow?: boolean;
+  fog?: number;
+  gridStep?: number;
 }
 
 // Optional above, and guaranteed below: every field is filled by the owning

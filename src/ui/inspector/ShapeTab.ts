@@ -22,7 +22,6 @@ export interface ShapeTabOptions {
   onYaw: (engineValue: number) => void;
   onRoll: (engineValue: number) => void;
   onSpin: (rotationSpeed: number) => void;
-  onZoom: (sliderValue: number) => void;
   onOpacity: (sliderValue: number) => void;
 }
 
@@ -46,7 +45,6 @@ class ShapeTab {
       onYaw: options.onYaw,
       onRoll: options.onRoll,
       onSpin: options.onSpin,
-      onZoom: options.onZoom,
     });
 
     this.material = new MaterialSection({
