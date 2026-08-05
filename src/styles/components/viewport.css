@@ -63,6 +63,15 @@
   display: block;
   width: 100%;
   height: 100%;
+  cursor: grab;
+  /* PointerOrbit owns the gesture; without this a one-finger drag scrolls the
+     page instead of orbiting, and a two-finger pinch triggers the browser's
+     own page zoom instead of reaching the ZOOM slider. */
+  touch-action: none;
+}
+
+.viewport-stage canvas:active {
+  cursor: grabbing;
 }
 
 /* ---- hud root -------------------------------------------------------------

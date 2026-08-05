@@ -15,6 +15,7 @@ import ShapeSwitcher from "@app/ShapeSwitcher";
 import CameraRig from "@camera/CameraRig";
 import data from "@data/data";
 import shapeInfo from "@data/shapeInfo";
+import PointerOrbit from "@input/PointerOrbit";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
@@ -106,6 +107,7 @@ class Main {
   private readonly textures: TextureRegistry;
   private readonly camera: CameraController;
   private readonly rig: CameraRig;
+  private readonly pointerOrbit: PointerOrbit;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
   // A change detector, not a second copy of the state: this class publishes the
@@ -216,6 +218,14 @@ class Main {
       onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
     });
     this.transport = new TransportBar();
+    this.pointerOrbit = new PointerOrbit({
+      canvas,
+      getAngles: () => this.rig.angles(),
+      getZoom: () => this.uiState.getState().zoom ?? DEFAULT_ZOOM_SLIDER_VALUE,
+      onOrbit: (pitch, yaw) => this.applyPointerOrbit(pitch, yaw),
+      onZoom: (value) => this.applyPointerZoom(value),
+      onReset: () => this.applyPointerReset(),
+    });
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
       transitionMachine: new ShapeTransitionMachine({
@@ -329,6 +339,7 @@ class Main {
     // The one collaborator holding a timer and a media-query listener: every
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
+    this.pointerOrbit.dispose();
   }
 
   // The whole point of this class existing: at the seed 1024x640 canvas, scale
@@ -393,6 +404,37 @@ class Main {
   private changeRig(angles: Partial<RigAngles>) {
     this.rig.setAngles(angles);
     this.renderPausedFrame();
+  }
+
+  // Mirrors changeRig, but a drag has no SliderRow of its own already showing
+  // the new angle the way a TRANSFORM input does — the rows have to be pushed
+  // the numbers PointerOrbit computed, the same way applyViewPreset pushes them
+  // mid-ease.
+  private applyPointerOrbit(pitch: number, yaw: number) {
+    this.rig.setAngles({ pitch, yaw });
+    this.shapeTab.setTransformUi(this.rig.angles());
+    this.renderPausedFrame();
+  }
+
+  // changeZoom alone leaves the ZOOM row and the store exactly where a slider
+  // drag would have moved them first — CameraSection.setZoomUi (via WorldTab)
+  // is the write-back half a pointer gesture has to supply for itself.
+  private applyPointerZoom(sliderValue: number) {
+    this.changeZoom(sliderValue);
+    this.worldTab.setZoomUi(sliderValue);
+  }
+
+  // The rig's own reset() only clears the spin accumulator and an in-flight
+  // preset — it does not zero pitch/yaw/roll, so both calls are needed here.
+  // Zoom goes through applyPointerZoom rather than changeZoom directly so its
+  // own row follows. Deliberately not resetControls(): a stray double-tap must
+  // not also touch shading, materials or toggles — the toolbar RESET stays the
+  // only path that restores those.
+  private applyPointerReset() {
+    this.rig.setAngles({ pitch: 0, yaw: 0, roll: 0 });
+    this.rig.reset();
+    this.shapeTab.setTransformUi(this.rig.angles());
+    this.applyPointerZoom(DEFAULT_ZOOM_SLIDER_VALUE);
   }
 
   // A preset while paused has to repaint, or the chip appears to do nothing —
