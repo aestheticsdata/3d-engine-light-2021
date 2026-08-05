@@ -1,16 +1,19 @@
 // ENVIRONMENT: what the scene is made of around the shape.
 //
-// Two of the four toggles are real. SKY DOME and CHECKER FLOOR gate layers
-// BackgroundRenderer actually paints, and they are the first controls in the
-// console with a second surface showing the same switch — the viewport's quick
-// toggles carry SKY, FLOOR and GRID as well. That is why all three write the
-// store and none of them keeps a private boolean: the owner re-reads the store
-// and pushes the result back to every surface, so the two can never drift.
+// Three of the four toggles are real. SKY DOME, CHECKER FLOOR and, since
+// COS-246 (E5a), GRID OVERLAY gate layers BackgroundRenderer actually paints,
+// and they are the controls in the console with a second surface showing the
+// same switch — the viewport's quick toggles carry SKY, FLOOR and GRID as
+// well. That is why all three write the store and none of them keeps a
+// private boolean: the owner re-reads the store and pushes the result back to
+// every surface, so the two can never drift. GRID STEP is real alongside GRID
+// OVERLAY, for the same reason and through the same onLayersChange callback —
+// it sizes both the grid's own spacing and the floor's checker cell.
 //
-// GRID OVERLAY and GROUND SHADOW have nothing behind them — the renderer draws
-// no grid and casts no shadow — and neither do FOG or GRID STEP. All four are
-// de-mock E5, and they are stored rather than discarded so the console remembers
-// the choice and RESET can undo it.
+// GROUND SHADOW and FOG still have nothing behind them — the renderer casts no
+// shadow and applies no fog curve. Both are de-mock E5b (COS-247), and they
+// are stored rather than discarded so the console remembers the choice and
+// RESET can undo it.
 
 import DOMScope from "@ui/DOMScope";
 import SliderRow from "@ui/inspector/controls/SliderRow";
@@ -34,18 +37,13 @@ const FOG_MAX = 100;
 const GRID_STEP_MIN = 1;
 const GRID_STEP_MAX = 20;
 
-// Exported because the viewport's GRID pill describes the same boolean and the
-// same gap, so the two `title` attributes have one source. The pill points at a
-// different hint NODE — #ph-quick-grid, out with the viewport's other hints —
-// because this one lives inside a panel that is display:none on every other tab
-// and would drop out of the accessibility tree with it. That node's text is a
-// literal in the markup, which no constant can reach; index.html and this line
-// have to be edited together, the same way ph-vp-projection and ph-projection
-// already are.
-export const WORLD_LAYER_HINT_TEXT = "This world layer is not drawn by the renderer yet (de-mock E5).";
-
+// GROUND SHADOW and FOG are what still read this: neither has an engine behind
+// it yet (de-mock E5b, COS-247). GRID OVERLAY and GRID STEP left this hint when
+// COS-246 (E5a) made them real, and the GRID quick-toggle pill's own copy —
+// #ph-quick-grid, previously out in the viewport markup — went with them; a
+// pill with no placeholder attributes has nothing left to describe.
 const HINT_ID = "ph-world-layer";
-const HINT_TEXT = WORLD_LAYER_HINT_TEXT;
+const HINT_TEXT = "This world layer is not drawn by the renderer yet (de-mock E5b).";
 
 export interface EnvironmentSectionOptions {
   togglesSelector: string;
@@ -97,13 +95,9 @@ class EnvironmentSection {
         options.onLayersChange();
       },
     });
-    // Placeholder, and still routed through onLayersChange: the quick toggles
-    // show the same boolean, so a flip here has to reach them even though it
-    // reaches no renderer.
     this.gridRow = new ToggleRow({
       label: "GRID OVERLAY",
       on: DEFAULT_GRID,
-      placeholder,
       onToggle: (next) => {
         this.store.setState({ grid: next });
         options.onLayersChange();
@@ -125,14 +119,19 @@ class EnvironmentSection {
       format: (value) => `${value}%`,
       onInput: (value) => this.store.setState({ fog: value }),
     });
+    // Raises onLayersChange, same as the toggles above: the value it writes
+    // feeds BackgroundRenderer.setWorld, which sizes both the grid's spacing
+    // and the floor's checker cell.
     this.gridStep = new SliderRow({
       label: "GRID STEP",
       min: GRID_STEP_MIN,
       max: GRID_STEP_MAX,
       value: DEFAULT_GRID_STEP,
-      placeholder,
       format: (value) => `${value}m`,
-      onInput: (value) => this.store.setState({ gridStep: value }),
+      onInput: (value) => {
+        this.store.setState({ gridStep: value });
+        options.onLayersChange();
+      },
     });
 
     // Applied here rather than asked for in SliderRow's options: it is a

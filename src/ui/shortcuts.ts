@@ -53,10 +53,7 @@ export const SHORTCUTS: readonly ShortcutBinding[] = [
     status: "pendingHandler",
     handler: "RenderPipelinePanel.setWireframe",
   },
-  // The only pending-*feature* binding in the list: the renderer draws no grid
-  // at all, so there is nothing for a handler to call. It goes live with de-mock
-  // E5 "WORLD: ground grid", not with the keyboard ticket.
-  { keyLabel: "G", keys: ["g"], action: "grid", status: "pendingFeature" },
+  { keyLabel: "G", keys: ["g"], action: "grid", status: "pendingHandler", handler: "UIStateStore.grid" },
   {
     keyLabel: "C",
     keys: ["c"],

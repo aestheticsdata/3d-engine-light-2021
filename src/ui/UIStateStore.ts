@@ -94,14 +94,16 @@ export interface UIState {
   // for the chip label and the branch in Camera.scaleAt, so neither end can
   // grow a value the other does not have.
   //
-  // sky and floor are live too — they gate real BackgroundRenderer layers — and
-  // they are the first slices with a SECOND surface reading them: the viewport's
-  // quick toggles show the same three booleans as this tab's rows, including
-  // grid. One boolean per switch, never a pair, which is why they sit in the
-  // store rather than on the section that draws them.
+  // sky, floor and, since COS-246 (E5a), grid are live too — they gate real
+  // BackgroundRenderer layers — and they are the slices with a SECOND surface
+  // reading them: the viewport's quick toggles show the same three booleans as
+  // this tab's rows. One boolean per switch, never a pair, which is why they
+  // sit in the store rather than on the section that draws them. gridStep is
+  // live alongside grid — it sizes both the grid's spacing and the floor's
+  // checker cell.
   //
-  // grid, shadow, fog and gridStep have no engine at all (de-mock E5) and are
-  // stored only so the console remembers the choice and RESET can undo it.
+  // shadow and fog have no engine at all (de-mock E5b, COS-247) and are stored
+  // only so the console remembers the choice and RESET can undo it.
   fov?: number;
   zoom?: number;
   projection?: ProjectionMode;
