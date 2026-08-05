@@ -33,10 +33,19 @@ const EDGES_PER_TRIANGLE = 1.5;
 
 // The design's 4096 budget does not fit this repo — the torus knot alone builds
 // 7920 triangles, so a hardcoded ceiling would pin the bar at 100% on one of
-// the fourteen shapes and say nothing on the other thirteen. Derived from the
-// registry instead and rounded up to a power of two: 8192 today, and it moves
-// on its own the day COS-201 lands a denser polyhedron. The label prints it, so
+// the twenty shapes and say nothing on the other nineteen. Derived from the
+// registry instead and rounded up to a power of two. The label prints it, so
 // the denominator documents itself.
+//
+// It is still 8192, and that is a decision rather than a coincidence. COS-410's
+// three new knots each need a longer curve than the trefoil and would have
+// pushed the registry maximum past 8192 at the trefoil's tube resolution,
+// doubling this to 16384 and halving the bar for every other shape in the
+// console. TorusKnotGenerator holds them under it instead by trading tube
+// segments for path segments, so the densest shape in the registry is now 8008
+// and this number has not moved. Nothing enforces that from here — the budget
+// is derived, so it would move silently — which is why the ceiling is asserted
+// on the other side, in TorusKnotGenerator and its suite.
 const REGISTRY_MAX_TRIANGLES = Math.max(...Object.values(data).map((object3D) => object3D.triangles.length));
 
 export const POLY_BUDGET = 2 ** Math.ceil(Math.log2(REGISTRY_MAX_TRIANGLES));

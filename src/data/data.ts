@@ -11,6 +11,9 @@ import rhombicDodecahedron from "@data/shapes/rhombicDodecahedron";
 import rhombicTriacontahedron from "@data/shapes/rhombicTriacontahedron";
 import sphere from "@data/shapes/sphere";
 import torusKnot from "@data/shapes/torusKnot";
+import torusKnot25 from "@data/shapes/torusKnot25";
+import torusKnot27 from "@data/shapes/torusKnot27";
+import torusKnot34 from "@data/shapes/torusKnot34";
 import truncatedCuboctahedron from "@data/shapes/truncatedCuboctahedron";
 import truncatedIcosidodecahedron from "@data/shapes/truncatedIcosidodecahedron";
 
@@ -30,6 +33,9 @@ const data = {
   cross,
   donut,
   torusKnot,
+  torusKnot25,
+  torusKnot27,
+  torusKnot34,
   menger,
   cuboctahedron,
   rhombicDodecahedron,
