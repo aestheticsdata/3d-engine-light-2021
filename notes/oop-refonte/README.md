@@ -12,7 +12,7 @@ directory holds only what a ticket cannot.
   length (D7), and the four readings taken against the engine batch (D8). Read it
   before arguing that something should or should not become a class.
 - **[reference/geometry-baseline.json](reference/geometry-baseline.json)** — every
-  point and every triangle of all fourteen shapes, in registry order.
+  point and every triangle of all twenty shapes, in registry order.
 - **[reference/geometry-counts.md](reference/geometry-counts.md)** — the same
   registry, as the two numbers the SHAPE INFO panel prints.
 

@@ -22,8 +22,8 @@ export interface ShapeOption {
 }
 
 // One section of the list. The picker takes groups rather than a flat array
-// because fourteen names in one column is already a wall to scan, and COS-201
-// adds roughly ten more with near-identical spellings. What it does NOT take is
+// because twenty names in one column is already a wall to scan, and half of them
+// are COS-201 polyhedra with near-identical spellings. What it does NOT take is
 // a family: which sections exist and what order they come in is the caller's
 // business, and this class only knows it was handed a heading and some options.
 export interface ShapeOptionGroup {
@@ -216,9 +216,55 @@ class ShapePicker {
     this.list.hidden = false;
     this.trigger.setAttribute("aria-expanded", "true");
     this.root.classList.add("is-open");
+    this.publishSpaceBelow();
 
     const active = this.activeId === null ? null : this.options.get(this.activeId);
     active?.focus();
+  }
+
+  // How much room the open list actually has under it, which is the one input
+  // inspector.css cannot work out for itself: the list is absolutely
+  // positioned, so where its top lands depends on where the whole inspector was
+  // laid out. Published as a raw measurement — the stylesheet subtracts its own
+  // gutter token and clamps against the floor, because a spacing value belongs
+  // in the spacing tokens and not in a number computed here.
+  //
+  // Measured against the box that will CLIP the list, not against the viewport,
+  // and the difference is the whole correctness of this. `.inspector__body`
+  // scrolls (`overflow: auto`), so a list grown to the bottom of the *window*
+  // does not overflow the panel and scroll internally — it lengthens the
+  // panel's own scroll content, and the rows past the fold are reached by
+  // scrolling the inspector instead of the list. Which is the behaviour this
+  // whole change exists to remove.
+  //
+  // After `hidden = false`, never before: a display:none element measures zero
+  // and the list would be pinned to its floor forever. Reading the rect forces
+  // the layout that has just been invalidated, which is the cost of measuring
+  // at all and is paid once per open rather than per frame.
+  //
+  // Re-measured on every open rather than cached: the inspector scrolls and the
+  // window resizes, so a value taken once at construction is wrong the second
+  // time the control is used.
+  private publishSpaceBelow() {
+    const spaceBelow = this.clipBottom() - this.list.getBoundingClientRect().top;
+
+    this.list.style.setProperty("--size-picker-space-below", `${Math.round(spaceBelow)}px`);
+  }
+
+  // The nearest ancestor that would cut the list off, found rather than named.
+  // Naming `.inspector__body` here would tie a control that knows only its own
+  // root to one panel's markup; asking the DOM which box clips it keeps the
+  // question the widget's own. The viewport is the answer when nothing does.
+  private clipBottom(): number {
+    for (let node = this.root.parentElement; node !== null; node = node.parentElement) {
+      const { overflowY } = window.getComputedStyle(node);
+
+      if (overflowY === "auto" || overflowY === "scroll" || overflowY === "hidden") {
+        return node.getBoundingClientRect().bottom;
+      }
+    }
+
+    return window.innerHeight;
   }
 
   private close() {

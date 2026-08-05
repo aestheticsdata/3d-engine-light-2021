@@ -255,9 +255,22 @@
   transform: rotate(-135deg) translate(-2px, -2px);
 }
 
-/* Floating, and capped: fourteen options today and more coming, so the list
-   scrolls rather than running off the panel. --size-picker-max-h was tokenised
-   for exactly this.
+/* Floating, and grown into whatever room is under it.
+
+   It used to be a flat 320px, which is a fixed height — the one thing the
+   sizing rule forbids — and on a desktop panel it stopped the list at seven of
+   twenty rows with hundreds of pixels of empty inspector below. So it is the
+   fluid form the rule asks for: --size-picker-min-h is the floor, and above it
+   the list takes the space that is actually there.
+
+   How much space that is, only layout knows: the list is absolutely positioned,
+   so its top depends on where the whole inspector landed. ShapePicker measures
+   it on every open and publishes the raw distance down to the box that would
+   clip it — .inspector__body, which scrolls — as --size-picker-space-below. The
+   gutter that keeps the list off that edge is trimmed here, because a spacing
+   token belongs in the stylesheet and not in a number the picker computed. With
+   the property unset — JS not run yet, or a measurement that failed — max()
+   falls back to the floor, which is exactly the behaviour this replaced.
 
    The surface is --color-panel-bg, which is the colour of the inspector body
    the list floats over, and that is a deliberate departure from the ruling the
@@ -279,7 +292,10 @@
   right: 0;
   left: 0;
   display: block;
-  max-height: var(--size-picker-max-h);
+  max-height: max(
+    var(--size-picker-min-h),
+    calc(var(--size-picker-space-below, var(--size-picker-min-h)) - var(--space-4))
+  );
   overflow-y: auto;
   background: var(--color-panel-bg);
   border: var(--size-hairline) solid var(--color-border-panel);
@@ -325,18 +341,36 @@
    than subordinate to it. This is quieter on every axis — smaller, dimmer, mono
    — so it reads as a divider with a name on it. */
 .shape-picker__group-label {
+  position: sticky;
+  top: 0;
+  z-index: var(--layer-sticky);
   display: block;
-  padding: var(--space-1-5) var(--space-3) var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-1-5);
   font: var(--font-weight-medium) var(--text-xs) / var(--leading-none) var(--font-mono);
   letter-spacing: var(--tracking-lg);
   color: var(--color-text-dim);
+  background: var(--color-panel-bg);
+  border-bottom: var(--size-hairline) solid var(--color-border-panel);
 }
 
-/* The first heading sits against the list's own top edge; every later one earns
-   the gap that makes the sections read as separate blocks. */
-.shape-picker__group + .shape-picker__group .shape-picker__group-label {
-  margin-top: var(--space-2);
-}
+/* Sticky, and that is the whole point rather than a flourish. The failure it
+   fixes is specific: with twenty shapes in eight-character abbreviations,
+   scrolling into the middle of POLYHEDRA used to show a run of near-identical
+   rows with nothing on screen saying which section they belonged to — the
+   heading had scrolled away. Stuck to the top of the scroll port, the section
+   you are in is always named.
+
+   The containing block is the group, not the list, so each heading stops at its
+   own section's bottom edge and is pushed out by the next one rather than all
+   five piling up.
+
+   An opaque background is load-bearing, not decorative: options scroll UNDER
+   this, and --color-panel-bg is the list's own surface, so the heading reads as
+   part of the list rather than as a floating chip. The hairline under it is
+   what separates the sections now that the old margin is gone — a margin above
+   a sticky element leaves a transparent strip at the stuck position with the
+   previous section's rows sliding through it, which is worse than no gap at
+   all. The label's own padding is the air instead. */
 
 .shape-picker__option.is-active {
   background: var(--color-surface-sunken);

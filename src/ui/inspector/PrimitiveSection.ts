@@ -2,7 +2,8 @@
 //
 // Generated from the registry, never from a list. The design hardcodes eight
 // shapes that are not this engine's (SPHERE CUBE TORUS ICOSA CYLIND CONE TEAPOT
-// TERRA, L1123–L1148); this repo ships fourteen and COS-201 adds more. So the
+// TERRA, L1123–L1148); this repo ships twenty, half of them COS-201
+// polyhedra. So the
 // options walk Object.keys(data) and the header count is that length — adding a
 // shape to the registry adds an option with no edit here.
 //
@@ -64,7 +65,7 @@ class PrimitiveSection {
             .map((key) => this.buildOption(key, thumbnails)),
         }))
         // A family declared with nothing in it yet would otherwise draw a
-        // heading over an empty gap. Cannot happen with today's fourteen; it can
+        // heading over an empty gap. Cannot happen with today's twenty; it can
         // the moment a section is opened ahead of the shapes that will fill it.
         .filter((group) => group.options.length > 0),
     );

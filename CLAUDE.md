@@ -127,7 +127,7 @@ out of them, and new code still answers to it.
   COS-356: what makes a file exempt, the ten files not converted, and the recorded
   baselines. Read `reference/decisions.md` before arguing that something should or
   should not become a class. Its `README.md` documents `pnpm run snapshot:geometry`,
-  the byte-identical dump of all fourteen shapes that every geometry ticket runs
+  the byte-identical dump of all twenty shapes that every geometry ticket runs
   before QA.
 - `notes/ui-refonte/` — the design-system rules and per-widget layout specs from
   COS-213. The widgets are all built; the rules still bind anything that adds UI.

@@ -18,12 +18,19 @@ import { primitiveLabel } from "@ui/primitiveLabel";
 
 const MAX_CHIP_CHARACTERS = 8;
 
+// TK25 / TK27 / TK34 name the knot by its own (p, q) rather than by a common
+// name, because that is the one thing that tells four near-identical thumbnails
+// apart at 44px. The derived fallback would give all three TORUSKNO.
 const SHORT_LABELS: Record<string, string> = {
   torusKnot: "TKNOT",
+  torusKnot25: "TK25",
+  torusKnot27: "TK27",
+  torusKnot34: "TK34",
   cuboctahedron: "CUBOCT",
   rhombicDodecahedron: "RHOMBDOD",
   kisRhombicDodecahedron: "KISRHDOD",
   truncatedCuboctahedron: "TRCUBOCT",
+  truncatedIcosidodecahedron: "TRICOSID",
   icosidodecahedron: "ICOSIDOD",
   rhombicTriacontahedron: "RHOMBTRI",
   kisRhombicTriacontahedron: "KISRHTRI",

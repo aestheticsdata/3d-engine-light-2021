@@ -214,7 +214,7 @@ fields (`scene/sceneRows.ts:11,14,16`); it is not the house form and is not a pr
 
 R16's sibling: R16 says which specifier to import through, this says which *form*.
 
-`data.ts:1` imports `Data3D` as a type beside fourteen value imports of the shape
+`data.ts:1` imports `Data3D` as a type beside twenty value imports of the shape
 modules. `Mesh.ts:1-3` is the clearest case — all three of its imports are types, so
 the emitted module imports nothing at all at runtime.
 

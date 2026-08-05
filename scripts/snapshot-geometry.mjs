@@ -1,4 +1,4 @@
-// The geometry baseline: every point and every triangle of all fourteen shapes,
+// The geometry baseline: every point and every triangle of all twenty shapes,
 // dumped to disk so a refactor of the generators can be proved to have changed
 // nothing.
 //

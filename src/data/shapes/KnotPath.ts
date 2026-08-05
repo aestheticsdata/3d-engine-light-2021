@@ -49,6 +49,10 @@ export interface KnotFrame {
   binormal: Vec3;
 }
 
+// Euclid, as a pure module-scope helper beside the class: it holds no state and
+// is not exported, which is the one shape a free function is allowed here.
+const greatestCommonDivisor = (a: number, b: number): number => (b === 0 ? a : greatestCommonDivisor(b, a % b));
+
 class KnotPath {
   private readonly vec: Vec3Math;
   private readonly p: number;
@@ -58,6 +62,16 @@ class KnotPath {
   private readonly segments: number;
 
   constructor(options: KnotPathOptions) {
+    // p and q must be coprime, and this throws rather than correcting them.
+    // With a common factor the curve closes early and what comes back is a
+    // LINK — several separate loops — not a knot: (2, 4) is two interlocked
+    // circles. It would sweep into a perfectly plausible-looking object that is
+    // mathematically the wrong thing, which is precisely why it has to be loud;
+    // there is also no honest p or q to substitute.
+    if (greatestCommonDivisor(options.p, options.q) !== 1) {
+      throw new Error(`A (${options.p}, ${options.q}) torus curve is a link, not a knot: p and q must be coprime.`);
+    }
+
     this.vec = new Vec3Math();
     this.p = options.p;
     this.q = options.q;

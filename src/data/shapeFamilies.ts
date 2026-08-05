@@ -14,15 +14,25 @@
 // heading that is not its own name — "PLATONIC" drawn as "PLATONIC SOLIDS" —
 // this becomes an array of pairs and nothing else moves.
 //
-// FRACTALS holds one shape and looks thin because of it. It stays: a Sierpinski
-// or a Julia set belongs there and nowhere else, and folding it into SURFACES
-// now would only have to be undone. POLYHEDRA is the section COS-201 grows, by
-// roughly ten — no other section moves when it lands.
+// UNCATEGORIZED IS A REAL SECTION, not a fallback. The four shapes in it —
+// sphere, cube, pyramid, cross — are the engine's demo primitives and have no
+// mathematical family in common; naming them PRIMITIVES implied one. It leads
+// the list rather than trailing it so the boot shape is still the first row,
+// and so the section a newcomer wants is not below eight near-identically
+// spelled polyhedra.
+//
+// KNOTS was folded out of SURFACES when COS-410 landed the (2,5), (2,7) and
+// (3,4) knots beside the trefoil: four shapes of one construction is a section,
+// and leaving them next to the donut made SURFACES the second-largest family
+// while saying nothing about what its members share. SURFACES keeps the donut,
+// and FRACTALS keeps menger — both look thin, and both are the correct home for
+// the next shape of their kind rather than a bucket to be merged away now and
+// unpicked later.
 //
 // Inert data with no behaviour, so it stays a table rather than becoming a class
 // (decisions.md D1a).
 
-const shapeFamilies = ["PRIMITIVES", "SURFACES", "FRACTALS", "POLYHEDRA"] as const;
+const shapeFamilies = ["UNCATEGORIZED", "POLYHEDRA", "KNOTS", "FRACTALS", "SURFACES"] as const;
 
 export type ShapeFamily = (typeof shapeFamilies)[number];
 

@@ -32,11 +32,11 @@ export interface ShapeInfo {
 // a missing key, a missing `family` and a mistyped family name all fail at this
 // line. The export is deliberately widened back to a string key afterwards:
 // every consumer looks a shape up by a name it got at runtime (Main takes it
-// from the shape switcher), and narrowing the export would push the fourteen
+// from the shape switcher), and narrowing the export would push the twenty
 // literals through the whole call chain to buy nothing.
 const entries = {
   sphere: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Sphere",
     description: "A low-poly sphere built from latitude and longitude bands with a bold checker pattern.",
     geometricFeature: "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
@@ -49,7 +49,7 @@ const entries = {
     ],
   },
   cube: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Cube",
     description: "A hard-edged box mixing flat-colored faces with subdivided textured surfaces.",
     geometricFeature: "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
@@ -62,7 +62,7 @@ const entries = {
     ],
   },
   pyramid: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Pyramid",
     description: "A classic square-based pyramid with strongly contrasted side colors and a sharp apex.",
     geometricFeature: "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
@@ -81,7 +81,7 @@ const entries = {
     ],
   },
   cross: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Cross",
     description: "An extruded cross silhouette that reads like a solid emblem rather than a rounded primitive.",
     geometricFeature: "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
@@ -104,7 +104,7 @@ const entries = {
     ],
   },
   torusKnot: {
-    family: "SURFACES",
+    family: "KNOTS",
     title: "Torus Knot",
     description: "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
     geometricFeature:
@@ -114,6 +114,67 @@ const entries = {
     textureSummary: "No textures",
     references: [
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Torus_knot" },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TorusKnot.html",
+      },
+    ],
+  },
+  torusKnot25: {
+    family: "KNOTS",
+    title: "Cinquefoil knot",
+    description:
+      "The (2, 5) torus knot, 5₁ — Solomon's seal, five lobes of the same tube sweep in gold over deep blue.",
+    geometricFeature:
+      "Two turns around the main axis to five through the hole; coprime p and q are what make the curve close as one loop.",
+    densityLabel: "High density",
+    generator: "p/q knot sweep",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Cinquefoil_knot",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/SolomonsSealKnot.html",
+      },
+    ],
+  },
+  torusKnot27: {
+    family: "KNOTS",
+    title: "Septafoil knot",
+    description: "The (2, 7) torus knot, 7₁ — seven lobes in mint and violet, the longest curve of the four.",
+    geometricFeature:
+      "Its curve is the longest in the registry, so the sweep spends its whole tessellation budget on path segments.",
+    densityLabel: "High density",
+    generator: "p/q knot sweep",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/7_1_knot",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TorusKnot.html",
+      },
+    ],
+  },
+  torusKnot34: {
+    family: "KNOTS",
+    title: "(3, 4) torus knot",
+    description: "The (3, 4) torus knot, 8₁₉ — the only one of the four with p > 2, in peach over deep teal.",
+    geometricFeature:
+      "Three turns around the main axis rather than two, so three strands cross every section of the torus instead of two.",
+    densityLabel: "High density",
+    generator: "p/q knot sweep",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/8_19_knot",
+      },
       {
         label: "MathWorld",
         url: "https://mathworld.wolfram.com/TorusKnot.html",
@@ -283,6 +344,69 @@ const entries = {
       {
         label: "MathWorld",
         url: "https://mathworld.wolfram.com/DisdyakisTriacontahedron.html",
+      },
+    ],
+  },
+  truncatedIcosidodecahedron: {
+    family: "POLYHEDRA",
+    title: "Truncated icosidodecahedron",
+    description:
+      "An Archimedean solid of 30 squares, 20 hexagons and 12 decagons in three plums, the largest of Conway's family.",
+    geometricFeature:
+      "One vertex per flag of the icosahedron — each of the 120 sits where a decagon, a hexagon and a square plane meet.",
+    densityLabel: "High density",
+    generator: "icosahedron flag solve",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Truncated_icosidodecahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TruncatedIcosidodecahedron.html",
+      },
+    ],
+  },
+  mucuboctahedron: {
+    family: "POLYHEDRA",
+    title: "Mucuboctahedron",
+    description:
+      "An infinite skew polyhedron: a periodic sponge of squares and hexagons in the golds of Conway's plate, rendered as a finite chunk.",
+    geometricFeature:
+      "All the squares of the Kelvin foam's truncated octahedra plus half their hexagons; the other half are the openings.",
+    densityLabel: "Medium density",
+    generator: "bitruncated cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Bitruncated_cubic_honeycomb",
+      },
+    ],
+  },
+  murhombicuboctahedron: {
+    family: "POLYHEDRA",
+    title: "Murhombicuboctahedron",
+    description:
+      "The denser sponge of Conway's plate: squares and hexagons in pale gold, with the octagons opened out as its tunnels.",
+    geometricFeature:
+      "Every square and hexagon of the omnitruncated cubic honeycomb; deleting only its octagons leaves two faces on every edge.",
+    densityLabel: "High density",
+    generator: "omnitruncated cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Omnitruncated_cubic_honeycomb",
       },
     ],
   },

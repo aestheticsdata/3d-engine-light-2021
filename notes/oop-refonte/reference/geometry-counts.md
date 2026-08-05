@@ -17,6 +17,9 @@ key is the shape the console boots on.
 | cross | 24 | 44 |
 | donut | 861 | 1600 |
 | torusKnot | 3960 | 7920 |
+| torusKnot25 | 4004 | 8008 |
+| torusKnot27 | 3960 | 7920 |
+| torusKnot34 | 4004 | 8008 |
 | menger | 4224 | 2112 |
 | cuboctahedron | 12 | 20 |
 | rhombicDodecahedron | 14 | 24 |
@@ -25,3 +28,6 @@ key is the shape the console boots on.
 | icosidodecahedron | 30 | 56 |
 | rhombicTriacontahedron | 32 | 60 |
 | kisRhombicTriacontahedron | 62 | 120 |
+| truncatedIcosidodecahedron | 120 | 236 |
+| mucuboctahedron | 216 | 696 |
+| murhombicuboctahedron | 672 | 2392 |
