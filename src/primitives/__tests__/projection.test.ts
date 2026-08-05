@@ -5,44 +5,78 @@
 // under vitest's node environment threw before a single assertion ran. These
 // tests exist because they can now be written at all.
 //
-// The capture-at-construction case is the one worth guarding. Copying the two
-// numbers rather than holding the Viewport is what keeps a mesh already on
-// screen projecting about the centre it was built with; making it follow a
-// resize would be an improvement, and it belongs to the resize ticket, not here.
-// The camera is the opposite and is held rather than copied, which is what lets
-// one slider move every vertex of every mesh at once. The two arrive in the same
-// constructor and it would be easy to make one behave like the other by mistake.
+// The capture-at-construction case is the one worth guarding. Copying the
+// render target's three numbers rather than holding the instance is what keeps
+// a mesh already on screen projecting about the centre and scale it was built
+// with; following a resize would be an improvement, and it belongs to the
+// resize ticket (E9b), not here. The camera is the opposite and is held rather
+// than copied, which is what lets one slider move every vertex of every mesh
+// at once. The two arrive in the same constructor and it would be easy to make
+// one behave like the other by mistake.
 
 import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import Point3D from "@primitives/Point3D";
-import Viewport from "@primitives/Viewport";
+import RenderTarget from "@primitives/RenderTarget";
 import { describe, expect, it } from "vitest";
 
 import type { CameraOptions } from "@primitives/Camera";
 
-const canvasOf = (width: number, height: number) => ({ width, height }) as HTMLCanvasElement;
-
-const viewport = () => new Viewport(canvasOf(1024, 640));
+const renderTarget = () => new RenderTarget({ width: 1024, height: 640 });
 
 // Focal 300 at magnification 1 puts the eye 300 out and leaves the centre plane
 // at scale 1, which is what makes the projected numbers below readable by hand.
 const cameraOf = (options: Partial<CameraOptions> = {}) => new Camera({ focal: 300, magnification: 1, ...options });
 
-describe("Viewport", () => {
-  it("halves the canvas, rounding down on an odd dimension", () => {
-    const odd = new Viewport(canvasOf(1025, 641));
+describe("RenderTarget", () => {
+  it("halves width and height into the centre, rounding down on an odd dimension", () => {
+    const odd = new RenderTarget({ width: 1025, height: 641 });
 
-    expect(viewport().x).toBe(512);
-    expect(viewport().y).toBe(320);
-    expect(odd.x).toBe(512);
-    expect(odd.y).toBe(320);
+    expect(renderTarget().centerX).toBe(512);
+    expect(renderTarget().centerY).toBe(320);
+    expect(odd.centerX).toBe(512);
+    expect(odd.centerY).toBe(320);
+  });
+
+  it("resolves scale to 1 at the seed dimensions", () => {
+    expect(renderTarget().scale).toBe(1);
+  });
+
+  // Width plays no part in it — only height, because that is the axis the
+  // vertical field-of-view identity is written against.
+  it("derives scale from height relative to the reference height, independent of width", () => {
+    const target = new RenderTarget({ width: 800, height: 480 });
+
+    expect(target.scale).toBeCloseTo(480 / 640, 10);
+  });
+
+  // The exact case ShapeThumbnails depends on: pinning referenceHeight to the
+  // target's own height is what keeps a differently-sized render target
+  // behaving as though it had none at all.
+  it("resolves scale to 1 when the reference height is pinned to the target's own height", () => {
+    const target = new RenderTarget({ width: 88, height: 88, referenceHeight: 88 });
+
+    expect(target.scale).toBe(1);
+  });
+
+  it("recomputes width, height, centre and scale on setSize, without moving the reference height", () => {
+    const target = renderTarget();
+
+    target.setSize(800, 480);
+
+    expect(target.width).toBe(800);
+    expect(target.height).toBe(480);
+    expect(target.centerX).toBe(400);
+    expect(target.centerY).toBe(240);
+    // Still divided by 640, the reference the target opened with — setSize
+    // moves the target's own size, not the world it was authored against.
+    expect(target.scale).toBeCloseTo(480 / 640, 10);
   });
 });
 
 describe("convert3D2D", () => {
-  it("puts the origin at the viewport centre", () => {
-    const point = new Point3D(0, 0, 0, viewport(), cameraOf());
+  it("puts the origin at the render target centre", () => {
+    const point = new Point3D(0, 0, 0, renderTarget(), cameraOf());
     const projected = point.convert3D2D();
 
     expect(projected.x).toBe(512);
@@ -51,29 +85,28 @@ describe("convert3D2D", () => {
 
   it("shrinks with distance and grows as the shape comes closer", () => {
     const camera = cameraOf();
-    const near = new Point3D(100, 0, -150, viewport(), camera);
-    const far = new Point3D(100, 0, 300, viewport(), camera);
+    const near = new Point3D(100, 0, -150, renderTarget(), camera);
+    const far = new Point3D(100, 0, 300, renderTarget(), camera);
 
     expect(near.convert3D2D().x).toBeGreaterThan(612);
     expect(far.convert3D2D().x).toBeLessThan(612);
   });
 
-  it("keeps the centre it was built with when the canvas later resizes", () => {
-    const canvas = canvasOf(1024, 640);
-    const point = new Point3D(0, 0, 0, new Viewport(canvas), cameraOf());
+  it("keeps the centre and scale it was built with when the render target later resizes", () => {
+    const target = renderTarget();
+    const point = new Point3D(0, 0, 0, target, cameraOf());
 
-    canvas.width = 400;
-    canvas.height = 200;
+    target.setSize(400, 200);
 
     expect(point.convert3D2D().x).toBe(512);
   });
 
-  // Why the record is shared rather than copied: a zoom used to be 3960 field
-  // writes on the torus knot, and a mesh built before the camera moved projected
-  // at whatever that camera held when its vertices were constructed.
+  // Why the camera record is shared rather than copied: a zoom used to be 3960
+  // field writes on the torus knot, and a mesh built before the camera moved
+  // projected at whatever that camera held when its vertices were constructed.
   it("follows the camera it was built with rather than a copy of it", () => {
     const camera = cameraOf();
-    const point = new Point3D(100, 0, 0, viewport(), camera);
+    const point = new Point3D(100, 0, 0, renderTarget(), camera);
 
     expect(point.convert3D2D().x).toBe(612);
 
@@ -81,12 +114,38 @@ describe("convert3D2D", () => {
 
     expect(point.convert3D2D().x).toBe(712);
   });
+
+  // The composition this ticket introduces, and the reason it has to be tested
+  // on both branches: Camera.scaleAt(z) already returns one final, fully-divided
+  // number whichever mode it is in, and the render-target scale multiplies onto
+  // that return value from outside — there is no divide left inside Camera for
+  // it to hook into instead.
+  it("multiplies the render-target scale in after the camera's own divide, in both projections", () => {
+    // 320 / 640 = 0.5, chosen to be distinct from both 1 and the camera's own
+    // scale, so a bug that multiplies by the wrong number cannot hide behind an
+    // identity.
+    const target = new RenderTarget({ width: 1024, height: 320 });
+    const perspective = cameraOf();
+    const orthographic = cameraOf({ mode: "ORTHOGRAPHIC", magnification: 0.75 });
+
+    const perspectivePoint = new Point3D(100, 0, 50, target, perspective);
+    const orthographicPoint = new Point3D(100, 0, 50, target, orthographic);
+
+    expect(perspectivePoint.convert3D2D().x).toBeCloseTo(
+      target.centerX + 100 * perspective.scaleAt(50) * target.scale,
+      10,
+    );
+    expect(orthographicPoint.convert3D2D().x).toBeCloseTo(
+      target.centerX + 100 * orthographic.scaleAt(50) * target.scale,
+      10,
+    );
+  });
 });
 
 describe("setFromSource", () => {
   it("applies the whole matrix to the coordinates the point was authored with", () => {
     const matrix3D = new Matrix3D();
-    const point = new Point3D(100, 0, 0, viewport(), cameraOf());
+    const point = new Point3D(100, 0, 0, renderTarget(), cameraOf());
 
     point.setFromSource(matrix3D.yawMatrix(90));
 
@@ -101,7 +160,7 @@ describe("setFromSource", () => {
   // that came before it and no angle could be returned to; here the source is
   // read and never written, so the same matrix always gives the same vertex.
   it("rebuilds from the source rather than from the current position", () => {
-    const point = new Point3D(100, 0, 0, viewport(), cameraOf());
+    const point = new Point3D(100, 0, 0, renderTarget(), cameraOf());
     const matrix3D = new Matrix3D();
     const quarterTurn = matrix3D.yawMatrix(90);
 
@@ -113,11 +172,11 @@ describe("setFromSource", () => {
     point.setFromSource(matrix3D.yawMatrix(0));
 
     expect(point.zValue).toBeCloseTo(0, 10);
-    expect(point.convert3D2D().x).toBeCloseTo(new Point3D(100, 0, 0, viewport(), cameraOf()).convert3D2D().x, 10);
+    expect(point.convert3D2D().x).toBeCloseTo(new Point3D(100, 0, 0, renderTarget(), cameraOf()).convert3D2D().x, 10);
   });
 
   it("mutates in place and returns nothing", () => {
-    const point = new Point3D(10, 20, 30, viewport(), cameraOf());
+    const point = new Point3D(10, 20, 30, renderTarget(), cameraOf());
 
     expect(point.setFromSource(new Matrix3D().rollMatrix(0))).toBeUndefined();
     expect(point.zValue).toBe(30);
@@ -130,7 +189,7 @@ describe("Matrix3D", () => {
   // hold three different angles at once.
   it("builds each axis from its own angle", () => {
     const matrix3D = new Matrix3D();
-    const point = new Point3D(0, 100, 0, viewport(), cameraOf());
+    const point = new Point3D(0, 100, 0, renderTarget(), cameraOf());
 
     // A quarter turn about x sends +y to +z; the yaw built beside it must leave
     // that alone rather than turning by 90 as well.
@@ -141,7 +200,7 @@ describe("Matrix3D", () => {
 
   it("multiplies right to left, so the second operand is applied first", () => {
     const matrix3D = new Matrix3D();
-    const point = new Point3D(100, 0, 0, viewport(), cameraOf());
+    const point = new Point3D(100, 0, 0, renderTarget(), cameraOf());
 
     // Pitch about x cannot move a point on the x axis, so this is the yaw alone
     // — and it is the yaw regardless of which order the product is read in only
@@ -152,7 +211,7 @@ describe("Matrix3D", () => {
   });
 
   it("carries a translation in the fourth column", () => {
-    const point = new Point3D(10, 20, 30, viewport(), cameraOf());
+    const point = new Point3D(10, 20, 30, renderTarget(), cameraOf());
 
     point.setFromSource(new Matrix3D().translation(1, 2, 3));
 

@@ -200,3 +200,9 @@ come from the canvas the Bootstrapper owns. It does — `BootContext` already ca
 canvas and `Main` already destructures it, so `new Viewport(canvas)` there satisfies the
 requirement without widening the boot contract with a fourth field that only one
 collaborator reads. `Bootstrapper.ts` is unchanged.
+
+`Viewport` itself is gone — COS-235 (E9a) replaced it with `RenderTarget`, which adds a
+resize scale the centre-only class never needed. The ruling above still binds the
+replacement exactly: `new RenderTarget({ width: canvas.width, height: canvas.height })`
+is still constructed in `Main`'s constructor from the same already-destructured canvas,
+and `Bootstrapper.ts` is still unchanged.
