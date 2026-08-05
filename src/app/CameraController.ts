@@ -18,6 +18,8 @@
 
 import Camera from "@primitives/Camera";
 
+import type { ProjectionMode } from "@primitives/Camera";
+
 const ZOOM_SLIDER_MIN = 0;
 const ZOOM_SLIDER_MAX = 100;
 const ZOOM_ZOFFSET_FAR = 260;
@@ -113,6 +115,10 @@ class CameraController {
     return this.camera.far;
   }
 
+  public get projectionMode(): ProjectionMode {
+    return this.camera.mode;
+  }
+
   // The three setters below take `number | null` because their only other caller
   // reads a slider through Controls.getNumericValue, which returns null for a
   // missing control. Absorbing that here is what replaces the `?? this.zOffset`
@@ -136,6 +142,10 @@ class CameraController {
     }
 
     this.camera.setFocal(this.focalFor(fovDegrees));
+  }
+
+  public setProjection(mode: ProjectionMode) {
+    this.camera.setMode(mode);
   }
 
   // The engine has a focal length, not a field of view, so the two are related

@@ -49,6 +49,7 @@ import type { BootContext } from "@app/Bootstrapper";
 import type { RigAngles } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
 import type { Data3D } from "@data/data";
+import type { ProjectionMode } from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
@@ -193,6 +194,7 @@ class Main {
       store: this.uiState,
       onFov: (degrees) => this.changeFov(degrees),
       onZoom: (value) => this.changeZoom(value),
+      onProjection: (mode) => this.changeProjection(mode),
       onViewPreset: (key) => this.applyViewPreset(key),
       onLayersChange: () => this.syncWorldLayers(),
     });
@@ -354,6 +356,17 @@ class Main {
     this.camera.setFovDegrees(degrees);
     this.viewportHud.setFov(this.camera.fieldOfViewDegrees);
     this.viewportHud.setZoom(this.uiState.getState().zoom ?? DEFAULT_ZOOM_SLIDER_VALUE, this.camera.distance);
+    this.renderPausedFrame();
+  }
+
+  // Three surfaces print the mode — the HUD chip, the status bar and the CAMERA
+  // card's header note — and all three are one FieldWriter write, exactly as the
+  // shading label is. What is pushed is the camera's own mode rather than the
+  // chip that was clicked, so the console cannot end up describing a projection
+  // the renderer is not using.
+  private changeProjection(mode: ProjectionMode) {
+    this.camera.setProjection(mode);
+    this.statusBar.setProjection(this.camera.projectionMode);
     this.renderPausedFrame();
   }
 

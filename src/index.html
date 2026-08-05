@@ -327,12 +327,7 @@
                   <div class="viewport-hud__top-left">
                     <span class="hud-chip hud-chip--accent" data-field="shadingMode">FLAT</span>
                     <span class="viewport-hud__chip-row">
-                      <span
-                        class="hud-chip hud-chip--sm"
-                        data-placeholder="true"
-                        title="Orthographic projection is not wired to the engine yet (de-mock E2)."
-                        aria-describedby="ph-vp-projection"
-                      >PERSPECTIVE</span>
+                      <span class="hud-chip hud-chip--sm" data-field="projection">PERSPECTIVE</span>
                       <!-- The backing store, not the CSS box: that is the
                            resolution the rasteriser actually works at. -->
                       <span class="hud-chip hud-chip--sm viewport-hud__chip-res" data-field="resolution">&mdash;</span>
@@ -474,7 +469,6 @@
                   <span><span data-field="trisDrawn">0</span> &#9651;</span>
                 </span>
 
-                <span class="placeholder-hint" id="ph-vp-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
                 <span class="placeholder-hint" id="ph-vp-gestures">The canvas has no pointer handlers yet (de-mock E1b).</span>
                 <!-- The GRID pill's description, and it lives out here rather
                      than beside the pill for a reason: both quick-toggle mounts
@@ -774,11 +768,14 @@
                    primitive modifiers are stacked and the breakpoint picks.
                    Every row here is the design's own; the two that had to be
                    relabelled while the engine could not back them — NEAR / FAR
-                   as FOCAL / OFFSET, ROTATION as SPIN RATE — are both back. -->
+                   as FOCAL / OFFSET, ROTATION as SPIN RATE — are both back.
+                   The header note is the third node carrying the projection
+                   field, so it names the projection the renderer is running
+                   rather than the one the mockup assumed. -->
               <section class="panel panel--fill camera-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">camera</span>
-                  <span class="panel__note">PERSPECTIVE</span>
+                  <span class="panel__note" data-field="projection">PERSPECTIVE</span>
                 </div>
                 <div class="panel__body panel__body--pad-4 panel__body--pad-stats">
                   <div class="stat-list">
@@ -1039,11 +1036,7 @@
             &middot;
             <span data-field="texLabel">&mdash;</span>
             &middot;
-            <span
-              data-placeholder="true"
-              title="Orthographic projection is not wired to the engine yet (de-mock E2)."
-              aria-describedby="ph-projection"
-            >PERSPECTIVE</span>
+            <span data-field="projection">PERSPECTIVE</span>
           </span>
           <span
             class="status-item"
@@ -1060,7 +1053,6 @@
           </span>
         </span>
 
-        <span class="placeholder-hint" id="ph-projection">Orthographic projection is not wired to the engine yet (de-mock E2).</span>
         <span class="placeholder-hint" id="ph-units">The engine has no world-unit concept yet (de-mock E5).</span>
       </div>
 

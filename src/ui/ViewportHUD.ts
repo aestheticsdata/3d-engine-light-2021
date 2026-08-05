@@ -15,6 +15,10 @@
 //   * fov, zoom and dist, and the camera readouts the rig feeds,
 //   * the axis gizmo.
 //
+// The projection chip is not on that list and belongs on the first one: it is a
+// `projection` field the status bar publishes, so the overlay and the bar cannot
+// print two different projections for the same camera.
+//
 // Everything numeric here is handed in rather than derived: the camera owns the
 // projection arithmetic and the rig owns the orientation, so the overlay cannot
 // print a camera the renderer is not using.
@@ -72,11 +76,12 @@ class ViewportHUD {
   // the WORLD tab made the focal length a slider, and a lie the moment it did.
   //
   // The angle is passed in rather than read off the slider, for the same reason
-  // distance is: the applied focal is clamped at 260, so above roughly 102° the
-  // slider keeps climbing and the projection does not. The CAMERA card prints
-  // this same number, and two readouts of one camera disagreeing is exactly the
-  // kind of lie this rebuild exists to remove — the slider running ahead of both
-  // is the clamp being visible, which is the honest version.
+  // distance is: it is the field of view the projection is using, derived from
+  // the applied focal length. The CAMERA card prints this same number, and two
+  // readouts of one camera disagreeing is exactly the kind of lie this rebuild
+  // exists to remove. The two used to part company above roughly 102°, where the
+  // focal was clamped; the camera's near plane removed the clamp and they now
+  // agree at every slider position.
   public setFov(degrees: number) {
     this.fields.write("fov", `${Math.round(degrees)}°`);
   }
