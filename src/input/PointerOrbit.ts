@@ -121,11 +121,17 @@ class PointerOrbit {
 
     this.orbitLastX = event.clientX;
     this.orbitLastY = event.clientY;
-    this.orbitYaw += dx * DRAG_DEGREES_PER_PIXEL;
-    // The rig clamps pitch to its own ±89 limit inside setAngles, so an
-    // unclamped running total here is fine — a drag that overshoots the pole
-    // and reverses just rubber-bands back through that clamp rather than
-    // needing a second one here that could disagree with the rig's.
+    // Subtracted, not added: Matrix3D's yaw sends the front-facing vertex
+    // (0, 0, -r) to (-r·sinθ, …), so a positive yaw swings the face the user is
+    // grabbing to the *left*. The cursor has to subtract for the shape to
+    // follow the drag rather than run away from it.
+    this.orbitYaw -= dx * DRAG_DEGREES_PER_PIXEL;
+    // Unclamped, and deliberately so on both axes now. The rig used to stop
+    // pitch at ±89 and this total was left running against that clamp; it no
+    // longer clamps at all, because a drag that hits a wall after 178° while
+    // yaw spins freely is the one gesture in the console that cannot be
+    // repeated indefinitely. The PITCH row still saturates at its own ±89 —
+    // a range input has to be bounded — while the camera carries on past it.
     this.orbitPitch -= dy * DRAG_DEGREES_PER_PIXEL;
 
     this.onOrbit(this.orbitPitch, this.orbitYaw);

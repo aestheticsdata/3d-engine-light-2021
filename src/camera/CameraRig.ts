@@ -7,9 +7,26 @@
 // inverse, so the eye position falls out of the same matrix the frame is drawn
 // with. No readout here can describe a camera the renderer is not using.
 //
-// Spin is an accumulator added to yaw rather than a mutation of it, so the two
-// compose the way a turntable does: a preset or a drag moves the viewpoint and
-// the spin keeps running from wherever it was left.
+// Spin is an accumulator added to the angles rather than a mutation of them, so
+// the two compose the way a turntable does: a preset or a drag moves the
+// viewpoint and the spin keeps running from wherever it was left.
+//
+// It runs on all three axes, not just yaw, and it accumulates as a MATRIX
+// rather than as three angles. That distinction is the whole motion. The
+// per-frame rate sliders this rig replaced multiplied a fixed small delta into
+// the already-rotated points every frame — a constant angular velocity about a
+// fixed axis, which reads as one smooth tumble. Growing three Euler angles
+// linearly and recomposing them each frame is a different motion entirely: the
+// effective axis wanders as the angles grow, so the solid appears to turn one
+// way, then another, then another. Compose the delta; do not accumulate the
+// angles.
+//
+// None of the three angles is clamped. Pitch used to stop at ±89 on the
+// argument that a turntable has a roll axis and nothing to gain from the pole
+// flip, but that argument was about the sliders: it made a vertical drag hit a
+// wall after 178° and stop dead, while yaw span freely. The rows keep their own
+// ±89 / ±180 ranges — a range input has to be bounded — and saturate against an
+// angle that carries on, exactly as the YAW row already does past 180°.
 //
 // Angles are degrees everywhere, in and out. Matrix3D converts internally and
 // the gizmo hands CSS the radians atan2 already returns, so a `180 / Math.PI`
@@ -56,7 +73,6 @@ interface PresetTween {
   elapsedSeconds: number;
 }
 
-const PITCH_LIMIT_DEGREES = 89;
 const PRESET_DURATION_SECONDS = 0.35;
 const HALF_TURN_DEGREES = 180;
 const FULL_TURN_DEGREES = 360;
@@ -64,6 +80,19 @@ const FULL_TURN_DEGREES = 360;
 // a literal at both call sites, because the gizmo's X/Y/Z order is the same
 // order and the two must not drift.
 const AXIS_COLUMNS = [0, 1, 2];
+
+// The turntable's angular velocity, as a direction. SPIN names the yaw
+// component — the fastest of the three and the one the row is scaled in — and
+// these are the other two against it, taken from the rates this rig replaced
+// (87.3 and 48.0 against yaw's 122.2 °/s). Together they are the fixed axis the
+// solid tumbles about; SPIN only scales how fast it goes round it.
+const SPIN_AXIS_PITCH = 87.3 / 122.2;
+const SPIN_AXIS_YAW = 1;
+const SPIN_AXIS_ROLL = 48 / 122.2;
+// |(pitch, yaw, roll)|, so a SPIN of 122 °/s means 122 °/s of *yaw* rather than
+// 122 °/s about the tilted axis — which is what makes the row's number mean the
+// same thing it did before the other two axes came back.
+const SPIN_AXIS_LENGTH = Math.sqrt(SPIN_AXIS_PITCH ** 2 + SPIN_AXIS_YAW ** 2 + SPIN_AXIS_ROLL ** 2);
 
 // Into (-180, 180], not the [-180, 180) the usual
 // `((d + 180) % 360 + 360) % 360 - 180` gives: BACK is a yaw of exactly 180 and
@@ -81,7 +110,7 @@ class CameraRig {
   private yawDegrees: number;
   private rollDegrees: number;
   private spinDegreesPerSecond: number;
-  private spinDegrees: number;
+  private spinMatrix: number[][];
   private preset: PresetTween | null;
 
   constructor() {
@@ -91,7 +120,7 @@ class CameraRig {
     this.yawDegrees = 0;
     this.rollDegrees = 0;
     this.spinDegreesPerSecond = 0;
-    this.spinDegrees = 0;
+    this.spinMatrix = this.matrix3D.identity();
     this.preset = null;
   }
 
@@ -115,10 +144,20 @@ class CameraRig {
   // applied pitch, then yaw, then roll to already-transformed points, so the
   // product was R_roll · R_yaw · R_pitch. Preserving it is what makes equal
   // angles give the attitude they used to.
-  public matrix(): number[][] {
+  // The camera alone, with no turntable in it — what the background pass needs
+  // to draw a ground and a horizon the viewpoint agrees with.
+  public viewMatrix(): number[][] {
     const target = this.targetPosition;
 
-    return this.matrix3D.multiply(this.rotation(), this.matrix3D.translation(-target.x, -target.y, -target.z));
+    return this.matrix3D.multiply(this.cameraRotation(), this.matrix3D.translation(-target.x, -target.y, -target.z));
+  }
+
+  // What a mesh is drawn with: the object's own spin, then the camera. Composed
+  // as (C·T)·S rather than (C·S)·T so the translation stays on the camera's side
+  // — the day the orbit target moves, a spin folded inside it would swing the
+  // object around the target instead of turning it in place.
+  public meshMatrix(): number[][] {
+    return this.matrix3D.multiply(this.viewMatrix(), this.spinMatrix);
   }
 
   // Seconds, not frames. The old path applied a fixed angle per rendered frame,
@@ -128,16 +167,17 @@ class CameraRig {
   public advance(elapsedSeconds: number) {
     const preset = this.preset;
 
-    // The turntable is held still for the length of an ease. Letting spin
-    // accumulate through it would land the shape a few degrees past the angle
-    // the chip names, and being exact is the one thing a preset is for.
+    // Both step, every frame. The ease writes the camera and the turntable
+    // writes the object, so a preset now lands exactly on the angle its chip
+    // names no matter how long the shape has been spinning — which is what the
+    // old early return was buying by freezing the tumble for 350ms.
     if (preset) {
       this.stepPreset(preset, elapsedSeconds);
-
-      return;
     }
 
-    this.spinDegrees += this.spinDegreesPerSecond * elapsedSeconds;
+    const spun = this.spinDegreesPerSecond * elapsedSeconds;
+
+    this.spinMatrix = this.matrix3D.multiply(this.deltaSpin(spun), this.spinMatrix);
   }
 
   // `animated` is the loop's run state, because an ease is a sequence of frames
@@ -151,7 +191,7 @@ class CameraRig {
     // the starting yaw and zeroing it below is what makes the destination
     // absolute — otherwise the ease would land on the preset plus whatever the
     // turntable had wound up.
-    const fromYaw = this.yawDegrees + this.spinDegrees;
+    const fromYaw = this.yawDegrees;
     const preset: PresetTween = {
       from: { pitch: this.pitchDegrees, yaw: fromYaw, roll: this.rollDegrees },
       // Yaw is the only unbounded angle here, so it is the only one that can be
@@ -162,7 +202,6 @@ class CameraRig {
     };
 
     this.preset = preset;
-    this.spinDegrees = 0;
 
     if (!animated) {
       this.stepPreset(preset, PRESET_DURATION_SECONDS);
@@ -170,12 +209,15 @@ class CameraRig {
   }
 
   public setAngles(angles: Partial<RigAngles>) {
-    // Any TRANSFORM input ends a preset in flight, SPIN included. The ease would
-    // otherwise keep writing the angle the user is dragging, leaving the thumb
-    // and the shape disagreeing for the rest of the 350ms.
-    this.preset = null;
+    // An angle write ends a preset in flight — the ease would otherwise keep
+    // writing the angle the user is dragging, leaving the thumb and the shape
+    // disagreeing for the rest of the 350ms. SPIN is not an angle write: it
+    // moves the turntable, which the ease no longer touches.
+    if (angles.pitch !== undefined || angles.yaw !== undefined || angles.roll !== undefined) {
+      this.preset = null;
+    }
 
-    this.pitchDegrees = this.clampPitch(angles.pitch ?? this.pitchDegrees);
+    this.pitchDegrees = angles.pitch ?? this.pitchDegrees;
     this.yawDegrees = angles.yaw ?? this.yawDegrees;
     this.rollDegrees = angles.roll ?? this.rollDegrees;
     this.spinDegreesPerSecond = angles.spinRate ?? this.spinDegreesPerSecond;
@@ -186,7 +228,7 @@ class CameraRig {
   // TRANSFORM rows read their defaults; the accumulator and an in-flight ease
   // are engine state with no row of their own.
   public reset() {
-    this.spinDegrees = 0;
+    this.zeroSpin();
     this.preset = null;
   }
 
@@ -199,7 +241,7 @@ class CameraRig {
   // eye = target + Rᵀ·[0, 0, -d], and Rᵀ's third column is R's third row, so
   // this is three multiplies rather than a transpose.
   public eyePosition(distance: number): Vector3 {
-    const rotation = this.rotation();
+    const rotation = this.cameraRotation();
     const target = this.targetPosition;
 
     return {
@@ -217,16 +259,8 @@ class CameraRig {
   // the least surprising of the things a slider can do about it.
   public angles(): EulerDegrees {
     return {
-      pitch: this.pitchDegrees,
-      yaw: normaliseDegrees(this.yawDegrees),
-      roll: normaliseDegrees(this.rollDegrees),
-    };
-  }
-
-  public eulerDegrees(): EulerDegrees {
-    return {
       pitch: normaliseDegrees(this.pitchDegrees),
-      yaw: normaliseDegrees(this.yawDegrees + this.spinDegrees),
+      yaw: normaliseDegrees(this.yawDegrees),
       roll: normaliseDegrees(this.rollDegrees),
     };
   }
@@ -236,7 +270,7 @@ class CameraRig {
   // and its foreshortening is their length: 1 when the axis lies in the screen
   // plane, 0 when it points straight at the eye.
   public axisScreenDirections(): AxisScreenDirection[] {
-    const rotation = this.rotation();
+    const rotation = this.cameraRotation();
 
     return AXIS_COLUMNS.map((column) => ({
       angleRadians: Math.atan2(rotation[1][column], rotation[0][column]),
@@ -248,14 +282,6 @@ class CameraRig {
   // matrix and the gizmo — against roughly 200 flops each, next to the 48k the
   // vertex pass costs on the largest mesh. A cache would have to be invalidated
   // by spin, presets, sliders, RESET and, once E1b lands, every pointer move.
-  private rotation(): number[][] {
-    const pitch = this.matrix3D.pitchMatrix(this.pitchDegrees);
-    const yaw = this.matrix3D.yawMatrix(this.yawDegrees + this.spinDegrees);
-    const roll = this.matrix3D.rollMatrix(this.rollDegrees);
-
-    return this.matrix3D.multiply(roll, this.matrix3D.multiply(yaw, pitch));
-  }
-
   private stepPreset(preset: PresetTween, elapsedSeconds: number) {
     preset.elapsedSeconds += elapsedSeconds;
 
@@ -271,8 +297,34 @@ class CameraRig {
     }
   }
 
-  private clampPitch(degrees: number): number {
-    return Math.min(PITCH_LIMIT_DEGREES, Math.max(-PITCH_LIMIT_DEGREES, degrees));
+  // The viewpoint alone, with no turntable in it. Kept separate from rotation()
+  // because the background pass needs the camera's own attitude, not the
+  // camera's attitude times whatever the spin has wound up to.
+  private cameraRotation(): number[][] {
+    const pitch = this.matrix3D.pitchMatrix(this.pitchDegrees);
+    const yaw = this.matrix3D.yawMatrix(this.yawDegrees);
+    const roll = this.matrix3D.rollMatrix(this.rollDegrees);
+
+    // roll · pitch · yaw, not roll · yaw · pitch. Under the old order the
+    // horizon's normal C·e_y depended on yaw, so at the resting 30/45 pose the
+    // horizon sat 22° off level while the ROLL row read 0° and a horizontal
+    // drag rolled it. This order gives offset = f·tan(pitch) and tilt = roll,
+    // both untouched by yaw. FRNT, BACK, SIDE and TOP are bit-identical either
+    // way, since R_pitch(0) = I and TOP's yaw is 0; only the ISO-like resting
+    // pose moves, and it moves toward a true isometric.
+    return this.matrix3D.multiply(roll, this.matrix3D.multiply(pitch, yaw));
+  }
+
+  // One frame's worth of turntable: a single rotation about the fixed spin axis,
+  // multiplied into the accumulator rather than rebuilt from a running angle.
+  // Both halves matter — rebuilding from angles makes the axis wander, and
+  // composing three per-axis deltas makes it depend on the frame rate.
+  private deltaSpin(degrees: number): number[][] {
+    return this.matrix3D.axisAngleMatrix(SPIN_AXIS_PITCH, SPIN_AXIS_YAW, SPIN_AXIS_ROLL, degrees * SPIN_AXIS_LENGTH);
+  }
+
+  private zeroSpin() {
+    this.spinMatrix = this.matrix3D.identity();
   }
 }
 

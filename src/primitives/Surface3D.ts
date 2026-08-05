@@ -25,6 +25,15 @@ export interface Surface3DOptions {
   stats: RenderStats;
 }
 
+// Four values that describe one frame rather than the surface, so they ride on
+// the call rather than becoming fields (R4).
+export interface SurfaceRenderRequest {
+  renderables: MeshRenderRequest[];
+  options: TriangleRenderOptions;
+  timed: boolean;
+  cameraTransform: number[][];
+}
+
 class Surface3D {
   private readonly surface3DContainer: CanvasRenderingContext2D;
   // Held live, the same as every Point3D holds its own camera (COS-246): a
@@ -47,7 +56,8 @@ class Surface3D {
   // timed comes from Main's own RenderStats.beginFrame() call, made before
   // the rig's matrix pass — not called again here, because beginFrame() may
   // only run once per frame or its one-in-six sampling cadence would drift.
-  public render(renderables: MeshRenderRequest[], options: TriangleRenderOptions, timed: boolean): RenderStats {
+  public render(request: SurfaceRenderRequest): RenderStats {
+    const { renderables, options, timed, cameraTransform } = request;
     // Fixed for the whole call, across every renderable: two meshes mid
     // transition must bin into the same edges, or their two histograms would
     // each have their own axis and neither would describe the frame.
@@ -61,6 +71,7 @@ class Surface3D {
       context: this.surface3DContainer,
       camera: this.camera,
       renderTarget: this.renderTarget,
+      cameraTransform,
     });
     if (!this.backgroundRenderer) {
       this.surface3DContainer.clearRect(
@@ -89,6 +100,16 @@ class Surface3D {
         timed,
       });
     }
+
+    // The ground again, and only when the camera has dropped under it: from
+    // below, the floor is in front of every solid standing on it, and with no
+    // depth buffer the painting order is the only thing that can say so.
+    this.backgroundRenderer?.renderGroundOverlay({
+      context: this.surface3DContainer,
+      camera: this.camera,
+      renderTarget: this.renderTarget,
+      cameraTransform,
+    });
 
     return this.stats;
   }

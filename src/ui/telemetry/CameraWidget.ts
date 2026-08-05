@@ -57,7 +57,7 @@ class CameraWidget {
     // using the frame's own rotation, so POSITION and the HUD's cam.pos are one
     // derivation read twice rather than two that have to agree.
     this.fields.write("camStatPosition", vector3Label(this.rig.eyePosition(distance)));
-    this.fields.write("camStatRotation", eulerDegreesLabel(this.rig.eulerDegrees()));
+    this.fields.write("camStatRotation", eulerDegreesLabel(this.rig.angles()));
     this.fields.write("camStatDistance", `${distance.toFixed(1)} ${DISTANCE_UNIT}`);
     // Written every render even though neither plane moves: they are constants
     // of the camera, not of the frame, and a row seeded once is a row that has

@@ -19,11 +19,22 @@ const renderTarget = () => new RenderTarget({ width: 1024, height: 640 });
 
 const cameraOf = (options: Partial<CameraOptions> = {}) => new Camera({ focal: 300, magnification: 1, ...options });
 
+// A level camera: identity rotation and no translation, which is the pose every
+// expectation below was written against. The projection folds the camera matrix
+// in now, and identity is what makes these assertions still describe the same
+// geometry they always did.
+const LEVEL = [
+  [1, 0, 0, 0],
+  [0, 1, 0, 0],
+  [0, 0, 1, 0],
+  [0, 0, 0, 1],
+];
+
 describe("GroundProjection", () => {
   it("projects the ground at z=0 through the same scale a mesh vertex there would get", () => {
     const camera = cameraOf();
     const target = renderTarget();
-    const ground = new GroundProjection(target, camera);
+    const ground = new GroundProjection({ renderTarget: target, camera, cameraTransform: LEVEL });
 
     const point = ground.project(0, 0);
 
@@ -32,7 +43,7 @@ describe("GroundProjection", () => {
   });
 
   it("puts the horizon at the render target centre as z grows without bound", () => {
-    const ground = new GroundProjection(renderTarget(), cameraOf());
+    const ground = new GroundProjection({ renderTarget: renderTarget(), camera: cameraOf(), cameraTransform: LEVEL });
 
     const far = ground.project(0, 1_000_000_000);
 
@@ -42,25 +53,25 @@ describe("GroundProjection", () => {
   it("moves x by exactly the camera's own scale at that z, the same multiply convert3D2D does", () => {
     const camera = cameraOf();
     const target = renderTarget();
-    const ground = new GroundProjection(target, camera);
+    const ground = new GroundProjection({ renderTarget: target, camera, cameraTransform: LEVEL });
 
     const point = ground.project(100, 50);
 
     expect(point.x).toBeCloseTo(target.centerX + 100 * camera.scaleAt(50) * target.scale, 10);
   });
 
-  it("floors nearZ's depth at 40 engine units when the camera's own near plane is tighter", () => {
+  it("floors the ground near plane at 40 engine units when the camera's own is tighter", () => {
     const camera = cameraOf({ near: 1 });
-    const ground = new GroundProjection(renderTarget(), camera);
+    const ground = new GroundProjection({ renderTarget: renderTarget(), camera, cameraTransform: LEVEL });
 
-    expect(ground.nearZ).toBeCloseTo(40 - camera.distance, 10);
+    expect(ground.nearDepth).toBeCloseTo(40, 10);
   });
 
   it("lets a wider camera near plane than the 40-unit floor win", () => {
     const camera = cameraOf({ near: 200 });
-    const ground = new GroundProjection(renderTarget(), camera);
+    const ground = new GroundProjection({ renderTarget: renderTarget(), camera, cameraTransform: LEVEL });
 
-    expect(ground.nearZ).toBeCloseTo(200 - camera.distance, 10);
+    expect(ground.nearDepth).toBeCloseTo(200, 10);
   });
 
   // ORTHOGRAPHIC's own exception (GroundProjection.scaleFor): Camera.scaleAt
@@ -75,7 +86,7 @@ describe("GroundProjection", () => {
     it("agrees with PERSPECTIVE's own scale exactly at the z=0 reference plane", () => {
       const camera = cameraOf({ mode: "ORTHOGRAPHIC", magnification: 0.75 });
       const target = renderTarget();
-      const ground = new GroundProjection(target, camera);
+      const ground = new GroundProjection({ renderTarget: target, camera, cameraTransform: LEVEL });
 
       const point = ground.project(100, 0);
 
@@ -84,7 +95,7 @@ describe("GroundProjection", () => {
 
     it("recedes linearly rather than collapsing: x keeps changing as z grows", () => {
       const camera = cameraOf({ mode: "ORTHOGRAPHIC", magnification: 0.75 });
-      const ground = new GroundProjection(renderTarget(), camera);
+      const ground = new GroundProjection({ renderTarget: renderTarget(), camera, cameraTransform: LEVEL });
 
       const near = ground.project(100, -50);
       const mid = ground.project(100, camera.distance / 2);
@@ -101,7 +112,7 @@ describe("GroundProjection", () => {
     it("reaches the render-target centre at the ground's own designed depth and never crosses past it", () => {
       const camera = cameraOf({ mode: "ORTHOGRAPHIC", magnification: 0.75 });
       const target = renderTarget();
-      const ground = new GroundProjection(target, camera);
+      const ground = new GroundProjection({ renderTarget: target, camera, cameraTransform: LEVEL });
       const reach = metresToUnits(GROUND_DEPTH_METRES);
 
       expect(camera.distance).toBeLessThan(reach);
@@ -118,7 +129,7 @@ describe("GroundProjection", () => {
     it("keeps the far edge of the ground visible even when the camera sits very close", () => {
       const camera = cameraOf({ magnification: 6, mode: "ORTHOGRAPHIC" });
       const target = renderTarget();
-      const ground = new GroundProjection(target, camera);
+      const ground = new GroundProjection({ renderTarget: target, camera, cameraTransform: LEVEL });
 
       expect(camera.distance).toBeCloseTo(50, 5);
 
@@ -132,7 +143,7 @@ describe("GroundProjection", () => {
 
   it("follows the camera it was built with when it is mutated afterwards", () => {
     const camera = cameraOf();
-    const ground = new GroundProjection(renderTarget(), camera);
+    const ground = new GroundProjection({ renderTarget: renderTarget(), camera, cameraTransform: LEVEL });
 
     const before = ground.project(100, 0).x;
 

@@ -21,7 +21,8 @@
 // class calls project(x, z) exactly as it would in PERSPECTIVE, which is the
 // point of keeping that exception inside GroundProjection alone.
 
-import { GROUND_DEPTH_METRES, GROUND_HALF_WIDTH_METRES, metresToUnits } from "@rendering/worldScale";
+import GroundNearClip from "@rendering/GroundNearClip";
+import { GROUND_DEPTH_METRES, metresToUnits } from "@rendering/worldScale";
 import { chartTokens } from "@ui/chartTokens";
 
 import type GroundProjection from "@rendering/GroundProjection";
@@ -43,83 +44,84 @@ const withAlpha = (hex: string, alpha: number): string => {
 
 class GroundGrid {
   private readonly ground: GroundProjection;
+  private readonly clip: GroundNearClip;
   private readonly stepUnits: number;
 
   constructor(ground: GroundProjection, stepMetres: number) {
     this.ground = ground;
+    this.clip = new GroundNearClip(ground);
     this.stepUnits = metresToUnits(stepMetres);
   }
 
   public draw(context: CanvasRenderingContext2D) {
-    const nearZ = this.ground.nearZ;
-    const farZ = nearZ + metresToUnits(GROUND_DEPTH_METRES);
-    const xHalf = metresToUnits(GROUND_HALF_WIDTH_METRES);
+    // Square and centred on the target, matching GroundFloor: a forward-only
+    // span is a ribbon off to one side the moment the camera yaws.
+    const reach = metresToUnits(GROUND_DEPTH_METRES);
 
     context.save();
-    this.drawColumns(context, nearZ, farZ, xHalf);
-    this.drawRows(context, nearZ, farZ, xHalf);
+    this.drawLines(context, reach, true);
+    this.drawLines(context, reach, false);
     context.restore();
   }
 
-  // Constant x, varying z: the lines that converge on the vanishing point.
-  // Each is one moveTo/lineTo from the near clip to the far edge, faded along
-  // its own length with a gradient rather than a single alpha.
-  private drawColumns(context: CanvasRenderingContext2D, nearZ: number, farZ: number, xHalf: number) {
-    const half = Math.floor(xHalf / this.stepUnits);
+  // One routine for both families. They differ only in which coordinate is held
+  // constant, and once the camera can turn there is no longer a meaningful
+  // difference between "the lines that converge" and "the lines at one depth" —
+  // a yaw of 90° swaps their roles entirely. Both are therefore faded along
+  // their own length by depth rather than one of them getting a single alpha.
+  private drawLines(context: CanvasRenderingContext2D, reach: number, alongZ: boolean) {
+    const half = Math.floor(reach / this.stepUnits);
+    const near = this.ground.nearDepth;
+    const fadeSpan = 2 * reach;
+    let previous: { x: number; y: number } | null = null;
 
     for (let k = -half; k <= half; k += 1) {
-      const x = k * this.stepUnits;
-      const near = this.ground.project(x, nearZ);
-      const far = this.ground.project(x, farZ);
-      const color = k === 0 ? chartTokens.groundGridAxis : chartTokens.groundGridLine;
-      const gradient = context.createLinearGradient(near.x, near.y, far.x, far.y);
+      const fixed = k * this.stepUnits;
+      const from = alongZ ? { x: fixed, z: -reach } : { x: -reach, z: fixed };
+      const to = alongZ ? { x: fixed, z: reach } : { x: reach, z: fixed };
+      const visible = this.clip.segment(from, to);
 
-      gradient.addColorStop(0, withAlpha(color, 1));
-      gradient.addColorStop(1, withAlpha(color, 0));
+      if (!visible) {
+        continue;
+      }
+
+      const [start, end] = visible;
+      const a = this.ground.project(start.x, start.z);
+      const b = this.ground.project(end.x, end.z);
+      const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+      // The sub-pixel guard, now measured between consecutive lines' midpoints
+      // rather than down a screen axis: adjacent grid values stay adjacent on
+      // screen at any camera angle, but "adjacent in y" stops being true the
+      // moment a yaw turns these lines sideways. The axis always draws.
+      if (k !== 0 && previous && Math.hypot(middle.x - previous.x, middle.y - previous.y) < MIN_ROW_GAP_PX) {
+        continue;
+      }
+
+      previous = middle;
+
+      const color = k === 0 ? chartTokens.groundGridAxis : chartTokens.groundGridLine;
+      const gradient = context.createLinearGradient(a.x, a.y, b.x, b.y);
+
+      gradient.addColorStop(0, withAlpha(color, this.fadeAt(start.x, start.z, near, fadeSpan)));
+      gradient.addColorStop(1, withAlpha(color, this.fadeAt(end.x, end.z, near, fadeSpan)));
 
       context.strokeStyle = gradient;
       context.lineWidth = k === 0 ? AXIS_LINE_WIDTH : GRID_LINE_WIDTH;
       context.beginPath();
-      context.moveTo(near.x, near.y);
-      context.lineTo(far.x, far.y);
+      context.moveTo(a.x, a.y);
+      context.lineTo(b.x, b.y);
       context.stroke();
     }
   }
 
-  // Constant z, varying x: one depth per line, so one alpha per line. Drawn
-  // far to near so the sub-pixel guard compares each row only against the one
-  // immediately before it — except the k=0 axis, which always draws regardless
-  // of how close its neighbour landed. Without that exception the axis is just
-  // another row competing for the guard's one surviving slot per cluster, and
-  // a near-tie could drop the one line most worth keeping visible in favour of
-  // an adjacent, unremarkable one.
-  private drawRows(context: CanvasRenderingContext2D, nearZ: number, farZ: number, xHalf: number) {
-    const first = Math.floor(farZ / this.stepUnits);
-    const last = Math.ceil(nearZ / this.stepUnits);
-    let previousY: number | null = null;
+  // Linear in real eye depth rather than in world z, so the falloff stays put
+  // as the camera turns instead of sweeping round with it. E5b owns the real
+  // fog curve this stands in for.
+  private fadeAt(x: number, z: number, near: number, span: number): number {
+    const depth = this.ground.depthAt(x, z);
 
-    for (let k = first; k >= last; k -= 1) {
-      const z = k * this.stepUnits;
-      const left = this.ground.project(-xHalf, z);
-      const right = this.ground.project(xHalf, z);
-      const isAxis = k === 0;
-
-      if (!isAxis && previousY !== null && Math.abs(left.y - previousY) < MIN_ROW_GAP_PX) {
-        continue;
-      }
-
-      previousY = left.y;
-
-      const fade = Math.max(0, Math.min(1, 1 - (z - nearZ) / (farZ - nearZ)));
-      const color = isAxis ? chartTokens.groundGridAxis : chartTokens.groundGridLine;
-
-      context.strokeStyle = withAlpha(color, fade);
-      context.lineWidth = isAxis ? AXIS_LINE_WIDTH : GRID_LINE_WIDTH;
-      context.beginPath();
-      context.moveTo(left.x, left.y);
-      context.lineTo(right.x, right.y);
-      context.stroke();
-    }
+    return Math.max(0, Math.min(1, 1 - (depth - near) / span));
   }
 }
 
