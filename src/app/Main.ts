@@ -761,7 +761,12 @@ class Main {
     const submitted = this.sceneGraph.isMeshHidden() ? [] : renderables;
     const options = { ...this.pipeline.getRenderOptions(), textures: this.textures };
 
-    const stats = this.surface3D.render(submitted, options, timed);
+    const stats = this.surface3D.render({
+      renderables: submitted,
+      options,
+      timed,
+      cameraTransform: this.rig.viewMatrix(),
+    });
 
     this.renderedTriangles = stats.drawn;
     // Four phases describing one frame because they come from one shared

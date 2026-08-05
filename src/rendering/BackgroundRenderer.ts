@@ -22,6 +22,12 @@ import GroundFloor from "@rendering/GroundFloor";
 import GroundGrid from "@rendering/GroundGrid";
 import GroundProjection from "@rendering/GroundProjection";
 import { chartTokens } from "@ui/chartTokens";
+
+// A @ui import from inside @rendering, which is the wrong direction and is the
+// lesser evil: chartTokens is the one file sanctioned to hand-mirror colors.css
+// for canvas painting, and the alternative is a second mirror here. See its
+// header.
+
 // A @ui import from inside @rendering, which is the wrong direction and is the
 // lesser evil: chartTokens is the one file sanctioned to hand-mirror colors.css
 // for canvas painting, and the alternative is a second mirror here. See its
@@ -29,6 +35,7 @@ import { chartTokens } from "@ui/chartTokens";
 
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
+import type { GroundHorizon } from "@rendering/GroundProjection";
 
 // How much of the frame the sky photograph covers, and how far above the top
 // edge it starts.
@@ -69,6 +76,10 @@ export interface BackgroundRenderRequest {
   context: CanvasRenderingContext2D;
   camera: Camera;
   renderTarget: RenderTarget;
+  // The camera's own matrix, with no turntable folded into it — the ground has
+  // to answer to where the viewpoint is looking, and not at all to the spin
+  // that turns the object in front of it.
+  cameraTransform: number[][];
 }
 
 class BackgroundRenderer {
@@ -129,22 +140,31 @@ class BackgroundRenderer {
   // checker floor's own painter already did — the object is new, the pattern
   // is not.
   public render(request: BackgroundRenderRequest) {
-    const { context, camera, renderTarget } = request;
+    const { context, camera, renderTarget, cameraTransform } = request;
 
     context.save();
     context.clearRect(0, 0, this.width, this.height);
 
-    // The one horizon every layer now agrees on: the render target's own
-    // centre, which is where s -> 0 puts the vanishing point for both the mesh
-    // and the ground. The pre-COS-246 floor sat at 0.57h against the
-    // atmosphere's 0.56h, a 1% gap kept deliberately so the two would not read
-    // as one seam — that reasoning no longer applies once both are the same
-    // camera's own horizon.
+    const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
+    // Where the ground actually vanishes, which is only the render target's
+    // centre while the camera is level. Everything painted in bands — the haze,
+    // the glow, the floor's dissolve — is drawn inside alignToHorizon() below,
+    // so it keeps using this same centre and lands on the real line whatever
+    // the camera is doing. Left as a constant, the sky's horizon and the
+    // ground's separate by 172px at the resting pose alone.
+    const horizon = ground.horizon();
     const horizonY = renderTarget.centerY;
 
     if (this.skyEnabled) {
-      this.renderSky(context);
-      this.renderAtmosphere(context, horizonY);
+      // The camera's forward direction in world space is row 2 of its own
+      // matrix, so its azimuth is what the sky has to pan against.
+      const azimuth = Math.atan2(cameraTransform[2][0], cameraTransform[2][2]);
+      const focalPx = camera.focalLength * renderTarget.scale;
+
+      this.alignToHorizon(context, renderTarget, horizon, () => {
+        this.renderSky(context, azimuth, focalPx);
+        this.renderAtmosphere(context, horizonY);
+      });
     } else {
       // A flat fill rather than leaving the cleared canvas transparent, so the
       // frame is a dark image and not a hole. On screen the two are
@@ -159,14 +179,13 @@ class BackgroundRenderer {
       context.fillRect(0, 0, this.width, this.height);
     }
 
-    const ground = new GroundProjection(renderTarget, camera);
-
-    if (this.floorEnabled) {
-      new GroundFloor(ground, this.gridStepMetres).draw(context, horizonY);
-    }
-
-    if (this.gridEnabled) {
-      new GroundGrid(ground, this.gridStepMetres).draw(context);
+    // Only while the eye is above the plane. From below, the floor is in front
+    // of everything standing on it, so Surface3D paints it after the meshes
+    // through renderGroundOverlay() instead — a background that is sometimes
+    // foreground is exactly what a scene with no depth buffer has to do by
+    // hand.
+    if (!ground.isEyeBelowGround) {
+      this.paintGround(context, ground, renderTarget, horizon, horizonY);
     }
 
     this.renderVignette(context);
@@ -174,14 +193,91 @@ class BackgroundRenderer {
     context.restore();
   }
 
-  private renderSky(context: CanvasRenderingContext2D) {
+  // The second half of the ground pass, for the frames where the camera has
+  // dropped under the floor. Surface3D calls it after the mesh loop, so the
+  // plane covers the solids it is genuinely in front of. Above the plane this
+  // does nothing and the ground has already been painted behind them.
+  public renderGroundOverlay(request: BackgroundRenderRequest) {
+    const { context, camera, renderTarget, cameraTransform } = request;
+    const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
+
+    if (!ground.isEyeBelowGround) {
+      return;
+    }
+
+    context.save();
+    this.paintGround(context, ground, renderTarget, ground.horizon(), renderTarget.centerY);
+    context.restore();
+  }
+
+  private paintGround(
+    context: CanvasRenderingContext2D,
+    ground: GroundProjection,
+    renderTarget: RenderTarget,
+    horizon: GroundHorizon,
+    horizonY: number,
+  ) {
+    if (this.floorEnabled) {
+      const floor = new GroundFloor(ground, this.gridStepMetres);
+
+      floor.drawCells(context);
+      this.alignToHorizon(context, renderTarget, horizon, () => floor.drawFade(context, horizonY, this.height));
+    }
+
+    if (this.gridEnabled) {
+      new GroundGrid(ground, this.gridStepMetres).draw(context);
+    }
+  }
+
+  // Runs `paint` in a frame where the ground's vanishing line is horizontal and
+  // sits exactly on the render target's centre. Deliberately no flip for which
+  // side the eye is on: the layers painted here are symmetric about the line, so
+  // they soften the ground/sky boundary from whichever side the ground is
+  // currently on. Mirroring the frame instead sent the haze to the far edge of
+  // the canvas the moment a vertical drag carried the eye under the plane, and
+  // what was left was an unsoftened horizon reading as a hard grey slab. Every band-shaped layer is
+  // written against that centre already, so this is what lets them all follow a
+  // horizon that tips with roll and slides with pitch without any of them
+  // re-deriving it.
+  //
+  // The fills inside are canvas-width rectangles, so the rotation would expose
+  // bare corners; callers overscan against the render target's diagonal rather
+  // than its width. Its own save/restore pair, because a leaked transform would
+  // rotate the vignette too — and the vignette belongs to the screen, not to
+  // the world.
+  private alignToHorizon(
+    context: CanvasRenderingContext2D,
+    renderTarget: RenderTarget,
+    horizon: GroundHorizon,
+    paint: () => void,
+  ) {
+    context.save();
+    context.translate(renderTarget.centerX, renderTarget.centerY);
+    context.rotate(-horizon.tilt);
+    context.translate(-renderTarget.centerX, -renderTarget.centerY + horizon.offset);
+    paint();
+    context.restore();
+  }
+
+  // Painted inside the horizon's own frame, so it rises and falls with pitch and
+  // tilts with roll along with everything else anchored there. At a level camera
+  // the frame is the identity and every constant below still describes exactly
+  // the image this shipped with.
+  //
+  // `azimuth` pans it under yaw. A cylindrical panorama of focal f is 2*pi*f
+  // wide, so one radian of turn is exactly f pixels of pan — no separate
+  // calibration, and the sky tracks the ground's own vanishing directions.
+  private renderSky(context: CanvasRenderingContext2D, azimuth: number, focalPx: number) {
+    // The rotated frame exposes the canvas corners, so every fill here is
+    // oversized against the diagonal rather than the width.
+    const overscan = Math.hypot(this.width, this.height);
     const skyGradient = context.createLinearGradient(0, 0, 0, this.height);
     skyGradient.addColorStop(0, "#7db8ff");
     skyGradient.addColorStop(0.5, "#9bd3ff");
     skyGradient.addColorStop(0.82, "#f3d8e3");
     skyGradient.addColorStop(1, "#f1e8ee");
     context.fillStyle = skyGradient;
-    context.fillRect(0, 0, this.width, this.height);
+    context.fillRect(-overscan, -overscan, this.width + 2 * overscan, this.height + 2 * overscan);
 
     if (!this.skyImage) {
       return;
@@ -191,32 +287,89 @@ class BackgroundRenderer {
     const scale = Math.max(this.width / this.skyImage.width, targetHeight / this.skyImage.height);
     const drawWidth = this.skyImage.width * scale;
     const drawHeight = this.skyImage.height * scale;
-    const drawX = (this.width - drawWidth) / 2;
     const drawY = -drawHeight * SKY_OVERSCAN_RATIO;
+    const centred = (this.width - drawWidth) / 2;
+    // Wrapped into one image width so the tile indices below stay small however
+    // many turns the camera has made.
+    const pan = (((-azimuth * focalPx - centred) % drawWidth) + drawWidth) % drawWidth;
+    const first = -Math.ceil((overscan + pan) / drawWidth);
+    const last = Math.ceil((this.width + overscan) / drawWidth);
 
     // Its own save/restore pair: the alpha is for the photograph alone, and the
     // atmosphere pass immediately after paints at full strength.
     context.save();
     context.globalAlpha = SKY_ALPHA;
-    context.drawImage(this.skyImage, drawX, drawY, drawWidth, drawHeight);
+
+    // Mirrored alternately rather than butted end to end. The asset is a single
+    // square photograph, not a seamless 360° panorama, so repeating it plainly
+    // would run a hard vertical join through the sky once a yaw drag brought the
+    // join on screen; reflecting every other copy makes the tiling continuous by
+    // construction, which a soft cloud field hides completely.
+    for (let tile = first; tile <= last; tile += 1) {
+      const x = tile * drawWidth - pan;
+
+      context.save();
+
+      if (((tile % 2) + 2) % 2 === 1) {
+        context.translate(x + drawWidth, 0);
+        context.scale(-1, 1);
+        this.drawSkyTile(context, 0, drawY, drawWidth, drawHeight, overscan);
+      } else {
+        this.drawSkyTile(context, x, drawY, drawWidth, drawHeight, overscan);
+      }
+
+      context.restore();
+    }
+
     context.restore();
   }
 
+  // One tile of the sky, with its top and bottom rows stretched out past it.
+  // The photograph is finite vertically, and once the horizon slides down its
+  // upper edge comes into view — leaving a hard line with the bare gradient
+  // showing above it, which reads as a second, wrong sky. Clamping the edge
+  // pixels is the standard fix and is invisible here, because the rows being
+  // stretched are the near-uniform blue at the top and the haze at the bottom.
+  private drawSkyTile(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    overscan: number,
+  ) {
+    const image = this.skyImage;
+
+    if (!image) {
+      return;
+    }
+
+    context.drawImage(image, 0, 0, image.width, 1, x, y - overscan, width, overscan);
+    context.drawImage(image, x, y, width, height);
+    context.drawImage(image, 0, image.height - 1, image.width, 1, x, y + height, width, overscan);
+  }
+
   private renderAtmosphere(context: CanvasRenderingContext2D, horizonY: number) {
-    const haze = context.createLinearGradient(0, horizonY - 40, 0, this.height);
+    // Symmetric about the horizon, where it used to hang below it. Below was
+    // the ground's side while the camera stayed level, and it stops being so
+    // the moment the eye drops under the plane — a band that has to know which
+    // side it is on is a band that gets it wrong at exactly one pitch.
+    const reach = this.height;
+    const haze = context.createLinearGradient(0, horizonY - reach, 0, horizonY + reach);
     haze.addColorStop(0, "rgba(255,255,255,0)");
-    haze.addColorStop(0.22, "rgba(255,235,245,0.58)");
-    haze.addColorStop(0.5, "rgba(255,240,246,0.35)");
+    haze.addColorStop(0.39, "rgba(255,240,246,0.35)");
+    haze.addColorStop(0.5, "rgba(255,235,245,0.58)");
+    haze.addColorStop(0.61, "rgba(255,240,246,0.35)");
     haze.addColorStop(1, "rgba(255,255,255,0)");
     context.fillStyle = haze;
-    context.fillRect(0, horizonY - 50, this.width, this.height - horizonY + 50);
+    context.fillRect(-this.width, horizonY - reach, 3 * this.width, 2 * reach);
 
     const horizonGlow = context.createLinearGradient(0, horizonY - 20, 0, horizonY + 20);
     horizonGlow.addColorStop(0, "rgba(255,255,255,0)");
     horizonGlow.addColorStop(0.5, "rgba(255,245,252,0.85)");
     horizonGlow.addColorStop(1, "rgba(255,255,255,0)");
     context.fillStyle = horizonGlow;
-    context.fillRect(0, horizonY - 20, this.width, 40);
+    context.fillRect(-this.width, horizonY - 20, 3 * this.width, 40);
   }
 
   private renderVignette(context: CanvasRenderingContext2D) {
