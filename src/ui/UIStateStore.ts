@@ -20,19 +20,13 @@
 // rather than once per slice, so the panels repaint in a single pass. Both are
 // pinned by src/ui/__tests__/UIStateStore.test.ts.
 
+import type { ProjectionMode } from "@primitives/Camera";
 import type { ShadingModeKey } from "@ui/modeLabel";
-
-// The two projection chips. Only PERSPECTIVE has an engine behind it —
-// Point3D.convert3D2D divides by the focal distance and has no orthographic
-// branch — so ORTHOGRAPHIC selects and is remembered and does nothing, until
-// de-mock E2. Declared here rather than beside the section that renders it
-// because the store is what both the section and its future engine read.
-export type ProjectionKey = "PERSPECTIVE" | "ORTHOGRAPHIC";
 
 // The RENDER LOOP chips. MAX is uncapped rather than a number, because rAF is
 // the only clock the engine has and a cap can only ever remove frames — there
-// is no value that means "faster than the display". Declared here for the same
-// reason ProjectionKey is: the section renders it, the store is what both it and
+// is no value that means "faster than the display". Declared here rather than
+// beside the section that renders it because the store is what both it and
 // RenderLoop's target read.
 export type FrameRateCapKey = "30" | "60" | "MAX";
 
@@ -93,9 +87,12 @@ export interface UIState {
   lightSpecular?: number;
 
   // --- WORLD tab ------------------------------------------------------------
-  // fov and zoom are the two live camera controls: both reach the projection
-  // through CameraController, and zoom moved here from the SHAPE tab, where the
-  // shell had parked it because WORLD did not exist yet.
+  // fov, zoom and projection are the three live camera controls: all three reach
+  // the shared Camera record through CameraController, and zoom moved here from
+  // the SHAPE tab, where the shell had parked it because WORLD did not exist
+  // yet. The mode is typed by the engine rather than by this store — one union
+  // for the chip label and the branch in Camera.scaleAt, so neither end can
+  // grow a value the other does not have.
   //
   // sky and floor are live too — they gate real BackgroundRenderer layers — and
   // they are the first slices with a SECOND surface reading them: the viewport's
@@ -103,12 +100,11 @@ export interface UIState {
   // grid. One boolean per switch, never a pair, which is why they sit in the
   // store rather than on the section that draws them.
   //
-  // projection, grid, shadow, fog and gridStep have no engine at all
-  // (de-mock E2 for the first, E5 for the rest) and are stored only so the
-  // console remembers the choice and RESET can undo it.
+  // grid, shadow, fog and gridStep have no engine at all (de-mock E5) and are
+  // stored only so the console remembers the choice and RESET can undo it.
   fov?: number;
   zoom?: number;
-  projection?: ProjectionKey;
+  projection?: ProjectionMode;
   sky?: boolean;
   floor?: boolean;
   grid?: boolean;

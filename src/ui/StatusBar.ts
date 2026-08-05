@@ -12,6 +12,7 @@
 import { modeLabel } from "@ui/modeLabel";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
+import type { ProjectionMode } from "@primitives/Camera";
 import type FieldWriter from "@ui/FieldWriter";
 import type MaterialSummary from "@ui/MaterialSummary";
 
@@ -34,6 +35,15 @@ class StatusBar {
 
   public setMode(wireframeEnabled: boolean) {
     this.fields.write("shadingMode", modeLabel(wireframeEnabled));
+  }
+
+  // Three nodes carry this field — the bar's own segment, the viewport HUD's
+  // chip and the CAMERA card's header note — and one write reaches all three,
+  // exactly as setMode above reaches the bar and the HUD. The mode is already
+  // the word to print, so there is no label table between the engine's union and
+  // the three surfaces that could disagree with it.
+  public setProjection(mode: ProjectionMode) {
+    this.fields.write("projection", mode);
   }
 
   // Takes the summary, not the shape: Main already built one for the panel, and

@@ -11,12 +11,14 @@ import CameraSection from "@ui/inspector/CameraSection";
 import EnvironmentSection from "@ui/inspector/EnvironmentSection";
 
 import type { ViewPresetKey } from "@camera/viewPresets";
+import type { ProjectionMode } from "@primitives/Camera";
 import type UIStateStore from "@ui/UIStateStore";
 
 export interface WorldTabOptions {
   store: UIStateStore;
   onFov: (degrees: number) => void;
   onZoom: (sliderValue: number) => void;
+  onProjection: (mode: ProjectionMode) => void;
   onViewPreset: (key: ViewPresetKey) => void;
   onLayersChange: () => void;
 }
@@ -33,6 +35,7 @@ class WorldTab {
       store: options.store,
       onFov: options.onFov,
       onZoom: options.onZoom,
+      onProjection: options.onProjection,
       onViewPreset: options.onViewPreset,
     });
 
@@ -46,7 +49,7 @@ class WorldTab {
 
   // Called after the store's defaults are restored, mirroring the other two
   // tabs — every section reads back from one place. CAMERA's half also re-applies
-  // its two values to the renderer, because they are live.
+  // its three values to the renderer, because all three are live.
   public syncFromStore() {
     this.camera.syncFromStore();
     this.environment.syncFromStore();

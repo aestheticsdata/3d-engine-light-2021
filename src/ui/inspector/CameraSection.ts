@@ -1,11 +1,17 @@
-// CAMERA: five view presets, the projection pair, and the two sliders that are
-// the only live camera controls the console has.
+// CAMERA: five view presets, the projection pair and two sliders, and every one
+// of them now moves the renderer.
 //
-// FOV and ZOOM both reach the renderer through CameraController. Their defaults
-// are imported from it rather than restated here, because the controller seeds
-// itself with the same two numbers for the frames before syncFromStore() runs —
-// two constants that have to agree is how the opening frame ends up describing a
-// camera the sliders do not.
+// FOV, ZOOM and the projection pair all reach the shared Camera record through
+// CameraController. The two slider defaults are imported from it rather than
+// restated here, because the controller seeds itself with the same two numbers
+// for the frames before syncFromStore() runs — two constants that have to agree
+// is how the opening frame ends up describing a camera the sliders do not.
+//
+// FOV covers its whole 15..120 range. It used to be clamped in the renderer
+// above roughly 102°, because a short focal put the near cap of a large mesh
+// behind the eye where it projected mirrored; the camera's near plane clips that
+// away instead, so the clamp is gone and the slider means what it says at every
+// position.
 //
 // The view presets became real with the camera rig: a chip eases the rig to an
 // absolute pitch/yaw/roll over 350ms. They stay momentary and unlit, which is
@@ -20,10 +26,10 @@ import ChipGrid from "@ui/inspector/controls/ChipGrid";
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
 import type { ViewPresetKey } from "@camera/viewPresets";
+import type { ProjectionMode } from "@primitives/Camera";
 import type UIStateStore from "@ui/UIStateStore";
-import type { ProjectionKey } from "@ui/UIStateStore";
 
-export const DEFAULT_PROJECTION: ProjectionKey = "PERSPECTIVE";
+export const DEFAULT_PROJECTION: ProjectionMode = "PERSPECTIVE";
 
 const FOV_MIN = 15;
 const FOV_MAX = 120;
@@ -33,15 +39,7 @@ const ZOOM_MAX = 100;
 // Off the preset table rather than a second list of five labels here: the chip
 // order is the table's declaration order, so adding a view is one edit.
 const VIEW_PRESETS = Object.keys(viewPresets) as ViewPresetKey[];
-const PROJECTIONS: ProjectionKey[] = ["PERSPECTIVE", "ORTHOGRAPHIC"];
-
-// The markup already carries this exact sentence twice, for the status bar's
-// PERSPECTIVE segment and the viewport HUD's. A third node saying the same thing
-// about the same gap is what the hint id exists to avoid, so this chip points at
-// the HUD's — which lives outside every tab panel and is therefore in the
-// accessibility tree whenever anything is.
-const PROJECTION_HINT_ID = "ph-vp-projection";
-const PROJECTION_HINT_TEXT = "Orthographic projection is not wired to the engine yet (de-mock E2).";
+const PROJECTIONS: ProjectionMode[] = ["PERSPECTIVE", "ORTHOGRAPHIC"];
 
 export interface CameraSectionOptions {
   viewGridSelector: string;
@@ -50,6 +48,7 @@ export interface CameraSectionOptions {
   store: UIStateStore;
   onFov: (degrees: number) => void;
   onZoom: (sliderValue: number) => void;
+  onProjection: (mode: ProjectionMode) => void;
   onViewPreset: (key: ViewPresetKey) => void;
 }
 
@@ -89,19 +88,9 @@ class CameraSection {
       selector: options.projectionGridSelector,
       modifier: "chip--proj",
       columns: PROJECTIONS.length,
-      onPick: (id) => this.pickProjection(id as ProjectionKey),
+      onPick: (id) => this.pickProjection(id as ProjectionMode),
     });
-    this.projectionGrid.setChips(
-      PROJECTIONS.map((key) => ({
-        id: key,
-        label: key,
-        // Per-chip, not grid-level: PERSPECTIVE is the projection the engine
-        // actually runs, and dimming it would claim the working half of the
-        // pair is unbuilt.
-        placeholder:
-          key === "ORTHOGRAPHIC" ? { title: PROJECTION_HINT_TEXT, describedBy: PROJECTION_HINT_ID } : undefined,
-      })),
-    );
+    this.projectionGrid.setChips(PROJECTIONS.map((key) => ({ id: key, label: key })));
     this.projectionGrid.setActive(DEFAULT_PROJECTION);
 
     this.fov = new SliderRow({
@@ -134,23 +123,28 @@ class CameraSection {
   // Writes the store's values into the rows AND pushes them to the camera. Both
   // halves matter: this is the RESET path, and a reset that moved the sliders
   // without moving the camera would leave the two disagreeing until the next
-  // drag.
+  // drag. The projection pair joined that second half when it stopped being
+  // decoration — RESET has to put the renderer back into PERSPECTIVE, not only
+  // the chip.
   public syncFromStore() {
     const state = this.store.getState();
     const fov = state.fov ?? DEFAULT_FOV;
     const zoom = state.zoom ?? DEFAULT_ZOOM_SLIDER_VALUE;
+    const projection = state.projection ?? DEFAULT_PROJECTION;
 
     this.fov.setValue(fov);
     this.zoom.setValue(zoom);
-    this.projectionGrid.setActive(state.projection ?? DEFAULT_PROJECTION);
+    this.projectionGrid.setActive(projection);
 
     this.apply.onFov(fov);
     this.apply.onZoom(zoom);
+    this.apply.onProjection(projection);
   }
 
-  private pickProjection(key: ProjectionKey) {
-    this.projectionGrid.setActive(key);
-    this.store.setState({ projection: key });
+  private pickProjection(mode: ProjectionMode) {
+    this.projectionGrid.setActive(mode);
+    this.store.setState({ projection: mode });
+    this.apply.onProjection(mode);
   }
 }
 

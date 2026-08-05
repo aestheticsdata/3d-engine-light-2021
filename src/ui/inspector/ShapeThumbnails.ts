@@ -13,6 +13,7 @@
 // than a hole — which is why Main calls this from init() and not from its
 // constructor.
 
+import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import Viewport from "@primitives/Viewport";
@@ -61,14 +62,19 @@ class ShapeThumbnails {
       return canvas;
     }
 
-    const mesh = new MeshFactory(new Viewport(canvas)).build(object3D);
+    // Its own camera as well as its own viewport, and for the same reason: this
+    // picture is not the console's projection at a smaller size. It has no FOV
+    // control, no zoom, and nothing that comes near either clip plane — the
+    // shape is pushed back until it fits and painted once.
+    //
+    // The push-back is expressed as a magnification because that is what the
+    // camera holds now: k = fl / (fl + zOffset) is the identity that made the
+    // console's whole zoom range survive the change, used here to say the same
+    // thing about one fixed offset.
+    const offsetZ = this.offsetFor(object3D.points);
+    const camera = new Camera({ focal: FOCAL, magnification: FOCAL / (FOCAL + offsetZ) });
+    const mesh = new MeshFactory(new Viewport(canvas), camera).build(object3D);
     const matrix3D = new Matrix3D();
-
-    mesh.changeFocal(FOCAL);
-    // Pushed back far enough that the widest solid in the registry still fits
-    // the box. Derived from the shape rather than fixed, so a future 10x larger
-    // polyhedron does not overflow its own thumbnail.
-    mesh.changeOffsetZ(this.offsetFor(object3D.points));
 
     // Yaw times pitch, in that order, which is the single matrix equivalent of
     // the two sequential passes this replaces. A thumbnail is painted once and

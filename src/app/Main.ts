@@ -49,6 +49,7 @@ import type { BootContext } from "@app/Bootstrapper";
 import type { RigAngles } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
 import type { Data3D } from "@data/data";
+import type { ProjectionMode } from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
@@ -149,8 +150,11 @@ class Main {
     this.rig = new CameraRig();
     this.lastFrameTimestamp = performance.now();
     // The projection centre, resolved once from the canvas the Bootstrapper
-    // already handed over, and shared by every point of every mesh built here.
-    this.meshFactory = new MeshFactory(new Viewport(canvas));
+    // already handed over, and the camera record the controller owns — both
+    // shared by every point of every mesh built here. Every mesh in the console
+    // therefore projects through one camera, and the sliders write to it rather
+    // than to the vertices.
+    this.meshFactory = new MeshFactory(new Viewport(canvas), this.camera.projection);
     this.textures = new TextureRegistry();
     this.objects3D = data;
     this.renderedTriangles = 0;
@@ -190,6 +194,7 @@ class Main {
       store: this.uiState,
       onFov: (degrees) => this.changeFov(degrees),
       onZoom: (value) => this.changeZoom(value),
+      onProjection: (mode) => this.changeProjection(mode),
       onViewPreset: (key) => this.applyViewPreset(key),
       onLayersChange: () => this.syncWorldLayers(),
     });
@@ -229,7 +234,7 @@ class Main {
     this.frameTime = new FrameTimeWidget(this.fields);
     this.geometry = new GeometryWidget(this.fields);
     this.zBuffer = new ZBufferWidget();
-    this.cameraStats = new CameraWidget({ fields: this.fields, camera: this.camera, rig: this.rig, canvas });
+    this.cameraStats = new CameraWidget({ fields: this.fields, camera: this.camera, rig: this.rig });
     this.system = new SystemWidget(this.fields, canvas);
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
@@ -323,41 +328,45 @@ class Main {
     this.system.dispose();
   }
 
-  // The HUD's `dist` is the camera distance, not the raw offset: the offset
-  // alone runs 260 -> -220 across the slider and would print a negative
-  // distance. Focal plus offset stays positive throughout (560 -> 80).
+  // The HUD's `dist` is the camera distance, which is fl/k: positive at every
+  // reachable combination of the two sliders, and the same number the rig turns
+  // into an eye position.
+  //
+  // Nothing is pushed into the meshes. The projection is one record every vertex
+  // already holds, so the write above IS the change — all that is left is the
+  // repaint a stopped loop would not otherwise do.
+  //
   // A plain method, not an arrow property: nothing hands it to a listener, and
   // R9 spends the bound-this form only where something does.
   private changeZoom(sliderValue: number) {
     this.camera.setZoomFromSlider(sliderValue);
     this.viewportHud.setZoom(sliderValue, this.camera.distance);
-    this.applyCameraToActiveMeshes();
+    this.renderPausedFrame();
   }
 
-  // Mirrors changeZoom, and has to: both write the same two numbers into every
-  // live mesh through applyTo, and the HUD's dist is focal plus offset, so a
-  // focal change moves the distance readout exactly as a zoom change does — which
-  // is why the zoom readout is rewritten here from the slice rather than left to
-  // go stale against a distance that just moved under it.
+  // Mirrors changeZoom, and has to: the eye distance is fl/k, so a focal change
+  // moves the distance readout exactly as a zoom change does — which is why the
+  // zoom readout is rewritten here from the slice rather than left to go stale
+  // against a distance that just moved under it.
   //
-  // The HUD is given the camera's own angle, not the argument: above roughly 102°
-  // the clamp holds the focal and these two part company, and the readout follows
-  // the projection.
+  // What does NOT move is the shape's size at its own centre plane: the
+  // magnification is left alone, so this is a dolly zoom rather than a second
+  // zoom control.
   private changeFov(degrees: number) {
     this.camera.setFovDegrees(degrees);
     this.viewportHud.setFov(this.camera.fieldOfViewDegrees);
     this.viewportHud.setZoom(this.uiState.getState().zoom ?? DEFAULT_ZOOM_SLIDER_VALUE, this.camera.distance);
-    this.applyCameraToActiveMeshes();
+    this.renderPausedFrame();
   }
 
-  // The tail both camera controls share: the focal length and the z offset live
-  // on the triangles, not on the camera, so every active mesh has to be written
-  // through — and the frame has to be repainted by hand when the loop is
-  // stopped, or a paused console would show a camera it no longer has.
-  private applyCameraToActiveMeshes() {
-    this.shapes.getActiveMeshes().forEach((mesh) => {
-      this.camera.applyTo(mesh);
-    });
+  // Three surfaces print the mode — the HUD chip, the status bar and the CAMERA
+  // card's header note — and all three are one FieldWriter write, exactly as the
+  // shading label is. What is pushed is the camera's own mode rather than the
+  // chip that was clicked, so the console cannot end up describing a projection
+  // the renderer is not using.
+  private changeProjection(mode: ProjectionMode) {
+    this.camera.setProjection(mode);
+    this.statusBar.setProjection(this.camera.projectionMode);
     this.renderPausedFrame();
   }
 
@@ -513,7 +522,6 @@ class Main {
     }
 
     const mesh = this.meshFactory.build(object3D);
-    this.camera.applyTo(mesh);
     // Posed before it is ever drawn. A mesh built mid-transition starts at its
     // authored rest pose, and startTransition runs outside the render path — so
     // without this the incoming shape holds a different attitude from the

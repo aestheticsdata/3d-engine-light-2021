@@ -79,7 +79,7 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 | --- | --- | --- |
 | Shading mode chip | `WIRE` / `FLAT` | real — `modeLabel()`, exported by the render-tab ticket and driven by `wireframeEnabled` (`src/index.ts` L110, L546–L550). POINTS, GOURAUD, DEPTH and NORMALS are placeholder; de-mock `Shading modes` |
 | Canvas filter | `saturate(.5) contrast(1.2)` / `saturate(1.05) contrast(1.05)` | placeholder — a cosmetic CSS filter keyed off the same `modeLabel()`, not shading; de-mock `Shading modes` deletes the rules |
-| Projection chip | `PERSPECTIVE` | placeholder — engine is perspective-only (`DEFAULT_FOCAL_LENGTH = 300`); de-mock `Perspective / orthographic` |
+| Projection chip | `PERSPECTIVE` / `ORTHOGRAPHIC` | ~~placeholder~~ real since COS-236 (de-mock E2). Not owned here: it carries the `projection` field the status bar writes, so the overlay and the bar cannot disagree |
 | Resolution chip | `1024 × 640` | real — `canvasID.width` × `canvasID.height`. The design's `848 × 530` is the CSS box, not the backing store; show the backing store, since that is what the rasterizer works at |
 | Texture chip | `TEXTURED` / `SOLID` | real — `MaterialSummary.label` from `src/ui/MaterialSummary.ts`, owned by the shape-info ticket (D5) and rendered verbatim by the SHAPE INFO MATERIAL row. Take the same instance; do not re-derive it and never print `NO TEXTURE`. De-mock `Texture picker` owns the CHECKER / SOLID / UV GRID / NO TEXTURE set |
 | `cam.pos` | `0.0 1.2 12.0` | placeholder — the engine rotates the mesh; there is no camera transform; de-mock `Orbit camera` |

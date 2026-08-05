@@ -68,12 +68,18 @@ class GeometryWidget {
   // Cheap enough for the paint path: two reductions over at most two
   // renderables and one subtraction.
   //
-  // That subtraction is culled *plus skipped*, not culled alone.
-  // Triangle.render() also returns false at its degenerate-UV guard, and
-  // Mesh.renderMesh only counts a truthy return, so a textured face with a
-  // collapsed UV triple would land in this number. No shape in the registry
-  // produces one today, but the cube is textured and the path is reachable —
-  // de-mock E6's real instrumentation is what separates the two counts.
+  // That subtraction is culled *plus clipped plus skipped*, not culled alone.
+  // Triangle.render() returns false at three guards, and Mesh.renderMesh only
+  // counts a truthy return: the backface test, the near/far rejection COS-236
+  // added, and the degenerate-UV skip. The clipped ones are reachable at every
+  // session — the whole point of the near plane is that a shape pushed close
+  // enough loses faces to it — so this row over-counts wherever CULL is on and
+  // the zoom is high, and de-mock E6's real instrumentation is what separates
+  // the three.
+  //
+  // The other direction is worse and is deliberate: with CULL off the row reads
+  // 0 while clipped triangles are still going missing. Reporting them as CULLED
+  // would be a different lie, and there is nowhere honest to put them until E6.
   public pushFrame(renderables: readonly MeshRenderRequest[], drawn: number, cullBackfaces: boolean) {
     this.vertices = renderables.reduce((total, renderable) => total + renderable.mesh.pointCount, 0);
     this.submitted = renderables.reduce((total, renderable) => total + renderable.mesh.triangleCount, 0);
