@@ -70,7 +70,7 @@
   --size-chip-quick: 24px;
   --size-hud-chip: 22px;
   --size-hud-chip-sm: 22px;
-  --size-picker-max-h: 320px; /* NEW — the primitive picker's open list */
+  --size-picker-min-h: 320px; /* the primitive picker's open list — floor only, see inspector.css */
   --size-toggle-w: 62px;
   --size-toggle-h: 19px;
   --size-toggle-row: 26px;

@@ -32,11 +32,11 @@ export interface ShapeInfo {
 // a missing key, a missing `family` and a mistyped family name all fail at this
 // line. The export is deliberately widened back to a string key afterwards:
 // every consumer looks a shape up by a name it got at runtime (Main takes it
-// from the shape switcher), and narrowing the export would push the fourteen
+// from the shape switcher), and narrowing the export would push the twenty
 // literals through the whole call chain to buy nothing.
 const entries = {
   sphere: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Sphere",
     description: "A low-poly sphere built from latitude and longitude bands with a bold checker pattern.",
     geometricFeature: "Triangulated meridians and parallels approximate a smooth volume with a limited polygon budget.",
@@ -49,7 +49,7 @@ const entries = {
     ],
   },
   cube: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Cube",
     description: "A hard-edged box mixing flat-colored faces with subdivided textured surfaces.",
     geometricFeature: "Two faces are heavily subdivided for texture mapping, while the others stay simple and flat.",
@@ -62,7 +62,7 @@ const entries = {
     ],
   },
   pyramid: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Pyramid",
     description: "A classic square-based pyramid with strongly contrasted side colors and a sharp apex.",
     geometricFeature: "Five vertices define four lateral faces converging to a single tip plus a triangulated base.",
@@ -81,7 +81,7 @@ const entries = {
     ],
   },
   cross: {
-    family: "PRIMITIVES",
+    family: "UNCATEGORIZED",
     title: "Cross",
     description: "An extruded cross silhouette that reads like a solid emblem rather than a rounded primitive.",
     geometricFeature: "A 2D profile is duplicated in depth, then stitched with side quads to create thickness.",
@@ -104,7 +104,7 @@ const entries = {
     ],
   },
   torusKnot: {
-    family: "SURFACES",
+    family: "KNOTS",
     title: "Torus Knot",
     description: "A tubular surface wrapped along a trefoil-like closed knot with repeating braided curvature.",
     geometricFeature:
@@ -121,7 +121,7 @@ const entries = {
     ],
   },
   torusKnot25: {
-    family: "SURFACES",
+    family: "KNOTS",
     title: "Cinquefoil knot",
     description:
       "The (2, 5) torus knot, 5₁ — Solomon's seal, five lobes of the same tube sweep in gold over deep blue.",
@@ -142,7 +142,7 @@ const entries = {
     ],
   },
   torusKnot27: {
-    family: "SURFACES",
+    family: "KNOTS",
     title: "Septafoil knot",
     description: "The (2, 7) torus knot, 7₁ — seven lobes in mint and violet, the longest curve of the four.",
     geometricFeature:
@@ -162,7 +162,7 @@ const entries = {
     ],
   },
   torusKnot34: {
-    family: "SURFACES",
+    family: "KNOTS",
     title: "(3, 4) torus knot",
     description: "The (3, 4) torus knot, 8₁₉ — the only one of the four with p > 2, in peach over deep teal.",
     geometricFeature:
