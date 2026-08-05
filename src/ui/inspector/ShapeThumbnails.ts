@@ -22,6 +22,7 @@ import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
+import RenderStats from "@rendering/RenderStats";
 
 import type { Data3D } from "@data/types";
 import type TextureRegistry from "@textures/TextureRegistry";
@@ -89,7 +90,19 @@ class ShapeThumbnails {
       matrix3D.multiply(matrix3D.yawMatrix(VIEW_YAW_DEGREES), matrix3D.pitchMatrix(VIEW_PITCH_DEGREES)),
     );
 
-    mesh.renderMesh(context, 0, 0, { textures: this.textures, cullBackfaces: true, opacity: 1 });
+    // A throwaway accumulator: renderMesh (E6/COS-239) always writes through
+    // one, but a thumbnail is painted once and nothing here reads its stats
+    // back — the console's own telemetry describes the stage, not a picker
+    // chip.
+    mesh.renderMesh({
+      context,
+      offsetX: 0,
+      offsetY: 0,
+      options: { textures: this.textures, cullBackfaces: true, opacity: 1 },
+      stats: new RenderStats(),
+      eyeDistance: camera.distance,
+      timed: false,
+    });
 
     return canvas;
   }

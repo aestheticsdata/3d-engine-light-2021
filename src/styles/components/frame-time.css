@@ -25,9 +25,10 @@
   background: var(--color-surface-sunken);
 }
 
-/* Three measured phases now, so the width is a percentage the widget writes
-   rather than a flex share: the segments have to add up to the frame, and a
-   grow factor would redistribute the rounding error instead of showing it. */
+/* Four measured phases now (E6/COS-239), so the width is a percentage the
+   widget writes rather than a flex share: the segments have to add up to the
+   frame, and a grow factor would redistribute the rounding error instead of
+   showing it. */
 .frame-time__segment {
   flex: 0 0 auto;
   width: 0;
@@ -44,11 +45,7 @@
   background: var(--color-ft-transform);
 }
 
-/* Reuses the CLIP / CULL blue. The token keeps the design's name because
-   colors.css is the tokens ticket's file; what changed is which real phase
-   occupies that slot — this renderer has a background pass and has no
-   separable clip stage. */
-.frame-time__segment--background {
+.frame-time__segment--clipcull {
   background: var(--color-ft-clip);
 }
 
@@ -56,8 +53,16 @@
   background: var(--color-ft-raster);
 }
 
-.frame-time__swatch--background {
+.frame-time__segment--present {
+  background: var(--color-ft-present);
+}
+
+.frame-time__swatch--clipcull {
   background: var(--color-ft-clip);
+}
+
+.frame-time__swatch--present {
+  background: var(--color-ft-present);
 }
 
 .frame-time__legend {
@@ -119,9 +124,9 @@
   color: var(--color-text-primary);
 }
 
-/* The mobile statGroups card's phase colours. These carry live numbers now, so
-   they are no longer paired with --dim; the scoped override further down is
-   what keeps --dim winning on FILL RATE, the one row still unmeasured. */
+/* The mobile statGroups card's phase colours. All five rows carry live
+   numbers now (E6/COS-239), so none of this card is paired with --dim any
+   longer. */
 .stat-row__value--transform {
   color: var(--color-ft-transform);
 }
@@ -134,10 +139,10 @@
   color: var(--color-ft-raster);
 }
 
-/* FILL RATE is the last placeholder in this card, and --dim has to keep
-   winning over the phase colours above regardless of import order. */
-.frame-time-stats .stat-row__value--dim {
-  color: var(--color-text-dim);
+/* --present-text, not --present: #3A4E7E is too dark at 11px on this card's
+   background (colors.css's own note on the pair). */
+.stat-row__value--present {
+  color: var(--color-ft-present-text);
 }
 
 /* BUDGETS' own frame-time block: the card shell, header and body padding are

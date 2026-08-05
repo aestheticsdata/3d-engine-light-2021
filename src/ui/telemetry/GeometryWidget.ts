@@ -1,19 +1,21 @@
 // The GEOMETRY card's five counts and the POLY BUDGET bar under them.
 //
-// Four of the five are real. VERTICES and TRIANGLES are summed over the meshes
-// actually submitted to Surface3D this frame rather than read off the current
-// primitive, which is what keeps them right in the two places the registry
-// count is wrong: a shape transition puts two meshes on screen at once, and
-// hiding the mesh from the scene graph submits none at all. EDGES is derived
-// from TRIANGLES. DRAW CALLS is a static placeholder in the markup and this
-// class never touches it — a software rasteriser with no batching would report
-// a constant 1, and what that number should mean is de-mock E6's call.
+// All five are real now (E6/COS-239). VERTICES and TRIANGLES are summed over
+// the meshes actually submitted to Surface3D this frame rather than read off
+// the current primitive, which is what keeps them right in the two places the
+// registry count is wrong: a shape transition puts two meshes on screen at
+// once, and hiding the mesh from the scene graph submits none at all. EDGES is
+// derived from TRIANGLES. DRAW CALLS is canvas submissions per frame — one per
+// drawn triangle plus one for the background pass — read off RenderStats
+// rather than derived here, since Mesh and Surface3D are the only classes that
+// know when a fill(), stroke() or drawImage() actually happened.
 //
 // pushFrame() and render() are split the way FramerateWidget splits them, and
-// for the same reason: pushFrame() runs on the paint path, where the submitted
-// meshes and the drawn count are both in hand and provably describe the same
-// frame, while render() — five field writes and two style writes — rides the
-// same 90ms display gate as the rest of the telemetry row.
+// for the same reason: the push half runs on the paint path, where the
+// submitted meshes and the render pass's own counts are both in hand and
+// provably describe the same frame, while render() — six field writes and two
+// style writes — rides the same 90ms display gate as the rest of the telemetry
+// row.
 
 import data from "@data/data";
 import DOMScope from "@ui/DOMScope";
@@ -39,12 +41,25 @@ const REGISTRY_MAX_TRIANGLES = Math.max(...Object.values(data).map((object3D) =>
 
 export const POLY_BUDGET = 2 ** Math.ceil(Math.log2(REGISTRY_MAX_TRIANGLES));
 
+// Five arguments, so an options object rather than a positional list (R4). The
+// renderables are here for VERTICES, which only the mesh list knows; every
+// other field is read off the frame's RenderStats rather than re-derived, so
+// the card cannot drift from what the renderer actually did.
+export interface GeometryFrame {
+  renderables: readonly MeshRenderRequest[];
+  submitted: number;
+  drawn: number;
+  drawCalls: number;
+  cullBackfaces: boolean;
+}
+
 class GeometryWidget {
   private readonly fields: FieldWriter;
   private readonly barFills: HTMLElement[];
   private vertices: number;
   private submitted: number;
   private culled: number;
+  private drawCalls: number;
 
   constructor(fields: FieldWriter) {
     const scope = new DOMScope(document);
@@ -63,9 +78,10 @@ class GeometryWidget {
     this.vertices = 0;
     this.submitted = 0;
     this.culled = 0;
+    this.drawCalls = 0;
   }
 
-  // Cheap enough for the paint path: two reductions over at most two
+  // Cheap enough for the paint path: one reduction over at most two
   // renderables and one subtraction.
   //
   // That subtraction is culled *plus clipped plus skipped*, not culled alone.
@@ -80,13 +96,14 @@ class GeometryWidget {
   // The other direction is worse and is deliberate: with CULL off the row reads
   // 0 while clipped triangles are still going missing. Reporting them as CULLED
   // would be a different lie, and there is nowhere honest to put them until E6.
-  public pushFrame(renderables: readonly MeshRenderRequest[], drawn: number, cullBackfaces: boolean) {
-    this.vertices = renderables.reduce((total, renderable) => total + renderable.mesh.pointCount, 0);
-    this.submitted = renderables.reduce((total, renderable) => total + renderable.mesh.triangleCount, 0);
+  public pushFrame(frame: GeometryFrame) {
+    this.vertices = frame.renderables.reduce((total, renderable) => total + renderable.mesh.pointCount, 0);
+    this.submitted = frame.submitted;
+    this.drawCalls = frame.drawCalls;
     // Nothing is culled while the test is off: every submitted triangle is
     // drawn, and the row must read 0 rather than reporting the degenerate-UV
     // skips on their own.
-    this.culled = cullBackfaces ? this.submitted - drawn : 0;
+    this.culled = frame.cullBackfaces ? this.submitted - frame.drawn : 0;
   }
 
   public render() {
@@ -99,11 +116,20 @@ class GeometryWidget {
     this.fields.write("geoEdges", Math.round(this.submitted * EDGES_PER_TRIANGLE));
     this.fields.write("geoTriangles", this.submitted);
     this.fields.write("geoCulled", this.culled);
+    this.fields.write("geoDrawCalls", this.drawCalls.toLocaleString());
     this.fields.write("polyBudget", `${this.submitted} / ${POLY_BUDGET}`);
 
     this.barFills.forEach((fill) => {
       fill.style.width = `${percent.toFixed(1)}%`;
     });
+  }
+
+  // The pause half of the frame-time ticket's own zeroing (E6/COS-239):
+  // draw calls are a render-pass count like fill rate, not a scene fact like
+  // VERTICES/TRIANGLES, so this alone resets on stop rather than the whole
+  // card.
+  public zeroDrawCalls() {
+    this.drawCalls = 0;
   }
 }
 

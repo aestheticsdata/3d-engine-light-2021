@@ -1,17 +1,63 @@
 import type Point3D from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
+import type RenderStats from "@rendering/RenderStats";
+
+// Three required fields — past R4's two-collaborator exemption — and
+// boundingRadius is a plain number rather than a third collaborator, so this
+// is the options object rather than a third positional argument.
+export interface MeshOptions {
+  points: Point3D[];
+  triangles: Triangle[];
+  // Orientation-invariant (E6/COS-239): MeshFactory folds it once, over the
+  // registry's raw coordinates, before rotation exists to disturb it. See
+  // MeshFactory.build for why that is also where it has to be computed.
+  boundingRadius: number;
+}
+
+// Everything one renderMesh call needs, bundled rather than positional
+// (E6/COS-239 pushed this past R4's three-argument line the day it needed
+// both the shared stats accumulator and the eye distance the depth bins bin
+// on). stats.setDepthRange must already have been called by Surface3D before
+// this runs — the bin edges are fixed once per Surface3D.render call, across
+// every renderable, not recomputed per mesh.
+export interface MeshRenderPass {
+  context: CanvasRenderingContext2D;
+  offsetX: number;
+  offsetY: number;
+  options: TriangleRenderOptions;
+  stats: RenderStats;
+  // The projection denominator's constant term (Camera.distance), added to a
+  // triangle's own mean z to bin it in the same eye-space depth its near/far
+  // clip already reasons in. Passed rather than recomputed from Camera: Mesh
+  // has never held a camera reference, and threading the one number this
+  // needs is simpler than giving it one.
+  eyeDistance: number;
+  // Whether this frame is one of the one-in-six RenderStats.beginFrame()
+  // marked sampled. False means every pass below still runs — the mesh must
+  // still be drawn — it just makes zero performance.now() calls doing it.
+  timed: boolean;
+}
 
 class Mesh {
   private readonly points: Point3D[];
   private readonly triangles: Triangle[];
+  private readonly radius: number;
 
   // Copied rather than aliased: the factory hands over the arrays it was
   // building, and a mesh whose geometry a caller can still push into is not a
   // mesh.
-  constructor(points: Point3D[], triangles: Triangle[]) {
-    this.points = [...points];
-    this.triangles = [...triangles];
+  constructor(options: MeshOptions) {
+    this.points = [...options.points];
+    this.triangles = [...options.triangles];
+    this.radius = options.boundingRadius;
+  }
+
+  // The histogram's fixed bin edges (E6) are camera.distance ± this, rather
+  // than the submitted set's own per-frame min/max — a rotating mesh must not
+  // make its own axis breathe.
+  public get boundingRadius(): number {
+    return this.radius;
   }
 
   // What this mesh submits, for the GEOMETRY card. MeshFactory maps the
@@ -26,33 +72,86 @@ class Mesh {
     return this.triangles.length;
   }
 
-  // A visitor rather than a `depths` getter, and that is the point: the
-  // histogram walks this every frame over as many as 7920 triangles, and
-  // returning an array would allocate one per mesh per frame for a caller that
-  // only ever reads it once.
-  public forEachTriangleDepth(visit: (depth: number) => void) {
-    for (const triangle of this.triangles) {
-      visit(triangle.depth);
-    }
-  }
+  // Three named passes over the same triangle array, replacing the one fused
+  // call render() used to make per triangle (E6/COS-239) — so each can be
+  // timed on its own and the histogram can read a real depth for every
+  // submitted triangle, culled or not, rather than only the drawn ones.
+  // Nothing here returns a count: every number this used to hand back to the
+  // caller now lives on pass.stats, written as it is produced, which is what
+  // lets two renderables mid-transition sum into the one frame both belong to
+  // instead of each caller adding up return values by hand.
+  public renderMesh(pass: MeshRenderPass) {
+    pass.stats.addSubmitted(this.triangles.length);
 
-  public renderMesh(
-    context: CanvasRenderingContext2D,
-    offsetX: number = 0,
-    offsetY: number = 0,
-    options: TriangleRenderOptions,
-  ): number {
+    const transformStartedAt = pass.timed ? performance.now() : 0;
+
+    for (const triangle of this.triangles) {
+      triangle.project(pass.offsetX, pass.offsetY);
+    }
+
+    if (pass.timed) {
+      pass.stats.addTransformMs(performance.now() - transformStartedAt);
+    }
+
+    // The painter's sort belongs to this pass, not the one before it: it
+    // reads each triangle's own z, which project() does not touch, so its
+    // result is identical whichever side of the transform loop it runs on —
+    // grouped here to match where E6 puts its cost in the timing bracket.
     this.sortByDepth();
 
-    let renderedTriangles = 0;
+    const clipCullStartedAt = pass.timed ? performance.now() : 0;
+    const survivors: Triangle[] = [];
 
     for (const triangle of this.triangles) {
-      if (triangle.render(context, offsetX, offsetY, options)) {
-        renderedTriangles++;
+      // Binned here, over every submitted triangle rather than only the
+      // ones that go on to raster: a backface-culled triangle still occupies
+      // real depth, and reads Triangle.depth (the mean z the sort already
+      // uses) rather than a projected coordinate, so it costs nothing extra
+      // and cannot be garbage the way a post-projection value could be for a
+      // triangle the near plane was about to reject.
+      pass.stats.addDepthSample(triangle.depth + pass.eyeDistance);
+
+      if (triangle.isClipped) {
+        continue;
+      }
+
+      if ((pass.options.cullBackfaces ?? true) && !triangle.isFrontFacing()) {
+        continue;
+      }
+
+      survivors.push(triangle);
+    }
+
+    if (pass.timed) {
+      pass.stats.addClipCullMs(performance.now() - clipCullStartedAt);
+    }
+
+    const rasterStartedAt = pass.timed ? performance.now() : 0;
+
+    for (const triangle of survivors) {
+      if (!triangle.fill(pass.context, pass.options)) {
+        continue;
+      }
+
+      pass.stats.addDrawn();
+      pass.stats.addDrawCall();
+
+      const area = triangle.screenArea();
+
+      // E2's near plane already guarantees a positive projection denominator
+      // for anything that reaches this pass; a non-finite area means it
+      // somehow did not. Counted rather than thrown, because a defensive
+      // assertion that stops the frame is worse than a card that says so.
+      if (Number.isFinite(area)) {
+        pass.stats.addFillPx(area);
+      } else {
+        pass.stats.addInverted();
       }
     }
 
-    return renderedTriangles;
+    if (pass.timed) {
+      pass.stats.addRasterMs(performance.now() - rasterStartedAt);
+    }
   }
 
   // Idempotent, unlike the incremental transform it replaces: applying the same

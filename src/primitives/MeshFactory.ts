@@ -46,7 +46,16 @@ class MeshFactory {
       return new Triangle(points[a], points[b], points[c], material);
     });
 
-    return new Mesh(points, triangles);
+    return new Mesh({ points, triangles, boundingRadius: this.boundingRadiusOf(object3D) });
+  }
+
+  // Folded over the registry's own raw coordinates rather than the Point3D
+  // instances above: rotation is rigid, so this radius is the same before and
+  // after setTransform ever runs, and the raw arrays are already in hand here
+  // without needing Point3D to expose x/y (E6/COS-239 deliberately leaves
+  // that to whichever of E3a or E5b lands first and actually needs it).
+  private boundingRadiusOf(object3D: Object3D): number {
+    return object3D.points.reduce((radius, [x, y, z]) => Math.max(radius, Math.sqrt(x * x + y * y + z * z)), 0);
   }
 }
 

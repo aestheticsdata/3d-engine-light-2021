@@ -32,4 +32,16 @@ export default defineConfig({
     outDir: "../dist",
     emptyOutDir: true,
   },
+  // Cross-origin isolation, dev only: it is what makes
+  // performance.measureUserAgentSpecificMemory() available and
+  // performance.now() unclamped, both read by SystemWidget (E6/COS-239). The
+  // three image assets under src/textures/images are bundled same-origin
+  // imports, so COEP's cross-origin blocking has nothing to break here.
+  // Production isolation depends on the static host and is out of scope.
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+  },
 });
