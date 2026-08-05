@@ -1,32 +1,43 @@
-// The camera's projection: the two policies that map a slider position onto it —
-// zoom to a z offset, and field of view to a focal length — and the numbers
-// those two produce.
+// The camera's policy: the three mappings that turn a console control into
+// projection state — field of view to a focal length, zoom to a magnification,
+// and a chip to a projection mode — and the readouts those produce.
 //
-// Neither curve is a generic helper. The first encodes this camera's reach —
-// 260 at the far end to -220 at the near end — and the second encodes the
-// canvas half-height, which is what makes degrees convertible to a focal length
-// at all. Both belong to the object whose projection they are, not to module
-// scope beside a rasteriser.
+// The projection itself is Camera, which every vertex holds; this class owns
+// what the renderer must not know about. Sliders, degrees and the canvas
+// half-height are console concerns, and a primitive that knew about them could
+// not be built in the node test environment.
 //
-// Where the camera is *pointing* is not here. That is CameraRig, which owns the
-// scene's absolute orientation and derives the eye position from the same
-// matrix the frame is drawn with; this class owns only how far away the eye is
-// and how wide it sees.
+// Neither curve is a generic helper. The first encodes the canvas half-height,
+// which is what makes degrees convertible to a focal length at all; the second
+// encodes this camera's reach — 260 at the far end to -220 at the near end.
+//
+// Where the camera is *pointing* is not here either. That is CameraRig, which
+// owns the scene's absolute orientation and derives the eye position from the
+// same matrix the frame is drawn with; this class owns only how far away the eye
+// is and how wide it sees.
 
-import type Mesh from "@primitives/Mesh";
+import Camera from "@primitives/Camera";
 
 const ZOOM_SLIDER_MIN = 0;
 const ZOOM_SLIDER_MAX = 100;
 const ZOOM_ZOFFSET_FAR = 260;
 const ZOOM_ZOFFSET_NEAR = -220;
 
-// `scale` in Point3D.convert3D2D is `fl / (fl + z + zOffset)`, which flips sign
-// when the denominator crosses zero — and that already happens today at maximum
-// zoom for the largest meshes (focal 300, zOffset -220, z -173 gives -93). A
-// shorter focal only makes it easier to reach, so the applied focal stops here.
-// FOV values above roughly 102° are therefore clamped, and stay clamped until
-// de-mock E2 brings a real near plane to clip against instead.
-const MIN_FOCAL_LENGTH = 260;
+// The focal length the zoom curve was authored against, and the reason the whole
+// slider range still projects exactly as it did before the magnification
+// existed. The curve below stays the definition of the push-back AT THIS FOCAL,
+// and k is read off it:
+//
+//     k(v) = FL_REF / (FL_REF + zoomOffsetFor(v))
+//
+// which at fl = FL_REF collapses the new expression back into the old one:
+//
+//     k·fl / (fl + k·z) = 300/(300+zo) · 300 / (300 + 300z/(300+zo))
+//                       = 300 / (300 + zo + z)
+//
+// the exact divide `fl / (fl + zOffset + z)` this replaced. Change FL_REF and
+// every zoom position moves; it is a reference, not a default.
+const REFERENCE_FOCAL_LENGTH = 300;
 const DEGREES_PER_RADIAN = 180 / Math.PI;
 
 // The defaults the toolbar's RESET path and the first paint both need, so they
@@ -42,99 +53,112 @@ export const DEFAULT_ZOOM_SLIDER_VALUE = 50;
 export const DEFAULT_FOV = 94;
 
 class CameraController {
-  // The opposite side of the triangle the FOV mapping solves. The canvas is read
-  // for it once here rather than held, so nothing in this class can start
-  // depending on a live canvas dimension E9b is going to move.
+  // The opposite side of the triangle the FOV mapping solves, and the aspect the
+  // CAMERA card prints. The canvas is read for both once here rather than held,
+  // so nothing in this class can start depending on a live canvas dimension E9b
+  // is going to move — and when it does, this constructor is the single call
+  // site that has to start following it.
   private readonly halfHeight: number;
-  private focal: number;
-  private zOffset: number;
+  private readonly aspectRatio: number;
+  private readonly camera: Camera;
 
   constructor(canvas: HTMLCanvasElement) {
     this.halfHeight = canvas.height / 2;
-    // Seeded through the same mapping the slider drives rather than from a
-    // second focal-length constant: one derivation means the opening frame and
-    // the first drag cannot disagree about what 94° means.
-    this.focal = this.focalFor(DEFAULT_FOV);
-    this.zOffset = this.zoomOffsetFor(DEFAULT_ZOOM_SLIDER_VALUE);
+    this.aspectRatio = canvas.width / canvas.height;
+    // Seeded through the same two mappings the sliders drive rather than from a
+    // second pair of constants: one derivation means the opening frame and the
+    // first drag cannot disagree about what 94° and 50% mean.
+    this.camera = new Camera({
+      focal: this.focalFor(DEFAULT_FOV),
+      magnification: this.magnificationFor(DEFAULT_ZOOM_SLIDER_VALUE),
+    });
   }
 
-  // What the HUD prints, and it is the distance rather than the raw offset: the
-  // offset alone runs 260 -> -220 across the slider and would print a negative
-  // distance. Focal plus offset stays positive at every combination the two
-  // controls can reach, and that is now a property of the clamp rather than of a
-  // fixed focal: MIN_FOCAL_LENGTH is 260 and the largest negative offset is
-  // -220, so the sum bottoms out at 40 and rises from there.
+  // What every mesh is built under. Handed out rather than copied from, because
+  // the point of the record is that the meshes see this class's writes without
+  // anyone pushing them through.
+  public get projection(): Camera {
+    return this.camera;
+  }
+
+  // Eye distance, and it is fl/k rather than the focal plus a push-back — one
+  // derivation now that the offset is gone. Positive at every reachable
+  // combination, since the zoom curve bottoms out at -220 against a reference
+  // focal of 300 and the magnification therefore never reaches zero.
   public get distance(): number {
-    return this.focal + this.zOffset;
+    return this.camera.distance;
   }
 
-  // The field of view the projection is actually using, which is not always the
-  // one the slider is showing — past roughly 102° the clamp holds the focal at
-  // 260 and this stops climbing. Every readout of the FOV goes through here, so
-  // the HUD chip and the CAMERA card cannot print two different numbers for one
-  // camera.
+  // The vertical field of view — the same canvas and focal length give 119.3°
+  // horizontally, so it is always worth saying which.
+  //
+  // It comes off the applied focal rather than off the slider, which used to
+  // matter because the focal was clamped and the two could part company. The
+  // near plane removed the clamp, so today they agree at every position; the
+  // derivation stays this way round because the readouts describe the
+  // projection, not the control.
   public get fieldOfViewDegrees(): number {
-    return 2 * Math.atan(this.halfHeight / this.focal) * DEGREES_PER_RADIAN;
+    return 2 * Math.atan(this.halfHeight / this.camera.focalLength) * DEGREES_PER_RADIAN;
   }
 
-  // The two numbers that actually define this projection, for the CAMERA card's
-  // FOCAL / OFFSET row. There are no clip planes to report instead.
-  public get focalLength(): number {
-    return this.focal;
+  public get aspect(): number {
+    return this.aspectRatio;
   }
 
-  public get zoomOffset(): number {
-    return this.zOffset;
+  public get near(): number {
+    return this.camera.near;
   }
 
-  public applyTo(mesh: Mesh) {
-    mesh.changeFocal(this.focal);
-    mesh.changeOffsetZ(this.zOffset);
+  public get far(): number {
+    return this.camera.far;
   }
 
-  // Both setters below take `number | null` because their only other caller
+  // The three setters below take `number | null` because their only other caller
   // reads a slider through Controls.getNumericValue, which returns null for a
   // missing control. Absorbing that here is what replaces the `?? this.zOffset`
-  // fallback the call site used to spell out, and it is why the controller needs
-  // no getters for these two.
+  // fallback the call site used to spell out.
   public setZoomFromSlider(sliderValue: number | null) {
     if (sliderValue === null) {
       return;
     }
 
-    this.zOffset = this.zoomOffsetFor(sliderValue);
+    this.camera.setMagnification(this.magnificationFor(sliderValue));
   }
 
+  // Only the focal moves. The magnification is left exactly where the zoom
+  // slider put it, and that is the whole of the dolly compensation: holding k
+  // holds the subject's size at its own centre plane while the perspective
+  // falloff around it opens or flattens. The push-back this used to need
+  // recomputing — zOffset = fl·(1−k)/k — is not stored anywhere any more.
   public setFovDegrees(fovDegrees: number | null) {
     if (fovDegrees === null) {
       return;
     }
 
-    this.focal = this.focalFor(fovDegrees);
+    this.camera.setFocal(this.focalFor(fovDegrees));
   }
 
   // The engine has a focal length, not a field of view, so the two are related
   // exactly by the half-height and are converted here rather than approximated
-  // by a table.
-  //
-  // There is no dolly compensation: a shorter focal magnifies the subject as
-  // well as widening the frame, so this control behaves like a second zoom
-  // rather than a true FOV. De-mock E2 owns compensating zOffset to keep the
-  // subject framed; until then the coupling is real and visible.
+  // by a table. Unclamped: the focal used to stop at 260 because a shorter one
+  // pushed the near cap of a large mesh behind the eye, where it projected
+  // mirrored. Camera's near plane clips it away instead, which is what makes the
+  // slider's whole 15..120 range usable.
   private focalFor(fovDegrees: number): number {
     const halfAngle = (fovDegrees * Math.PI) / 180 / 2;
 
-    return Math.max(MIN_FOCAL_LENGTH, this.halfHeight / Math.tan(halfAngle));
+    return this.halfHeight / Math.tan(halfAngle);
   }
 
   // Written as one interpolation rather than through a shared `lerp`: the two
   // other copies in the repo are module-private to their own files, and adding a
   // third here to save one expression is how a fourth appears next.
-  private zoomOffsetFor(sliderValue: number): number {
+  private magnificationFor(sliderValue: number): number {
     const raw = (sliderValue - ZOOM_SLIDER_MIN) / (ZOOM_SLIDER_MAX - ZOOM_SLIDER_MIN);
     const progress = Math.min(1, Math.max(0, raw));
+    const zoomOffset = ZOOM_ZOFFSET_FAR + (ZOOM_ZOFFSET_NEAR - ZOOM_ZOFFSET_FAR) * progress;
 
-    return ZOOM_ZOFFSET_FAR + (ZOOM_ZOFFSET_NEAR - ZOOM_ZOFFSET_FAR) * progress;
+    return REFERENCE_FOCAL_LENGTH / (REFERENCE_FOCAL_LENGTH + zoomOffset);
   }
 }
 

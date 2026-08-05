@@ -179,6 +179,19 @@ class BackgroundRenderer {
     context.fillRect(0, horizonY - 20, this.width, 40);
   }
 
+  // The floor does not follow the camera, and after COS-236 that is visible
+  // rather than merely true. Its vanishing point, its focal length and its eye
+  // height are the constants at the top of this file; the mesh goes through the
+  // shared Camera record, which now has a field of view and an orthographic
+  // branch. So in ORTHOGRAPHIC the solid's edges go parallel while the checker
+  // keeps converging, and at 15° or 120° the two perspectives visibly disagree.
+  //
+  // Not fixable here. The floor would have to be projected in scene space
+  // through the same camera, which is COS-246 (E5a) — the ground grid and world
+  // units. Until then the mismatch is the honest cost of having a second
+  // projection at all, and it must not be papered over by faking a matching
+  // vanishing point from `fl`: that would leave two cameras agreeing by
+  // coincidence rather than one camera drawing both.
   private renderFloor(context: CanvasRenderingContext2D) {
     const horizonY = this.floorHorizonY;
     const nearZ = this.floorNearZ;

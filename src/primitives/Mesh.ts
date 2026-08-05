@@ -55,18 +55,6 @@ class Mesh {
     return renderedTriangles;
   }
 
-  public changeFocal(value: number) {
-    for (const triangle of this.triangles) {
-      triangle.changeFocal(value);
-    }
-  }
-
-  public changeOffsetZ(value: number) {
-    for (const triangle of this.triangles) {
-      triangle.changeOffsetZ(value);
-    }
-  }
-
   // Idempotent, unlike the incremental transform it replaces: applying the same
   // matrix twice leaves the mesh where it was. That is what lets a transition
   // hand the same matrix to both the outgoing and the incoming mesh and get one

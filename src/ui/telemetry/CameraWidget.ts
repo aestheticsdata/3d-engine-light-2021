@@ -2,19 +2,15 @@
 //
 // The mockup derives an orbit camera from the pitch / yaw / zoom sliders (design
 // L1377-L1381) and reports POSITION / ROTATION / DISTANCE / NEAR / FAR against
-// it. Two of those premises were false when this card was built and are true
-// now: CameraRig gives the scene an absolute orientation and derives the eye
-// position from the very matrix the frame is drawn with, so POSITION is exact
-// and ROTATION has reverted from the SPIN RATE relabel to real Euler degrees.
+// it. Every one of those rows is now real. CameraRig gives the scene an absolute
+// orientation and derives the eye position from the very matrix the frame is
+// drawn with; the camera record carries a view volume, so the NEAR / FAR row has
+// reverted from the FOCAL / OFFSET relabel it wore while there were no clip
+// planes to print.
 //
-// Two departures from the design survive, because their premises are still
-// false:
-//
-//   NEAR/FAR  -> FOCAL / OFFSET the engine has no clip planes; focal and
-//                               z-offset are what define this projection, until
-//                               de-mock E2 brings real ones
-//   DISTANCE    drops the mock's `m` suffix for `u` — there is no metric
-//               scale until de-mock E5a lands world units
+// One departure from the design survives, because its premise is still false:
+// DISTANCE drops the mock's `m` suffix for `u`, since there is no metric scale
+// until de-mock E5a lands world units.
 //
 // Every value is read off the rig or the controller rather than recomputed from
 // the sliders, and the two strings the viewport HUD also prints go through the
@@ -34,23 +30,17 @@ export interface CameraWidgetOptions {
   fields: FieldWriter;
   camera: CameraController;
   rig: CameraRig;
-  canvas: HTMLCanvasElement;
 }
 
 class CameraWidget {
   private readonly fields: FieldWriter;
   private readonly camera: CameraController;
   private readonly rig: CameraRig;
-  // Aspect really is fixed — the canvas is a 1024x640 backing store that
-  // BackgroundRenderer, ShapeTransitionMachine and every Point3D capture at
-  // construction, and COS-250 (E9b) is what makes it recomputable.
-  private readonly aspect: string;
 
   constructor(options: CameraWidgetOptions) {
     this.fields = options.fields;
     this.camera = options.camera;
     this.rig = options.rig;
-    this.aspect = (options.canvas.width / options.canvas.height).toFixed(2);
   }
 
   // Seeded as well as rendered: render() runs on a frame, and this card is
@@ -69,21 +59,24 @@ class CameraWidget {
     this.fields.write("camStatPosition", vector3Label(this.rig.eyePosition(distance)));
     this.fields.write("camStatRotation", eulerDegreesLabel(this.rig.eulerDegrees()));
     this.fields.write("camStatDistance", `${distance.toFixed(1)} ${DISTANCE_UNIT}`);
-    // One decimal, because the focal length stopped being an integer when
-    // COS-231 made FOV a control: 94° maps to 298.4, and the raw float would
-    // print seventeen digits into a stat row.
-    this.fields.write("camStatFocal", `${this.camera.focalLength.toFixed(1)} / ${this.camera.zoomOffset.toFixed(1)}`);
+    // Written every render even though neither plane moves: they are constants
+    // of the camera, not of the frame, and a row seeded once is a row that has
+    // to be re-seeded by hand the day either becomes a control.
+    this.fields.write("camStatClip", `${this.camera.near} / ${this.camera.far}`);
     this.fields.write("camStatFov", this.fovAspect());
   }
 
   // Vertical, and it has to be said which: the same canvas and focal length give
   // 119.3° horizontally.
   //
-  // The angle comes off the controller rather than being re-derived here, for
-  // the reason its getter gives: it is the FOV the projection is using, not the
-  // one the slider is showing, and the viewport HUD prints the same number.
+  // Both halves come off the controller rather than being re-derived here. The
+  // angle for the reason its getter gives — it is the FOV the projection is
+  // using, not the one the slider is showing, and the viewport HUD prints the
+  // same number. The aspect because the controller is where the render target's
+  // dimensions are read, and a second reading here is a second thing to
+  // remember when E9b makes them move.
   private fovAspect(): string {
-    return `${this.camera.fieldOfViewDegrees.toFixed(1)}° / ${this.aspect}`;
+    return `${this.camera.fieldOfViewDegrees.toFixed(1)}° / ${this.camera.aspect.toFixed(2)}`;
   }
 }
 

@@ -1,20 +1,18 @@
 import Point2D from "@primitives/Point2D";
 
+import type Camera from "@primitives/Camera";
 import type Viewport from "@primitives/Viewport";
 
 class Point3D {
   private x: number;
   private y: number;
   private z: number;
-  // Public because Triangle writes them from outside, through changeFocal and
-  // changeOffsetZ, which is what the camera drives them with.
-  //
-  // 300 is also CameraController's DEFAULT_FOCAL_LENGTH, declared there
-  // independently: two copies of one number. Recorded rather than unified,
-  // because a mesh built before the camera has been applied projects at this
-  // value and the two must move together or not at all.
-  public fl: number = 300;
-  public zOffset: number = 0;
+  // Held, not copied, and that is the difference from the viewport below: the
+  // projection is one shared record every vertex reads through, so a slider
+  // writes one number rather than two fields on each of 3960 points. A mesh
+  // built before the camera has moved therefore cannot project at a stale
+  // focal length — there is only ever one.
+  private readonly camera: Camera;
   private readonly vpX: number;
   private readonly vpY: number;
   // The vertex as the registry authored it, kept for the life of the mesh. It is
@@ -31,7 +29,7 @@ class Point3D {
   // about the centre it was built with, and a later canvas resize does not move
   // it. Following the resize would be an improvement, and it belongs to the
   // ticket that owns resizing rather than to this one.
-  constructor(x: number, y: number, z: number, viewport: Viewport) {
+  constructor(x: number, y: number, z: number, viewport: Viewport, camera: Camera) {
     this.x = x;
     this.y = y;
     this.z = z;
@@ -40,14 +38,24 @@ class Point3D {
     this.sz = z;
     this.vpX = viewport.x;
     this.vpY = viewport.y;
+    this.camera = camera;
   }
 
   public get zValue(): number {
     return this.z;
   }
 
+  // Outside the view volume, which is the camera's question rather than the
+  // point's: it owns the two planes and the depth the projection divides by.
+  public get isClipped(): boolean {
+    return this.camera.clips(this.z);
+  }
+
+  // Both projections in one call, because the branch is the camera's and not
+  // this vertex's: perspective divides by the depth, orthographic does not, and
+  // the point does the same multiply either way.
   public convert3D2D(): Point2D {
-    const scale = this.fl / (this.fl + this.z + this.zOffset);
+    const scale = this.camera.scaleAt(this.z);
     const tmpX = this.vpX + this.x * scale;
     const tmpY = this.vpY + this.y * scale;
 

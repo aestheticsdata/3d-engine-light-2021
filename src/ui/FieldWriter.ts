@@ -15,14 +15,15 @@
 //
 // Known field names, owned by the tickets that introduce them:
 //   shell        buildDesktop, buildMobile, fps, trisDrawn
-//   status bar   statusLabel, selectedId, shadingMode, texLabel
+//   status bar   statusLabel, selectedId, shadingMode, texLabel, projection
 //   viewport     resolution, camPos, camRot, camTarget, camDist, fov, zoom
 //   frame time   frameMs, frameTimeNote, ftTransform, ftBackground, ftRaster
 //   geometry     geoVertices, geoEdges, geoTriangles, geoCulled, polyBudget
-//   camera card  camStatPosition, camStatSpin, camStatDistance, camStatFocal,
-//                camStatFov — deliberately not the viewport's camPos / camRot /
-//                camDist above. Those are the HUD's mock camera (COS-218); these
-//                are the engine's real projection, and the two must not collide.
+//   camera card  camStatPosition, camStatRotation, camStatDistance,
+//                camStatClip, camStatFov — deliberately not the viewport's
+//                camPos / camRot / camDist above. Both sets are real now, but
+//                they are formatted differently and one write must not land in
+//                the other's row.
 //   system       sysBuffer, sysColorBuffer, jsHeap, sysDpr, uptime
 
 class FieldWriter {

@@ -772,10 +772,9 @@
               <!-- One card for both branches: the rows, the note and the values
                    are identical, and only the body padding differs — so the two
                    primitive modifiers are stacked and the breakpoint picks.
-                   FOCAL / OFFSET is a deliberate relabel of the design's
-                   NEAR / FAR (L388–L415); the reasoning is in CameraWidget's
-                   header. ROTATION was SPIN RATE until the camera rig gave the
-                   scene real Euler angles to print. -->
+                   Every row here is the design's own; the two that had to be
+                   relabelled while the engine could not back them — NEAR / FAR
+                   as FOCAL / OFFSET, ROTATION as SPIN RATE — are both back. -->
               <section class="panel panel--fill camera-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">camera</span>
@@ -796,8 +795,8 @@
                       <span class="stat-row__value" data-field="camStatDistance">&mdash;</span>
                     </div>
                     <div class="stat-row">
-                      <span class="stat-row__label">FOCAL / OFFSET</span>
-                      <span class="stat-row__value" data-field="camStatFocal">&mdash;</span>
+                      <span class="stat-row__label">NEAR / FAR</span>
+                      <span class="stat-row__value" data-field="camStatClip">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">FOV / ASPECT</span>

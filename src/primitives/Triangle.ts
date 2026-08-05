@@ -99,6 +99,15 @@ class Triangle {
     offsetY: number = 0,
     options: TriangleRenderOptions,
   ): boolean {
+    // Before the projection, not after: a vertex behind the eye divides by a
+    // negative depth and lands mirrored across the vanishing point, so by the
+    // time there are three projected points there is nothing left to recognise
+    // the case by. The backface test below is a 2D winding check and would read
+    // that mirrored triangle as a legitimately front-facing one.
+    if (this.isClipped()) {
+      return false;
+    }
+
     this.project(offsetX, offsetY);
 
     if ((options.cullBackfaces ?? true) && this.isBackfacing()) {
@@ -142,12 +151,13 @@ class Triangle {
     return drawn;
   }
 
-  public changeFocal(value: number) {
-    this.a.fl = this.b.fl = this.c.fl = value;
-  }
-
-  public changeOffsetZ(value: number) {
-    this.a.zOffset = this.b.zOffset = this.c.zOffset = value;
+  // Whole-triangle rejection rather than a clip against the plane: one vertex
+  // outside drops all three, so the artefact is a hole rather than a smear.
+  // COS-418 (E2b) is what splits a straddling triangle instead, and it is a real
+  // piece of work — the UVs have to be interpolated along the cut and this
+  // method would have to emit geometry it does not own.
+  private isClipped(): boolean {
+    return this.a.isClipped || this.b.isClipped || this.c.isClipped;
   }
 
   private project(offsetX: number, offsetY: number) {
