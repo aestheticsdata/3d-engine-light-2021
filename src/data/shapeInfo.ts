@@ -368,6 +368,48 @@ const entries = {
       },
     ],
   },
+  mucuboctahedron: {
+    family: "POLYHEDRA",
+    title: "Mucuboctahedron",
+    description:
+      "An infinite skew polyhedron: a periodic sponge of squares and hexagons in the golds of Conway's plate, rendered as a finite chunk.",
+    geometricFeature:
+      "All the squares of the Kelvin foam's truncated octahedra plus half their hexagons; the other half are the openings.",
+    densityLabel: "Medium density",
+    generator: "bitruncated cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Bitruncated_cubic_honeycomb",
+      },
+    ],
+  },
+  murhombicuboctahedron: {
+    family: "POLYHEDRA",
+    title: "Murhombicuboctahedron",
+    description:
+      "The denser sponge of Conway's plate: squares and hexagons in pale gold, with the octagons opened out as its tunnels.",
+    geometricFeature:
+      "Every square and hexagon of the omnitruncated cubic honeycomb; deleting only its octagons leaves two faces on every edge.",
+    densityLabel: "High density",
+    generator: "omnitruncated cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Omnitruncated_cubic_honeycomb",
+      },
+    ],
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 const shapeInfo: Record<string, ShapeInfo> = entries;
