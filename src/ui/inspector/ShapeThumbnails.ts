@@ -5,9 +5,14 @@
 // thumbnail would be a second source of truth for what a shape looks like, and
 // it would be wrong the day COS-201 adds a solid nobody drew an icon for.
 //
-// Its own MeshFactory and Viewport, because the app's are bound to the 1024x640
-// canvas: Point3D caches the projection centre per point at construction, so a
-// mesh built for the stage cannot be re-aimed at a 44px thumbnail.
+// Its own MeshFactory and RenderTarget, because the app's are bound to the
+// 1024x640 stage: Point3D caches the projection centre and scale per point at
+// construction, so a mesh built for the stage cannot be re-aimed at a 44px
+// thumbnail. referenceHeight is pinned to the thumbnail's own SIZE rather than
+// left at RenderTarget's 640 default, which is what keeps scale at exactly 1 —
+// this file's own camera and offsetFor() below were tuned assuming no extra
+// multiplier, and inheriting the stage's reference height would silently
+// shrink every thumbnail toward its own centre.
 //
 // Rendered after the textures resolve, so the cube shows its galaxy face rather
 // than a hole — which is why Main calls this from init() and not from its
@@ -16,7 +21,7 @@
 import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
-import Viewport from "@primitives/Viewport";
+import RenderTarget from "@primitives/RenderTarget";
 
 import type { Data3D } from "@data/types";
 import type TextureRegistry from "@textures/TextureRegistry";
@@ -73,7 +78,8 @@ class ShapeThumbnails {
     // thing about one fixed offset.
     const offsetZ = this.offsetFor(object3D.points);
     const camera = new Camera({ focal: FOCAL, magnification: FOCAL / (FOCAL + offsetZ) });
-    const mesh = new MeshFactory(new Viewport(canvas), camera).build(object3D);
+    const renderTarget = new RenderTarget({ width: SIZE, height: SIZE, referenceHeight: SIZE });
+    const mesh = new MeshFactory(renderTarget, camera).build(object3D);
     const matrix3D = new Matrix3D();
 
     // Yaw times pitch, in that order, which is the single matrix equivalent of

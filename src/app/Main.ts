@@ -16,8 +16,8 @@ import CameraRig from "@camera/CameraRig";
 import data from "@data/data";
 import shapeInfo from "@data/shapeInfo";
 import MeshFactory from "@primitives/MeshFactory";
+import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
-import Viewport from "@primitives/Viewport";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
@@ -101,6 +101,7 @@ class Main {
   private readonly objects3D: Data3D;
   private readonly stage: CanvasRenderingContext2D;
   private readonly surface3D: Surface3D;
+  private readonly renderTarget: RenderTarget;
   private readonly meshFactory: MeshFactory;
   private readonly textures: TextureRegistry;
   private readonly camera: CameraController;
@@ -149,12 +150,14 @@ class Main {
     // whose construction order is load-bearing rather than incidental.
     this.rig = new CameraRig();
     this.lastFrameTimestamp = performance.now();
-    // The projection centre, resolved once from the canvas the Bootstrapper
-    // already handed over, and the camera record the controller owns — both
-    // shared by every point of every mesh built here. Every mesh in the console
-    // therefore projects through one camera, and the sliders write to it rather
-    // than to the vertices.
-    this.meshFactory = new MeshFactory(new Viewport(canvas), this.camera.projection);
+    // The render target, resolved once from the canvas the Bootstrapper already
+    // handed over, and the camera record the controller owns — both shared by
+    // every point of every mesh built here. Every mesh in the console therefore
+    // projects through one render target and one camera, and the sliders write
+    // to the camera rather than to the vertices.
+    this.renderTarget = new RenderTarget({ width: canvas.width, height: canvas.height });
+    this.assertSeedFraming();
+    this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
     this.objects3D = data;
     this.renderedTriangles = 0;
@@ -326,6 +329,20 @@ class Main {
     // The one collaborator holding a timer and a media-query listener: every
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
+  }
+
+  // The whole point of this class existing: at the seed 1024x640 canvas, scale
+  // is exactly 1 and the centre is exactly what Viewport always gave — so
+  // introducing a render target moves nothing today, it only gives a later
+  // resize somewhere to land. Thrown rather than logged, because a silent
+  // drift here would move every vertex on screen and the console would look
+  // wrong without printing why.
+  private assertSeedFraming() {
+    const { scale, centerX, centerY } = this.renderTarget;
+
+    if (scale !== 1 || centerX !== 512 || centerY !== 320) {
+      throw new Error(`RenderTarget seed framing drifted: scale=${scale} centerX=${centerX} centerY=${centerY}.`);
+    }
   }
 
   // The HUD's `dist` is the camera distance, which is fl/k: positive at every

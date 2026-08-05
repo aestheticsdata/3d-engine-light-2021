@@ -1,20 +1,21 @@
 import Point2D from "@primitives/Point2D";
 
 import type Camera from "@primitives/Camera";
-import type Viewport from "@primitives/Viewport";
+import type RenderTarget from "@primitives/RenderTarget";
 
 class Point3D {
   private x: number;
   private y: number;
   private z: number;
-  // Held, not copied, and that is the difference from the viewport below: the
-  // projection is one shared record every vertex reads through, so a slider
-  // writes one number rather than two fields on each of 3960 points. A mesh
-  // built before the camera has moved therefore cannot project at a stale
+  // Held, not copied, and that is the difference from the render target below:
+  // the projection is one shared record every vertex reads through, so a
+  // slider writes one number rather than two fields on each of 3960 points. A
+  // mesh built before the camera has moved therefore cannot project at a stale
   // focal length — there is only ever one.
   private readonly camera: Camera;
-  private readonly vpX: number;
-  private readonly vpY: number;
+  private readonly centerX: number;
+  private readonly centerY: number;
+  private readonly targetScale: number;
   // The vertex as the registry authored it, kept for the life of the mesh. It is
   // what makes an orientation absolute rather than accumulated: every frame
   // rebuilds x/y/z from these three, so a pose is a matrix rather than a history
@@ -24,20 +25,21 @@ class Point3D {
   private readonly sy: number;
   private readonly sz: number;
 
-  // The viewport is read once here and its two numbers copied, not held. That is
-  // today's behaviour kept exactly: a mesh already on screen keeps projecting
-  // about the centre it was built with, and a later canvas resize does not move
-  // it. Following the resize would be an improvement, and it belongs to the
-  // ticket that owns resizing rather than to this one.
-  constructor(x: number, y: number, z: number, viewport: Viewport, camera: Camera) {
+  // The render target is read once here and its three numbers copied, not held.
+  // That is today's behaviour kept exactly: a mesh already on screen keeps
+  // projecting about the centre and scale it was built with, and a later
+  // resize does not move it. Following a resize would be an improvement, and
+  // it belongs to the ticket that owns resizing (E9b) rather than to this one.
+  constructor(x: number, y: number, z: number, renderTarget: RenderTarget, camera: Camera) {
     this.x = x;
     this.y = y;
     this.z = z;
     this.sx = x;
     this.sy = y;
     this.sz = z;
-    this.vpX = viewport.x;
-    this.vpY = viewport.y;
+    this.centerX = renderTarget.centerX;
+    this.centerY = renderTarget.centerY;
+    this.targetScale = renderTarget.scale;
     this.camera = camera;
   }
 
@@ -53,11 +55,14 @@ class Point3D {
 
   // Both projections in one call, because the branch is the camera's and not
   // this vertex's: perspective divides by the depth, orthographic does not, and
-  // the point does the same multiply either way.
+  // the point does the same multiply either way. The render-target scale
+  // multiplies in after that divide, never before — Camera owns nothing about
+  // resolution, and multiplying rather than folding it into the focal is what
+  // keeps vertical field of view constant at any render-target size.
   public convert3D2D(): Point2D {
-    const scale = this.camera.scaleAt(this.z);
-    const tmpX = this.vpX + this.x * scale;
-    const tmpY = this.vpY + this.y * scale;
+    const scale = this.camera.scaleAt(this.z) * this.targetScale;
+    const tmpX = this.centerX + this.x * scale;
+    const tmpY = this.centerY + this.y * scale;
 
     return new Point2D(tmpX, tmpY);
   }

@@ -1,8 +1,8 @@
 // Registry data in, a Mesh out.
 //
 // The single construction site of Point3D and Triangle in the repo, and this is
-// where that pays: the viewport and the camera are resolved once, here, instead
-// of by every point for itself.
+// where that pays: the render target and the camera are resolved once, here,
+// instead of by every point for itself.
 //
 // Pure. No DOM and no store. The camera arrives as a record rather than as a set
 // of values to copy, so there is no third step where the caller applies it —
@@ -15,20 +15,20 @@ import Triangle from "@primitives/Triangle";
 
 import type { Object3D } from "@data/types";
 import type Camera from "@primitives/Camera";
-import type Viewport from "@primitives/Viewport";
+import type RenderTarget from "@primitives/RenderTarget";
 
 class MeshFactory {
-  private readonly viewport: Viewport;
+  private readonly renderTarget: RenderTarget;
   private readonly camera: Camera;
 
-  constructor(viewport: Viewport, camera: Camera) {
-    this.viewport = viewport;
+  constructor(renderTarget: RenderTarget, camera: Camera) {
+    this.renderTarget = renderTarget;
     this.camera = camera;
   }
 
   public build(object3D: Object3D): Mesh {
     const points = object3D.points.map(
-      (point) => new Point3D(point[0], point[1], point[2], this.viewport, this.camera),
+      (point) => new Point3D(point[0], point[1], point[2], this.renderTarget, this.camera),
     );
 
     // `triangle` is a union of a 4-tuple (flat colour) and a 7-tuple (colour
