@@ -22,6 +22,7 @@ export default defineConfig({
       "@primitives": path.resolve(__dirname, "src/primitives"),
       "@data": path.resolve(__dirname, "src/data"),
       "@img": path.resolve(__dirname, "src/img"),
+      "@input": path.resolve(__dirname, "src/input"),
       "@textures": path.resolve(__dirname, "src/textures"),
       "@rendering": path.resolve(__dirname, "src/rendering"),
       "@ui": path.resolve(__dirname, "src/ui"),

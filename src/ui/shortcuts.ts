@@ -76,10 +76,10 @@ export const SHORTCUTS: readonly ShortcutBinding[] = [
   },
 ];
 
-// The touch equivalent, for the branch that has no keyboard. All three are
-// pending-feature — the canvas has no pointer, touch or wheel handler of any
-// kind — and they ship with de-mock "Pointer orbit, pinch zoom, double-tap
-// reset".
+// The touch equivalent, for the branch that has no keyboard. All three gestures
+// are live — PointerOrbit (E1b) is what dispatches them — so, unlike SHORTCUTS
+// above, this table carries no per-row status: there is no pending state left
+// to mark.
 export interface GestureBinding {
   gesture: string;
   effect: string;

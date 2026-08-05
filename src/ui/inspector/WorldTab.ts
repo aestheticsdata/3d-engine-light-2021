@@ -61,6 +61,13 @@ class WorldTab {
   public syncEnvironmentUi() {
     this.environment.syncFromStore();
   }
+
+  // The CAMERA half alone, for wheel/pinch/double-tap zoom (E1b): those already
+  // apply their own value to the camera before reaching Main, so only the ZOOM
+  // row and the store need to follow.
+  public setZoomUi(value: number) {
+    this.camera.setZoomUi(value);
+  }
 }
 
 export default WorldTab;

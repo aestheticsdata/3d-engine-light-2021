@@ -141,6 +141,18 @@ class CameraSection {
     this.apply.onProjection(projection);
   }
 
+  // Mirrors TransformSection.setAngleUi: writes the row and the store but
+  // deliberately does not call options.onZoom — a pointer gesture already
+  // applied its own value to the camera before reaching here, and a second
+  // call would fight it exactly the way setAngleUi's own comment warns a
+  // preset would fight onPitch/onYaw/onRoll.
+  public setZoomUi(value: number) {
+    const rounded = Math.round(value);
+
+    this.zoom.setValue(rounded);
+    this.store.setState({ zoom: rounded });
+  }
+
   private pickProjection(mode: ProjectionMode) {
     this.projectionGrid.setActive(mode);
     this.store.setState({ projection: mode });
