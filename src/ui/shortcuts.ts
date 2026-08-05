@@ -36,10 +36,10 @@ export interface ShortcutBinding {
 export const PRIMITIVE_COUNT = Object.keys(data).length;
 
 // The number of primitives a *keystroke* can reach, which is a different number.
-// The registry holds fourteen and the digit row holds nine, so the range stops
-// at 9 rather than printing "1-14" and promising keys 10 through 14 that no
+// The registry holds twenty and the digit row holds nine, so the range stops
+// at 9 rather than printing "1-20" and promising keys 10 through 20 that no
 // keyboard has. Still derived, never a literal: a registry of six would print
-// 1-6, and a fifteenth primitive changes nothing here.
+// 1-6, and a twenty-first primitive changes nothing here.
 export const SHAPE_KEY_COUNT = Math.min(9, PRIMITIVE_COUNT);
 
 const shapeKeys = Array.from({ length: SHAPE_KEY_COUNT }, (_, index) => String(index + 1));

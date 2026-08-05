@@ -24,7 +24,7 @@ import type { Data3D } from "@data/types";
 export type { Data3D, Object3D } from "@data/types";
 
 // `satisfies` rather than an annotation, so the key list survives into the type
-// system: `keyof typeof data` is the fourteen names, not `string`. That is what
+// system: `keyof typeof data` is the twenty names, not `string`. That is what
 // lets shapeInfo.ts be checked against this registry — a shape added here and
 // left unclassified there is a compile error rather than a solid that quietly
 // falls out of the picker. The shape of each entry is still enforced.
