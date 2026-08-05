@@ -19,6 +19,8 @@ import PointerOrbit from "@input/PointerOrbit";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
+import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
+import RenderStats from "@rendering/RenderStats";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
@@ -110,6 +112,11 @@ class Main {
   private readonly stage: CanvasRenderingContext2D;
   private readonly surface3D: Surface3D;
   private readonly renderTarget: RenderTarget;
+  // Constructed here rather than by Surface3D (E6/COS-239): Main has to call
+  // beginFrame() before the rig's own matrix pass, which runs before
+  // surface3D.render is ever reached, so the shared accumulator has to exist
+  // before Surface3D's constructor sees it.
+  private readonly renderStats: RenderStats;
   private readonly meshFactory: MeshFactory;
   private readonly textures: TextureRegistry;
   private readonly camera: CameraController;
@@ -161,11 +168,13 @@ class Main {
     // Surface3D is what carries them to it on every frame.
     this.renderTarget = new RenderTarget({ width: canvas.width, height: canvas.height });
     this.assertSeedFraming();
+    this.renderStats = new RenderStats();
     this.surface3D = new Surface3D({
       container: this.stage,
       camera: this.camera.projection,
       renderTarget: this.renderTarget,
       backgroundRenderer,
+      stats: this.renderStats,
     });
     // Before every widget that reads it. The SHAPE tab's sliders and the WORLD
     // tab's presets write to it, the CAMERA card and the HUD read from it, and
@@ -258,7 +267,14 @@ class Main {
       },
     });
     this.framerate = new FramerateWidget();
-    this.frameTime = new FrameTimeWidget(this.fields);
+    // Probed once, at boot: whether this page's performance.now() can
+    // actually resolve the four-stage split FRAME TIME draws (E6/COS-239).
+    // Reprobing per frame would be the exact per-frame cost the sampling gate
+    // elsewhere in this ticket exists to avoid, for an answer that only
+    // changes if cross-origin isolation itself changes mid-session, which it
+    // does not.
+    const hasFineClockResolution = probeClockResolutionMs() < CLOCK_RESOLUTION_THRESHOLD_MS;
+    this.frameTime = new FrameTimeWidget(this.fields, hasFineClockResolution);
     this.geometry = new GeometryWidget(this.fields);
     this.zBuffer = new ZBufferWidget();
     this.cameraStats = new CameraWidget({ fields: this.fields, camera: this.camera, rig: this.rig });
@@ -284,6 +300,13 @@ class Main {
         this.renderedTriangles = 0;
         this.fields.write("fps", 0);
         this.publishDrawnTriangles(0);
+        // The frame-time ticket's own zeroing (E6/COS-239): a paused console
+        // must show no stale stage split, fill rate or draw-call count.
+        this.renderStats.zero();
+        this.frameTime.reset();
+        this.frameTime.render();
+        this.geometry.zeroDrawCalls();
+        this.geometry.render();
       },
     });
 
@@ -619,6 +642,10 @@ class Main {
       return;
     }
 
+    // Once per rendered frame, before anything this frame times — the rig's
+    // own matrix pass below included (E6/COS-239).
+    const timed = this.renderStats.beginFrame();
+
     this.shapes.update(timestamp);
     this.shapes.syncQueue(timestamp);
 
@@ -635,9 +662,9 @@ class Main {
 
     // Posed even while hidden, so showing the mesh again resumes the turn where
     // it would have been rather than where it was hidden.
-    const transformMs = this.applyRigToActiveMeshes();
+    this.applyRigToActiveMeshes(timed);
 
-    this.paint(this.shapes.getRenderables(), transformMs);
+    this.paint(this.shapes.getRenderables(), timed);
     // Every frame, not on the 90ms gate the numeric readouts ride: the gizmo is
     // a picture rather than a number, and E1b makes the viewport draggable.
     this.viewportHud.setGizmo(this.rig.axisScreenDirections());
@@ -648,13 +675,13 @@ class Main {
       return;
     }
 
-    // A paused repaint really does re-pose the mesh now, which is what lets a
-    // preset or a slider move the shape while the loop is stopped. The transform
-    // it reports is therefore a real measurement rather than the zero the
-    // incremental path had to print here.
-    const transformMs = this.applyRigToActiveMeshes();
+    const timed = this.renderStats.beginFrame();
 
-    this.paint(this.shapes.getRenderables(), transformMs);
+    // A paused repaint really does re-pose the mesh now, which is what lets a
+    // preset or a slider move the shape while the loop is stopped.
+    this.applyRigToActiveMeshes(timed);
+
+    this.paint(this.shapes.getRenderables(), timed);
     this.frameTime.render();
     this.geometry.render();
     this.zBuffer.render();
@@ -670,17 +697,23 @@ class Main {
   // incremental path would have rotated twice. An absolute matrix makes the call
   // idempotent, so that whole class of bug goes away with the de-duplication.
   //
-  // Returns the elapsed milliseconds because the phase the FRAME TIME card calls
-  // TRANSFORM is exactly this loop, and only the loop knows where it begins.
-  private applyRigToActiveMeshes(): number {
-    const startedAt = performance.now();
+  // Feeds RenderStats.transformMs directly (E6/COS-239) rather than returning
+  // a number for the caller to thread through: TRANSFORM is this loop's own
+  // cost plus Mesh.renderMesh's projection pass, and the accumulator is the
+  // one place both halves can sum without paint() knowing either exists. timed
+  // comes from the same beginFrame() call the whole frame answers to — an
+  // unsampled frame must make zero performance.now() calls, this one included.
+  private applyRigToActiveMeshes(timed: boolean) {
+    const startedAt = timed ? performance.now() : 0;
     const matrix = this.rig.matrix();
 
     this.shapes.getActiveMeshes().forEach((mesh) => {
       mesh.setTransform(matrix);
     });
 
-    return performance.now() - startedAt;
+    if (timed) {
+      this.renderStats.addTransformMs(performance.now() - startedAt);
+    }
   }
 
   // Clamped, so a tab that was in the background for a minute resumes rather
@@ -711,7 +744,7 @@ class Main {
   // render option that is not a control, and it is required rather than optional
   // so a missing hand-off is a compile error instead of "dog" painted as a CSS
   // colour.
-  private paint(renderables: MeshRenderRequest[], transformMs: number) {
+  private paint(renderables: MeshRenderRequest[], timed: boolean) {
     // The submitted list and the render options are both named rather than
     // inlined because the GEOMETRY card needs them below: it counts what was
     // actually handed to the renderer — a hidden mesh submits nothing — and it
@@ -720,19 +753,28 @@ class Main {
     const submitted = this.sceneGraph.isMeshHidden() ? [] : renderables;
     const options = { ...this.pipeline.getRenderOptions(), textures: this.textures };
 
-    const stats = this.surface3D.render(submitted, options);
+    const stats = this.surface3D.render(submitted, options, timed);
 
-    this.renderedTriangles = stats.triangles;
-    // The three phases describe one frame because they come from one frame: the
-    // transform this class timed, and the two passes Surface3D timed around its
-    // own boundary.
+    this.renderedTriangles = stats.drawn;
+    // Four phases describing one frame because they come from one shared
+    // accumulator: applyRigToActiveMeshes' own contribution to transformMs,
+    // and everything Surface3D and Mesh added to the other three while
+    // walking submitted (E6/COS-239).
     this.frameTime.pushSample({
-      transformMs,
-      backgroundMs: stats.backgroundMs,
+      transformMs: stats.transformMs,
+      clipCullMs: stats.clipCullMs,
       rasterMs: stats.rasterMs,
+      presentMs: stats.presentMs,
+      fillPx: stats.fillPx,
     });
-    this.geometry.pushFrame(submitted, this.renderedTriangles, options.cullBackfaces);
-    this.zBuffer.pushFrame(submitted);
+    this.geometry.pushFrame({
+      renderables: submitted,
+      submitted: stats.submitted,
+      drawn: stats.drawn,
+      drawCalls: stats.drawCalls,
+      cullBackfaces: options.cullBackfaces,
+    });
+    this.zBuffer.pushFrame(stats.depthBins, stats.depthNear, stats.depthFar);
   }
 
   private togglePause = () => {

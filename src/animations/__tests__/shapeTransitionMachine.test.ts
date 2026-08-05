@@ -15,7 +15,7 @@ const DURATION = 100;
 
 // A mesh with no geometry is enough: nothing under test reads a point or a
 // triangle.
-const emptyMesh = () => new Mesh([], []);
+const emptyMesh = () => new Mesh({ points: [], triangles: [], boundingRadius: 0 });
 
 const machine = () => new ShapeTransitionMachine({ width: 1024, height: 640, duration: DURATION });
 

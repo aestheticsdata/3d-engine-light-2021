@@ -25,6 +25,15 @@
 // The affine mapping itself, and the notes explaining it, live with
 // AffineTextureMapper.
 // -----------------------------------------------------------------------------
+//
+// project() / isFrontFacing() / fill() are Mesh.renderMesh's three passes
+// (E6/COS-239), pulled apart from what used to be one fused per-triangle call
+// so each can be timed on its own: a transform pass that projects every
+// triangle, a clip-cull pass that sorts and tests every triangle, and a raster
+// pass that fills only the survivors. render() still exists and still
+// composes the three in the same order, so anything outside Mesh that called
+// it — there is nothing today, but the method is public API — sees unchanged
+// behaviour.
 
 import Point2D from "@primitives/Point2D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
@@ -48,13 +57,19 @@ class Triangle {
   private b: Point3D;
   private c: Point3D;
 
-  // Scratch, rewritten by every render and read by nothing outside this class.
-  // Declared rather than assigned in the constructor on purpose: under
-  // `useDefineForClassFields` these are real properties holding undefined from
-  // construction, not properties that appear on the first render.
-  private aproj: Point2D;
-  private bproj: Point2D;
-  private cproj: Point2D;
+  // Scratch, rewritten by every project() and read by isFrontFacing()/fill()/
+  // screenArea(). Six scalars rather than three Point2D instances (E6/COS-239):
+  // with the transform pass now a real loop of its own, two heap objects per
+  // triangle per frame — 15,840 of them a second on the torus knot at 60fps —
+  // is exactly the allocation churn T28/T29 spent this codebase's early
+  // tickets removing, for values nothing outside this class ever read as a
+  // Point2D in the first place.
+  private aprojX: number;
+  private aprojY: number;
+  private bprojX: number;
+  private bprojY: number;
+  private cprojX: number;
+  private cprojY: number;
 
   // can be a color OR a texture key
   private material: string;
@@ -83,10 +98,25 @@ class Triangle {
     this.uvb = uvb;
     this.uvc = uvc;
     this.textureMapper = new AffineTextureMapper();
+    this.aprojX = 0;
+    this.aprojY = 0;
+    this.bprojX = 0;
+    this.bprojY = 0;
+    this.cprojX = 0;
+    this.cprojY = 0;
   }
 
   public get depth(): number {
     return (this.a.zValue + this.b.zValue + this.c.zValue) / 3;
+  }
+
+  // Outside the view volume, which is the camera's question rather than this
+  // triangle's: whole-vertex rejection, so one vertex outside drops all
+  // three and the artefact is a hole rather than the smear a mirrored vertex
+  // used to paint. COS-418 (E2b) is what splits a straddling triangle
+  // instead.
+  public get isClipped(): boolean {
+    return this.a.isClipped || this.b.isClipped || this.c.isClipped;
   }
 
   // One save, one restore, on every path that reaches them. The cull exit leaves
@@ -104,16 +134,54 @@ class Triangle {
     // time there are three projected points there is nothing left to recognise
     // the case by. The backface test below is a 2D winding check and would read
     // that mirrored triangle as a legitimately front-facing one.
-    if (this.isClipped()) {
+    if (this.isClipped) {
       return false;
     }
 
     this.project(offsetX, offsetY);
 
-    if ((options.cullBackfaces ?? true) && this.isBackfacing()) {
+    if ((options.cullBackfaces ?? true) && !this.isFrontFacing()) {
       return false;
     }
 
+    return this.fill(context, options);
+  }
+
+  // The transform pass, over one triangle: both vertices' own convert3D2D,
+  // exactly as before, just no longer paired with the clip test or the facing
+  // test in the same call — Mesh.renderMesh's transform pass calls this alone,
+  // over every triangle, before clip-cull runs.
+  public project(offsetX: number, offsetY: number) {
+    const aproj = this.a.convert3D2D();
+    const bproj = this.b.convert3D2D();
+    const cproj = this.c.convert3D2D();
+
+    this.aprojX = aproj.x + offsetX;
+    this.aprojY = aproj.y + offsetY;
+    this.bprojX = bproj.x + offsetX;
+    this.bprojY = bproj.y + offsetY;
+    this.cprojX = cproj.x + offsetX;
+    this.cprojY = cproj.y + offsetY;
+  }
+
+  // 2D backface culling: the sign of the cross product of the two projected
+  // edges, which is the winding the face ended up with on screen. Positive
+  // rather than negative-or-zero (isBackfacing's old sign) so a degenerate,
+  // zero-area triangle — every projected point coincident — reads as facing
+  // away rather than toward, which is what dropping it silently requires.
+  public isFrontFacing(): boolean {
+    const v1x = this.bprojX - this.aprojX;
+    const v1y = this.bprojY - this.aprojY;
+    const v2x = this.cprojX - this.aprojX;
+    const v2y = this.cprojY - this.aprojY;
+
+    return v1x * v2y - v1y * v2x > 0;
+  }
+
+  // The raster pass, over one triangle already known to have survived
+  // clip-cull: paints it and reports whether anything actually reached the
+  // canvas, the same three-way branch render() always had.
+  public fill(context: CanvasRenderingContext2D, options: TriangleRenderOptions): boolean {
     context.save();
     context.globalAlpha = Math.min(1, Math.max(0, options.opacity ?? 1));
 
@@ -135,11 +203,15 @@ class Triangle {
       return true;
     }
 
+    // The one place a Point2D still gets built: AffineTextureMapper's contract
+    // (D8) is a Point2D, not a pair of scalars, and only the textured branch —
+    // a handful of faces in the whole registry, not every triangle every
+    // frame — pays for it.
     const drawn = this.textureMapper.draw({
       context,
-      a: this.aproj,
-      b: this.bproj,
-      c: this.cproj,
+      a: new Point2D(this.aprojX, this.aprojY),
+      b: new Point2D(this.bprojX, this.bprojY),
+      c: new Point2D(this.cprojX, this.cprojY),
       uva: this.uva,
       uvb: this.uvb,
       uvc: this.uvc,
@@ -151,34 +223,17 @@ class Triangle {
     return drawn;
   }
 
-  // Whole-triangle rejection rather than a clip against the plane: one vertex
-  // outside drops all three, so the artefact is a hole rather than a smear.
-  // COS-418 (E2b) is what splits a straddling triangle instead, and it is a real
-  // piece of work — the UVs have to be interpolated along the cut and this
-  // method would have to emit geometry it does not own.
-  private isClipped(): boolean {
-    return this.a.isClipped || this.b.isClipped || this.c.isClipped;
-  }
+  // The fill-rate accounting's own unit of work (E6/COS-239): the projected
+  // triangle's screen-space area, the same cross product isFrontFacing already
+  // takes the sign of. Called only on triangles fill() actually painted, so a
+  // culled or clipped triangle costs nothing here.
+  public screenArea(): number {
+    const v1x = this.bprojX - this.aprojX;
+    const v1y = this.bprojY - this.aprojY;
+    const v2x = this.cprojX - this.aprojX;
+    const v2y = this.cprojY - this.aprojY;
 
-  private project(offsetX: number, offsetY: number) {
-    const aproj = this.a.convert3D2D();
-    const bproj = this.b.convert3D2D();
-    const cproj = this.c.convert3D2D();
-
-    this.aproj = new Point2D(aproj.x + offsetX, aproj.y + offsetY);
-    this.bproj = new Point2D(bproj.x + offsetX, bproj.y + offsetY);
-    this.cproj = new Point2D(cproj.x + offsetX, cproj.y + offsetY);
-  }
-
-  // 2D backface culling: the sign of the cross product of the two projected
-  // edges, which is the winding the face ended up with on screen.
-  private isBackfacing(): boolean {
-    const v1x = this.bproj.x - this.aproj.x;
-    const v1y = this.bproj.y - this.aproj.y;
-    const v2x = this.cproj.x - this.aproj.x;
-    const v2y = this.cproj.y - this.aproj.y;
-
-    return v1x * v2y - v1y * v2x <= 0;
+    return Math.abs(v1x * v2y - v1y * v2x) / 2;
   }
 
   private strokeWireframe(context: CanvasRenderingContext2D) {
@@ -196,9 +251,9 @@ class Triangle {
 
   private tracePath(context: CanvasRenderingContext2D) {
     context.beginPath();
-    context.moveTo(this.aproj.x, this.aproj.y);
-    context.lineTo(this.bproj.x, this.bproj.y);
-    context.lineTo(this.cproj.x, this.cproj.y);
+    context.moveTo(this.aprojX, this.aprojY);
+    context.lineTo(this.bprojX, this.bprojY);
+    context.lineTo(this.cprojX, this.cprojY);
     context.closePath();
   }
 }

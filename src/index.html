@@ -513,14 +513,16 @@
                   <span class="panel__note" data-field="frameTimeNote">&mdash; ms</span>
                 </div>
                 <div class="panel__body panel__body--pad-4 frame-time__body">
-                  <!-- Three measured phases, three segments. Widths are set
-                       by FrameTimeWidget from real timings; the mount is
-                       repeated in BUDGETS below and both carry the same
-                       data-ft-segment names so one write feeds both. -->
+                  <!-- Four measured phases, four segments (E6/COS-239).
+                       Widths are set by FrameTimeWidget from real timings;
+                       the mount is repeated in BUDGETS below and both carry
+                       the same data-ft-segment names so one write feeds
+                       both. -->
                   <div class="frame-time__bar">
                     <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
-                    <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                    <span class="frame-time__segment frame-time__segment--clipcull" data-ft-segment="clipcull"></span>
                     <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
+                    <span class="frame-time__segment frame-time__segment--present" data-ft-segment="present"></span>
                   </div>
                   <div class="frame-time__legend">
                     <div class="frame-time__legend-row">
@@ -529,28 +531,33 @@
                       <span class="frame-time__legend-value" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="frame-time__legend-row">
-                      <span class="frame-time__swatch frame-time__swatch--background"></span>
-                      <span class="frame-time__legend-label">BACKGROUND</span>
-                      <span class="frame-time__legend-value" data-field="ftBackground">&mdash;</span>
+                      <span class="frame-time__swatch frame-time__swatch--clipcull"></span>
+                      <span class="frame-time__legend-label">CLIP-CULL</span>
+                      <span class="frame-time__legend-value" data-field="ftClipCull">&mdash;</span>
                     </div>
                     <div class="frame-time__legend-row">
                       <span class="frame-time__swatch frame-time__swatch--raster"></span>
                       <span class="frame-time__legend-label">RASTERIZE</span>
                       <span class="frame-time__legend-value" data-field="ftRaster">&mdash;</span>
                     </div>
+                    <div class="frame-time__legend-row">
+                      <span class="frame-time__swatch frame-time__swatch--present"></span>
+                      <span class="frame-time__legend-label">PRESENT</span>
+                      <span class="frame-time__legend-value" data-field="ftPresent">&mdash;</span>
+                    </div>
                   </div>
                   <div class="frame-time__footer">
                     <span class="frame-time__footer-label">FILL RATE</span>
-                    <span
-                      class="frame-time__footer-value"
-                      data-placeholder="true"
-                      title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
-                      aria-describedby="ph-frame-time"
-                    >&mdash; px/f</span>
+                    <!-- The unit sits outside [data-field]: FieldWriter writes
+                         textContent, so a unit inside the written node would be
+                         wiped on the first frame, and this row's unit differs
+                         between the two mounts (px/f here, px on mobile) so one
+                         write cannot carry both. Same split as trisDrawn. -->
+                    <span class="frame-time__footer-value"><span data-field="frameFillRate">&mdash;</span> px/f</span>
                   </div>
                 </div>
               </section>
-              <span class="placeholder-hint" id="ph-frame-time">Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6).</span>
+              <span class="placeholder-hint" id="ph-frame-time-clock">Stage timings need a clock finer than 0.2ms, which this browser does not provide.</span>
 
               <!-- Mobile-only: BUDGETS' shell and its first block. The
                    geometry ticket appends a POLY BUDGET block inside
@@ -564,12 +571,13 @@
                   <div class="budgets__frame-time">
                     <div class="budgets__frame-time-label-row">
                       <span class="budgets__frame-time-label">FRAME TIME</span>
-                      <span class="budgets__frame-time-sub">transform &middot; background &middot; raster</span>
+                      <span class="budgets__frame-time-sub">transform &middot; clip-cull &middot; raster &middot; present</span>
                     </div>
                     <div class="frame-time__bar">
                       <span class="frame-time__segment frame-time__segment--transform" data-ft-segment="transform"></span>
-                      <span class="frame-time__segment frame-time__segment--background" data-ft-segment="background"></span>
+                      <span class="frame-time__segment frame-time__segment--clipcull" data-ft-segment="clipcull"></span>
                       <span class="frame-time__segment frame-time__segment--raster" data-ft-segment="raster"></span>
+                      <span class="frame-time__segment frame-time__segment--present" data-ft-segment="present"></span>
                     </div>
                   </div>
                   <!-- BUDGETS' second block, the mobile half of the desktop
@@ -588,11 +596,8 @@
               </section>
 
               <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
-                   primitives bar its own rows. -->
-              <!-- Mobile-only: the statGroups FRAME TIME card, entirely from
                    primitives bar its own rows. No longer marked as a
-                   placeholder — three of the four rows are measured now, and
-                   only FILL RATE still carries the affordance. -->
+                   placeholder — all five rows are measured now (E6/COS-239). -->
               <section class="panel frame-time-stats" data-mpanel="stats">
                 <div class="panel__header panel__header--card">
                   <span class="panel__title">frame time</span>
@@ -605,21 +610,20 @@
                       <span class="stat-row__value stat-row__value--transform" data-field="ftTransform">&mdash;</span>
                     </div>
                     <div class="stat-row">
-                      <span class="stat-row__label">BACKGROUND</span>
-                      <span class="stat-row__value stat-row__value--clip" data-field="ftBackground">&mdash;</span>
+                      <span class="stat-row__label">CLIP-CULL</span>
+                      <span class="stat-row__value stat-row__value--clip" data-field="ftClipCull">&mdash;</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-row__label">RASTERIZE</span>
                       <span class="stat-row__value stat-row__value--raster" data-field="ftRaster">&mdash;</span>
                     </div>
                     <div class="stat-row">
+                      <span class="stat-row__label">PRESENT</span>
+                      <span class="stat-row__value stat-row__value--present" data-field="ftPresent">&mdash;</span>
+                    </div>
+                    <div class="stat-row">
                       <span class="stat-row__label">FILL RATE</span>
-                      <span
-                        class="stat-row__value stat-row__value--dim"
-                        data-placeholder="true"
-                        title="Fill rate needs a pixel count the rasteriser does not produce yet (de-mock E6)."
-                        aria-describedby="ph-frame-time"
-                      >&mdash; px</span>
+                      <span class="stat-row__value"><span data-field="frameFillRate">&mdash;</span> px</span>
                     </div>
                   </div>
                 </div>
@@ -655,10 +659,9 @@
                     <div class="stat-row">
                       <span class="stat-row__label">DRAW CALLS</span>
                       <span
-                        class="stat-row__value stat-row__value--dim"
-                        data-placeholder="true"
-                        title="Draw-call accounting is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-geometry"
+                        class="stat-row__value"
+                        data-field="geoDrawCalls"
+                        title="Canvas submissions this frame: one per filled or stroked triangle, plus one for the background pass."
                       >&mdash;</span>
                     </div>
                   </div>
@@ -673,7 +676,6 @@
                   </div>
                 </div>
               </section>
-              <span class="placeholder-hint" id="ph-geometry">Draw-call accounting is not instrumented yet (de-mock E6).</span>
 
               <!-- Mobile-only: the statGroups GEOMETRY card, entirely the
                    primitives' stat-card recipe bar its own rows. -->
@@ -703,10 +705,9 @@
                     <div class="stat-row">
                       <span class="stat-row__label">DRAW CALLS</span>
                       <span
-                        class="stat-row__value stat-row__value--dim"
-                        data-placeholder="true"
-                        title="Draw-call accounting is not instrumented yet (de-mock E6)."
-                        aria-describedby="ph-geometry"
+                        class="stat-row__value"
+                        data-field="geoDrawCalls"
+                        title="Canvas submissions this frame: one per filled or stroked triangle, plus one for the background pass."
                       >&mdash;</span>
                     </div>
                   </div>
