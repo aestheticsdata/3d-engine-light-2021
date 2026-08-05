@@ -39,6 +39,15 @@ The UI range and the engine range are identical here, so the new input keeps the
 
 ## FOV — half-real, wired live
 
+> **Superseded by COS-236 (de-mock E2).** All three of the recorded caveats below
+> are gone. There is dolly compensation — the zoom slider owns a magnification
+> the focal length no longer touches — the clamp at focal 260 is deleted and the
+> slider covers its whole 15..120 range, and `scale` cannot go negative because
+> the camera has a near plane to clip against. What survives is the first bullet:
+> the integer slider still defaults to 94 rather than the exact 93.7°, and the
+> resulting focal is still 298.4. The acceptance criteria below that name the
+> clamp are superseded with it.
+
 The engine has a focal length, not a field of view: `DEFAULT_FOCAL_LENGTH = 300`, applied through `Mesh.changeFocal`, and consumed in `Point3D.convert3D2D` as `scale = fl / (fl + z + zOffset)`. With the canvas fixed at 1024 × 640 the vertical half-height is 320, so the two are related exactly:
 
 ```
@@ -84,12 +93,14 @@ GRID defaults **OFF** in both surfaces. Nothing in the renderer draws a grid, an
 
 ## Data
 
+> The three rows COS-236 (de-mock E2) made real are marked in place below.
+
 | Field | Value shown | Source today |
 |---|---|---|
-| View preset chips | FRNT / BACK / TOP / SIDE / ISO, momentary | `placeholder` — inert while rotation is rate-based; owned by de-mock E1 |
-| PERSPECTIVE | selected | real — the only projection the engine has (`Point3D.convert3D2D`); selected by default |
-| ORTHOGRAPHIC | not selected | `placeholder` — owned by de-mock E2 |
-| FOV | `v + "°"` | real — `focal = 320 / tan(fov/2)`, clamped to ≥ 260, default 94 (focal 298.4, ~0.5% off the current 300) |
+| View preset chips | FRNT / BACK / TOP / SIDE / ISO, momentary | ~~`placeholder`~~ real since COS-237 — `CameraRig.applyPreset` eases to absolute angles |
+| PERSPECTIVE | selected | real — `Camera.scaleAt`'s perspective branch; selected by default |
+| ORTHOGRAPHIC | not selected | ~~`placeholder`~~ real since COS-236 — `Camera.scaleAt`'s parallel branch, the same expression with the depth term dropped |
+| FOV | `v + "°"` | real — `focal = 320 / tan(fov/2)`, ~~clamped to ≥ 260~~ unclamped since COS-236, default 94 (focal 298.4, ~0.5% off the current 300) |
 | ZOOM | `v + "%"` | real — `sliderToZoomOffset` (`src/index.ts` L47), 0..100 → `zOffset` 260 down to −220, default 50 |
 | SKY DOME | ON / OFF | real — `store.sky` through `BackgroundRenderer.setLayers`, shipped in this ticket; default ON |
 | CHECKER FLOOR | ON / OFF | real — `store.floor` through the same call; default ON |

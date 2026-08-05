@@ -47,7 +47,7 @@ The one thing this ticket adds at the breakpoint is overflow behaviour. The POSI
 | POSITION | `0.0 0.0 <-(300 + zOffset)>` e.g. `0.0 0.0 -320.0` at the default slider | Real, derived. Moving the object by `zOffset` is mathematically identical to moving the eye, so the equivalent camera sits `fl + zOffset` units back on -Z. Updates live with the zoom slider. |
 | ROTATION → relabel **SPIN RATE** | `<p>°/f <y>°/f <r>°/f` to 2 decimals | Real, derived — the three per-frame rates from `rotateMesh()`, already in degrees per frame: `((pitch - 320) / 110) * (speed / 100)`, `(-(yaw - 512) / 110) * (speed / 100)`, `(roll / 500) * (speed / 100)`. No radian conversion — `Matrix3D.setAngle()` takes degrees. Keeping the label `ROTATION` would be a lie; the row is a rate. |
 | DISTANCE | `<300 + zOffset>.toFixed(1) + ' u'` | Real, derived. Engine units, not metres — drop the mock's `m` suffix. Range 560 u (slider 0) to 80 u (slider 100). |
-| NEAR / FAR → relabel **FOCAL / OFFSET** | `300 / <zOffset>` | Real. Deliberate deviation from the mock: the engine has no clip planes, and focal + z-offset are the two numbers that actually define this projection. |
+| NEAR / FAR | `1 / 5000` | Real since COS-236 (de-mock E2), which gave the camera a view volume; the row shipped relabelled **FOCAL / OFFSET** until then, because there were no clip planes to print and focal + z-offset were the two numbers that actually defined the projection. Far is inert by construction — 5000 against a maximum reachable depth of ~4719 — and near is not: it is what clips the near cap of a shape at high zoom instead of letting it project mirrored. |
 | FOV / ASPECT | `93.7° / 1.60` | Real, derived and constant. Vertical FOV `2 * Math.atan((canvas.height / 2) / 300)` = 93.7° — specify vertical, since horizontal would be 119.3°. Aspect `canvas.width / canvas.height` = 1024 / 640 = 1.60, which happens to match the mock's hardcoded 1.60 exactly. Read both from the canvas, do not hardcode. |
 
 Constraint to record: the canvas is fixed at 1024×640 (src/index.html L57). `BackgroundRenderer` and `ShapeTransitionMachine` receive `{width, height}` at construction and `Point3D` caches `vpX`/`vpY` per point, so aspect and FOV cannot change at runtime and can be computed once at boot.
@@ -72,6 +72,6 @@ RESET, owned by the toolbar ticket, restores the zoom, pitch, yaw, roll and rota
 - [ ] SPIN RATE reaches exactly `0.00°/f` on pitch at slider 320 and on yaw at slider 512, and on roll at slider 0, and scales with the rotation-speed slider
 - [ ] SPIN RATE prints degrees per frame with no `180 / Math.PI` factor anywhere in the widget
 - [ ] FOV / ASPECT is computed from the canvas dimensions and the focal length, not hardcoded, and reads `93.7° / 1.60`
-- [ ] The two relabelled rows (SPIN RATE, FOCAL / OFFSET) and the dropped `m` suffix are noted in a code comment pointing at the design line numbers
+- [ ] The two relabelled rows (SPIN RATE, FOCAL / OFFSET) and the dropped `m` suffix are noted in a code comment pointing at the design line numbers — both relabels have since been reverted, ROTATION by COS-237 and NEAR / FAR by COS-236, and only the `m` suffix survives as a deviation
 - [ ] `cameraStats.css` declares no card, header or stat-row recipe
 - [ ] No raw hex/px outside the token files
