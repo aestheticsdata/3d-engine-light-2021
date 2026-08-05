@@ -22,7 +22,14 @@ import Surface3D from "@primitives/Surface3D";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
-import { DEFAULT_FLOOR, DEFAULT_SKY } from "@ui/inspector/EnvironmentSection";
+import {
+  DEFAULT_FLOOR,
+  DEFAULT_FOG,
+  DEFAULT_GRID,
+  DEFAULT_GRID_STEP,
+  DEFAULT_SHADOW,
+  DEFAULT_SKY,
+} from "@ui/inspector/EnvironmentSection";
 import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
@@ -144,21 +151,28 @@ class Main {
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.stage = stage;
     this.background = backgroundRenderer;
-    this.surface3D = new Surface3D(this.stage, backgroundRenderer);
     this.camera = new CameraController(canvas);
+    // The render target, resolved once from the canvas the Bootstrapper already
+    // handed over, and the camera record the controller owns — both shared by
+    // every point of every mesh built here. Every mesh in the console therefore
+    // projects through one render target and one camera, and the sliders write
+    // to the camera rather than to the vertices. Moved ahead of Surface3D
+    // (COS-246): the background renderer's ground projection needs both, and
+    // Surface3D is what carries them to it on every frame.
+    this.renderTarget = new RenderTarget({ width: canvas.width, height: canvas.height });
+    this.assertSeedFraming();
+    this.surface3D = new Surface3D({
+      container: this.stage,
+      camera: this.camera.projection,
+      renderTarget: this.renderTarget,
+      backgroundRenderer,
+    });
     // Before every widget that reads it. The SHAPE tab's sliders and the WORLD
     // tab's presets write to it, the CAMERA card and the HUD read from it, and
     // the render path applies its matrix — so it is one of the few collaborators
     // whose construction order is load-bearing rather than incidental.
     this.rig = new CameraRig();
     this.lastFrameTimestamp = performance.now();
-    // The render target, resolved once from the canvas the Bootstrapper already
-    // handed over, and the camera record the controller owns — both shared by
-    // every point of every mesh built here. Every mesh in the console therefore
-    // projects through one render target and one camera, and the sliders write
-    // to the camera rather than to the vertices.
-    this.renderTarget = new RenderTarget({ width: canvas.width, height: canvas.height });
-    this.assertSeedFraming();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
     this.objects3D = data;
@@ -456,12 +470,22 @@ class Main {
   // itself. Both write the store and raise this, which re-reads the store once
   // and pushes the result to the renderer and back out to both. That is what
   // makes a flip from either end land on the other in the same frame.
+  //
+  // GRID STEP raises the same callback (COS-246) even though it has no second
+  // surface to reconcile: it still has to reach setWorld, and one sync path
+  // reading the whole store is simpler than a second one for a single slider.
   private syncWorldLayers() {
     const state = this.uiState.getState();
 
     this.background.setLayers({
       sky: state.sky ?? DEFAULT_SKY,
       floor: state.floor ?? DEFAULT_FLOOR,
+      grid: state.grid ?? DEFAULT_GRID,
+      shadow: state.shadow ?? DEFAULT_SHADOW,
+    });
+    this.background.setWorld({
+      fog: state.fog ?? DEFAULT_FOG,
+      gridStepMetres: state.gridStep ?? DEFAULT_GRID_STEP,
     });
     this.worldTab.syncEnvironmentUi();
     this.quickToggles.syncFromStore();

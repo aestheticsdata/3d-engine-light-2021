@@ -1,4 +1,6 @@
+import type Camera from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
+import type RenderTarget from "@primitives/RenderTarget";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
 
@@ -6,6 +8,15 @@ export interface MeshRenderRequest {
   mesh: Mesh;
   offsetX?: number;
   offsetY?: number;
+}
+
+// Four arguments, none optional but a background renderer, so R4's options
+// object rather than growing the constructor's positional list past three.
+export interface Surface3DOptions {
+  container: CanvasRenderingContext2D;
+  camera: Camera;
+  renderTarget: RenderTarget;
+  backgroundRenderer?: BackgroundRenderer | null;
 }
 
 // What one call to render() cost, split by the passes this renderer actually
@@ -22,17 +33,29 @@ export interface RenderStats {
 
 class Surface3D {
   private readonly surface3DContainer: CanvasRenderingContext2D;
+  // Held live, the same as every Point3D holds its own camera (COS-246): a
+  // slider moving the shared Camera or a later resize moving the shared
+  // RenderTarget must reach the ground projection the background renderer
+  // builds from these without this class being reconstructed.
+  private readonly camera: Camera;
+  private readonly renderTarget: RenderTarget;
   private readonly backgroundRenderer: BackgroundRenderer | null;
 
-  constructor(container: CanvasRenderingContext2D, backgroundRenderer: BackgroundRenderer | null = null) {
-    this.surface3DContainer = container;
-    this.backgroundRenderer = backgroundRenderer;
+  constructor(options: Surface3DOptions) {
+    this.surface3DContainer = options.container;
+    this.camera = options.camera;
+    this.renderTarget = options.renderTarget;
+    this.backgroundRenderer = options.backgroundRenderer ?? null;
   }
 
   public render(renderables: MeshRenderRequest[], options: TriangleRenderOptions): RenderStats {
     const backgroundStartedAt = performance.now();
 
-    this.backgroundRenderer?.render(this.surface3DContainer);
+    this.backgroundRenderer?.render({
+      context: this.surface3DContainer,
+      camera: this.camera,
+      renderTarget: this.renderTarget,
+    });
     if (!this.backgroundRenderer) {
       this.surface3DContainer.clearRect(
         0,

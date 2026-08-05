@@ -21,17 +21,9 @@
 // can write is not that.
 
 import DOMScope from "@ui/DOMScope";
-import { DEFAULT_FLOOR, DEFAULT_GRID, DEFAULT_SKY, WORLD_LAYER_HINT_TEXT } from "@ui/inspector/EnvironmentSection";
+import { DEFAULT_FLOOR, DEFAULT_GRID, DEFAULT_SKY } from "@ui/inspector/EnvironmentSection";
 
 import type UIStateStore from "@ui/UIStateStore";
-
-// Not the WORLD tab's own hint node, even though it carries the same sentence
-// about the same boolean. That one lives inside #panelWorld, which is
-// display:none on every other tab, and a display:none subtree is dropped from
-// the accessibility tree — so the description would resolve only while the tab
-// that does not contain this pill happens to be open. This node sits with the
-// viewport's other hints, where neither breakpoint hides it.
-const HINT_ID = "ph-quick-grid";
 
 // Fixed by the design, and the order is part of it: the three world layers, then
 // the two rasteriser switches.
@@ -105,15 +97,6 @@ class QuickToggles {
     button.className = "quick-toggle";
     button.textContent = key;
     button.dataset.quickToggle = key;
-
-    // GRID alone: nothing in the renderer draws a grid, so the pill remembers
-    // the choice and changes nothing. The sentence is the WORLD tab's, imported
-    // rather than retyped; only the node it points at is this widget's own.
-    if (key === "GRID") {
-      button.dataset.placeholder = "true";
-      button.title = WORLD_LAYER_HINT_TEXT;
-      button.setAttribute("aria-describedby", HINT_ID);
-    }
 
     button.addEventListener("click", () => this.flip(key));
     this.buttons.get(key)?.push(button);

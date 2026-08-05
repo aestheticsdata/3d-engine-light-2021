@@ -464,18 +464,6 @@
                   <span><span data-field="trisDrawn">0</span> &#9651;</span>
                 </span>
 
-                <!-- The GRID pill's description, and it lives out here rather
-                     than beside the pill for a reason: both quick-toggle mounts
-                     are display:none at one breakpoint or the other, and a
-                     display:none subtree is dropped from the accessibility tree
-                     entirely. The WORLD tab's GRID OVERLAY row has its own copy
-                     of this sentence, which is fine because that row is only
-                     reachable when its panel is open — the pill is visible from
-                     every tab, so its hint has to be too. .viewportHud is never
-                     hidden at either breakpoint, which is why the other four
-                     above sit here as well. -->
-                <span class="placeholder-hint" id="ph-quick-grid">This world layer is not drawn by the renderer yet (de-mock E5).</span>
-
               </div>
             </div>
           </div>
@@ -1032,12 +1020,7 @@
             &middot;
             <span data-field="projection">PERSPECTIVE</span>
           </span>
-          <span
-            class="status-item"
-            data-placeholder="true"
-            title="The engine has no world-unit concept yet (de-mock E5)."
-            aria-describedby="ph-units"
-          >units: metres</span>
+          <span class="status-item">units: metres</span>
         </span>
 
         <span class="status-group status-group--right">
@@ -1046,8 +1029,6 @@
             <span data-field="uptime">&mdash;</span> uptime
           </span>
         </span>
-
-        <span class="placeholder-hint" id="ph-units">The engine has no world-unit concept yet (de-mock E5).</span>
       </div>
 
       <!-- order 8 — RESET's only mobile mount. Same handler as #resetControls,
