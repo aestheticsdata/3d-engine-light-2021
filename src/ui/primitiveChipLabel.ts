@@ -24,6 +24,7 @@ const SHORT_LABELS: Record<string, string> = {
   rhombicDodecahedron: "RHOMBDOD",
   kisRhombicDodecahedron: "KISRHDOD",
   truncatedCuboctahedron: "TRCUBOCT",
+  truncatedIcosidodecahedron: "TRICOSID",
   icosidodecahedron: "ICOSIDOD",
   rhombicTriacontahedron: "RHOMBTRI",
   kisRhombicTriacontahedron: "KISRHTRI",

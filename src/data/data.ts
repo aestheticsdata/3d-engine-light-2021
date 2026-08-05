@@ -12,6 +12,7 @@ import rhombicTriacontahedron from "@data/shapes/rhombicTriacontahedron";
 import sphere from "@data/shapes/sphere";
 import torusKnot from "@data/shapes/torusKnot";
 import truncatedCuboctahedron from "@data/shapes/truncatedCuboctahedron";
+import truncatedIcosidodecahedron from "@data/shapes/truncatedIcosidodecahedron";
 
 import type { Data3D } from "@data/types";
 
@@ -37,6 +38,7 @@ const data = {
   icosidodecahedron,
   rhombicTriacontahedron,
   kisRhombicTriacontahedron,
+  truncatedIcosidodecahedron,
 } satisfies Data3D;
 
 export default data;

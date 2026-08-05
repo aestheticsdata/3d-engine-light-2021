@@ -286,6 +286,27 @@ const entries = {
       },
     ],
   },
+  truncatedIcosidodecahedron: {
+    family: "POLYHEDRA",
+    title: "Truncated icosidodecahedron",
+    description:
+      "An Archimedean solid of 30 squares, 20 hexagons and 12 decagons in three plums, the largest of Conway's family.",
+    geometricFeature:
+      "One vertex per flag of the icosahedron — each of the 120 sits where a decagon, a hexagon and a square plane meet.",
+    densityLabel: "High density",
+    generator: "icosahedron flag solve",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Truncated_icosidodecahedron",
+      },
+      {
+        label: "MathWorld",
+        url: "https://mathworld.wolfram.com/TruncatedIcosidodecahedron.html",
+      },
+    ],
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 const shapeInfo: Record<string, ShapeInfo> = entries;
