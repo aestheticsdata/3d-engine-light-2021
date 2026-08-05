@@ -54,6 +54,49 @@ class Matrix3D {
     ];
   }
 
+  // Rodrigues' rotation about an arbitrary axis, which is what a constant
+  // angular velocity actually is. Composing roll·yaw·pitch deltas instead would
+  // be close but not equal — those three do not commute, so the composed axis
+  // shifts with the step size and the tumble would drift with the frame rate.
+  // One axis, one angle, and R(a)·R(b) = R(a+b) exactly.
+  //
+  // The axis need not arrive normalised; a zero-length one is the identity,
+  // which is the honest answer for "no angular velocity" rather than a NaN.
+  public axisAngleMatrix(x: number, y: number, z: number, degrees: number): number[][] {
+    const length = Math.sqrt(x * x + y * y + z * z);
+
+    if (length === 0) {
+      return this.identity();
+    }
+
+    const ux = x / length;
+    const uy = y / length;
+    const uz = z / length;
+    const radians = degrees * DEGREES_TO_RADIANS;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const t = 1 - cos;
+
+    return [
+      [t * ux * ux + cos, t * ux * uy - sin * uz, t * ux * uz + sin * uy, 0],
+      [t * ux * uy + sin * uz, t * uy * uy + cos, t * uy * uz - sin * ux, 0],
+      [t * ux * uz - sin * uy, t * uy * uz + sin * ux, t * uz * uz + cos, 0],
+      [0, 0, 0, 1],
+    ];
+  }
+
+  // The starting point for an accumulated rotation: a turntable that composes a
+  // fixed delta every frame has to begin somewhere, and "no rotation yet" is a
+  // matrix rather than three angles.
+  public identity(): number[][] {
+    return [
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1],
+    ];
+  }
+
   // Column 3, which is the column Point3D.setFromSource already reads. A 4x4 is
   // otherwise more matrix than three rotations need; carrying the translation is
   // what earns the fourth row and column.

@@ -35,6 +35,7 @@ import {
 import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
+import { DEFAULT_PITCH_DEGREES, DEFAULT_ROLL_DEGREES, DEFAULT_YAW_DEGREES } from "@ui/inspector/TransformSection";
 import WorldTab from "@ui/inspector/WorldTab";
 import MaterialSummary from "@ui/MaterialSummary";
 import { impliesWireframe } from "@ui/modeLabel";
@@ -461,15 +462,22 @@ class Main {
     this.worldTab.setZoomUi(sliderValue);
   }
 
-  // The rig's own reset() only clears the spin accumulator and an in-flight
-  // preset — it does not zero pitch/yaw/roll, so both calls are needed here.
-  // Zoom goes through applyPointerZoom rather than changeZoom directly so its
-  // own row follows. Deliberately not resetControls(): a stray double-tap must
-  // not also touch shading, materials or toggles — the toolbar RESET stays the
-  // only path that restores those.
+  // A camera gesture, so it moves the camera and nothing else. It deliberately
+  // leaves the turntable running: rig.reset() would snap the object's attitude
+  // too, which reads as the shape jerking for a gesture the user aimed at the
+  // viewpoint. Zoom goes through applyPointerZoom rather than changeZoom so its
+  // own row follows. Deliberately not resetControls() either: a stray
+  // double-tap must not touch shading, materials or toggles — the toolbar RESET
+  // stays the only path that restores those.
   private applyPointerReset() {
-    this.rig.setAngles({ pitch: 0, yaw: 0, roll: 0 });
-    this.rig.reset();
+    // The shared defaults rather than three literal zeros: the toolbar RESET
+    // restores them through the store, and a double-tap that landed somewhere
+    // else would be the one path in the console disagreeing about where home is.
+    this.rig.setAngles({
+      pitch: DEFAULT_PITCH_DEGREES,
+      yaw: DEFAULT_YAW_DEGREES,
+      roll: DEFAULT_ROLL_DEGREES,
+    });
     this.shapeTab.setTransformUi(this.rig.angles());
     this.applyPointerZoom(DEFAULT_ZOOM_SLIDER_VALUE);
   }
@@ -632,7 +640,7 @@ class Main {
     // authored rest pose, and startTransition runs outside the render path — so
     // without this the incoming shape holds a different attitude from the
     // outgoing one for the first frame of every switch.
-    mesh.setTransform(this.rig.matrix());
+    mesh.setTransform(this.rig.meshMatrix());
 
     return mesh;
   }
@@ -705,7 +713,7 @@ class Main {
   // unsampled frame must make zero performance.now() calls, this one included.
   private applyRigToActiveMeshes(timed: boolean) {
     const startedAt = timed ? performance.now() : 0;
-    const matrix = this.rig.matrix();
+    const matrix = this.rig.meshMatrix();
 
     this.shapes.getActiveMeshes().forEach((mesh) => {
       mesh.setTransform(matrix);
@@ -732,7 +740,7 @@ class Main {
   // pair of formatters, so the overlay and the telemetry panel cannot print two
   // different cameras.
   private publishCameraReadouts() {
-    this.viewportHud.setCamera(this.rig.eyePosition(this.camera.distance), this.rig.eulerDegrees(), this.rig.target);
+    this.viewportHud.setCamera(this.rig.eyePosition(this.camera.distance), this.rig.angles(), this.rig.target);
     this.cameraStats.render();
   }
 

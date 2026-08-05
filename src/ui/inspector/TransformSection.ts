@@ -16,18 +16,28 @@ import SliderRow from "@ui/inspector/controls/SliderRow";
 import type { EulerDegrees } from "@camera/CameraRig";
 import type UIStateStore from "@ui/UIStateStore";
 
-// Zero, and the console still moves at rest — SPIN is what turns it now. The
-// old defaults were three off-centre rates (pitch 400, yaw 400, roll 200 in
-// engine space) chosen so the shape would tumble on load; a turntable at 24 °/s
-// does that with one axis and leaves all three angles at a real zero the user
-// can return to.
-export const DEFAULT_PITCH_DEGREES = 0;
-export const DEFAULT_YAW_DEGREES = 0;
+// ISO's own angles, so a shape arrives at a three-quarter view and RESET lands
+// on a preset the user can leave and click straight back to.
+//
+// Zero was tried first and is wrong. The rates these replaced (pitch 400, yaw
+// 400, roll 200 in engine space) were off-centre on all three axes precisely so
+// the shape would never be seen flat, and a turntable on yaw alone does not
+// reproduce that: pitch and roll stay at zero for the whole session, so the eye
+// sits in the object's equatorial plane and a cube is a square at the moment it
+// arrives. The spin sweeps the yaw away within seconds, which is fine — it is
+// the arrival that has to be oblique, and pitch is what keeps it that way.
+//
+// Roll stays at zero. It is the one axis with no second source: yaw has SPIN
+// and pitch has the presets, so a canted horizon here would be a permanent tilt
+// nothing else in the console ever expresses.
+export const DEFAULT_PITCH_DEGREES = 30;
+export const DEFAULT_YAW_DEGREES = 45;
 export const DEFAULT_ROLL_DEGREES = 0;
-// A fifteen-second revolution. The rates it replaces worked out at roughly
-// 87 / 122 / 48 °/s on three axes at once at 60fps, which is why the resting
-// shot is visibly calmer than it was.
-export const DEFAULT_SPIN_DEGREES_PER_SECOND = 24;
+// The yaw rate the per-frame sliders really ran at: 122 °/s, a three-second
+// revolution, with pitch and roll following in the rig's own proportions. 24
+// was tried first and is a fifth of this — slow enough that a viewer reads the
+// shape as parked rather than turning.
+export const DEFAULT_SPIN_DEGREES_PER_SECOND = 122;
 export const DEFAULT_SCALE = 100;
 
 // Pitch stops short of the pole because the rig is a turntable: roll is its own
@@ -36,7 +46,9 @@ const PITCH_LIMIT = 89;
 const YAW_LIMIT = 180;
 const ROLL_LIMIT = 180;
 const SPIN_MIN = 0;
-const SPIN_MAX = 120;
+// Twice the default, so the row's own default sits mid-track and there is
+// headroom above the rate the rig shipped with rather than a ceiling under it.
+const SPIN_MAX = 244;
 const SCALE_MIN = 10;
 const SCALE_MAX = 300;
 const SCALE_HINT_ID = "ph-shape-scale";
