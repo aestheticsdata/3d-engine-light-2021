@@ -23,7 +23,6 @@ const HINT_TEXT = "Grid is not drawn yet — ships with the ground-grid work.";
 // rather than a key to press. The count is the registry's, not the digit row's:
 // the line is about what the SHAPE tab holds, not about what a keystroke reaches.
 const POINTER_LINE = `${PRIMITIVE_COUNT} primitives in the SHAPE tab · sky, floor, grid in the WORLD tab`;
-const PENDING_NOTE = "Gestures ship with pointer camera control.";
 
 export interface ShortcutsPanelOptions {
   chipsSelector: string;
@@ -105,11 +104,7 @@ class ShortcutsPanel {
       return row;
     });
 
-    // One note for the whole card rather than a placeholder affordance per row:
-    // all three gestures are pending for the same reason, and dimming each of
-    // them would dim the card entire, which reads as disabled rather than as
-    // documentation.
-    this.gestureRoot.append(...rows, this.buildNote(POINTER_LINE), this.buildNote(PENDING_NOTE));
+    this.gestureRoot.append(...rows, this.buildNote(POINTER_LINE));
   }
 
   private buildNote(text: string): HTMLElement {
