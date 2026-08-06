@@ -70,12 +70,21 @@
   --color-ft-present: var(--color-slate-500); /* bar segment + legend swatch */
   --color-ft-present-text: var(--color-text-tertiary); /* text label, see note */
 
-  /* base colour swatch palette, in design order */
+  /* Base colour swatch palette, in design order. These are read back by the
+     inspector and handed to the renderer as the mesh's base colour, so they are
+     the engine's palette as well as the swatch row's ink — a restyle here
+     recolours the shape.
+
+     White is a literal rather than the --color-text-primary alias it used to
+     be. The base colour multiplies the authored one, so white has to be exactly
+     255 on every channel to be the identity; #eaf0ff is a pale blue tint that
+     would have darkened all twenty primitives by about 8% the moment the
+     console opened. */
   --color-swatch-red: #e01b1b;
   --color-swatch-yellow: var(--color-accent);
   --color-swatch-green: var(--color-state-ok);
   --color-swatch-blue: var(--color-state-info);
-  --color-swatch-white: var(--color-text-primary);
+  --color-swatch-white: #ffffff;
 
   /* HUD overlays */
   --color-hud-bg: rgba(5, 9, 26, 0.82);

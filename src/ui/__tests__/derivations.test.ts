@@ -8,29 +8,48 @@
 
 import cube from "@data/shapes/cube";
 import pyramid from "@data/shapes/pyramid";
+import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import MaterialSummary from "@ui/MaterialSummary";
 import { sceneObjectId } from "@ui/sceneObjectId";
 import { describe, expect, it } from "vitest";
 
 import type { Object3D } from "@data/types";
 
+const AUTHORED = DEFAULT_MESH_MATERIAL;
+const SOLID = { ...DEFAULT_MESH_MATERIAL, mode: "solid" as const };
+
 describe("MaterialSummary", () => {
   it("reads the cube as textured and the pyramid as solid", () => {
-    expect(new MaterialSummary(cube).label).toBe("TEXTURED");
-    expect(new MaterialSummary(pyramid).label).toBe("SOLID");
+    expect(new MaterialSummary(cube, AUTHORED).label).toBe("TEXTURED");
+    expect(new MaterialSummary(pyramid, AUTHORED).label).toBe("SOLID");
   });
 
   // The cube's two textured faces are subdivided into a 14x14 grid each, so the
   // keys arrive several hundred times over and the panel needs them once.
   it("lists each texture key once, in the order the faces declare them", () => {
-    expect(new MaterialSummary(cube).textureKeys).toEqual(["galaxy", "dog"]);
-    expect(new MaterialSummary(pyramid).textureKeys).toEqual([]);
+    expect(new MaterialSummary(cube, AUTHORED).textureKeys).toEqual(["galaxy", "dog"]);
+    expect(new MaterialSummary(pyramid, AUTHORED).textureKeys).toEqual([]);
+  });
+
+  // The runtime half of the derivation, and the case the console gets wrong if
+  // this class only ever reads geometry: SOLID overrides the cube's two textured
+  // faces, so the panel, the HUD chip and the status bar must all stop calling
+  // it textured in the same click.
+  it("reports a solid mesh as solid even when the shape authors textures", () => {
+    const material = new MaterialSummary(cube, SOLID);
+
+    expect(material.label).toBe("SOLID");
+    expect(material.textureKeys).toEqual([]);
+  });
+
+  it("returns to the authored answer when the mode does", () => {
+    expect(new MaterialSummary(cube, AUTHORED).label).toBe("TEXTURED");
   });
 
   // The whole reason this is a class: one pipeline behind both readings, and a
   // list no caller can reorder under the panel that is about to print it.
   it("derives once and hands out a list that cannot be mutated", () => {
-    const material = new MaterialSummary(cube);
+    const material = new MaterialSummary(cube, AUTHORED);
 
     expect(material.textureKeys).toBe(material.textureKeys);
     expect(Object.isFrozen(material.textureKeys)).toBe(true);
@@ -51,7 +70,7 @@ describe("MaterialSummary", () => {
       ],
     } as unknown as Object3D;
 
-    const material = new MaterialSummary(malformed);
+    const material = new MaterialSummary(malformed, AUTHORED);
 
     expect(material.textureKeys).toEqual([]);
     expect(material.label).toBe("SOLID");

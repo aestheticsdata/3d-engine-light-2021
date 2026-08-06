@@ -4,12 +4,13 @@
 // This Triangle can be rendered in two different modes:
 //
 // 1) Flat color:
-//    - material is a CSS color string (e.g. "rgba(...)").
+//    - the resolved fill is a CSS color string (e.g. "rgba(...)").
 //    - the triangle is filled with ctx.fill().
 //
 // 2) Textured:
-//    - material is a texture key (e.g. "dog", "galaxy") used to fetch an image
-//      from the textures registry carried in the render options.
+//    - the resolved material carries a texture key (e.g. "dog", "galaxy") used
+//      to fetch an image from the textures registry carried in the render
+//      options.
 //    - uva/uvb/uvc define the (u,v) texture coordinates for each vertex.
 //
 // UV coordinates:
@@ -26,6 +27,13 @@
 // AffineTextureMapper.
 // -----------------------------------------------------------------------------
 //
+// Which of the two a triangle is is no longer read off the raw string per frame
+// (E4a/COS-240). The authored slot is classified once, when the mesh is built,
+// and resolved against the mesh's runtime material into the fill and the texture
+// key this class actually draws with — so the BASE swatch can tint a shape and
+// SOLID can suppress its textures without any of that reaching the render path.
+// setMaterial is what re-resolves; nothing here resolves per frame.
+//
 // project() / isFrontFacing() / fill() are Mesh.renderMesh's three passes
 // (E6/COS-239), pulled apart from what used to be one fused per-triangle call
 // so each can be timed on its own: a transform pass that projects every
@@ -37,9 +45,11 @@
 
 import Point2D from "@primitives/Point2D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
+import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rendering/material";
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
+import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type TextureRegistry from "@textures/TextureRegistry";
 
 export interface TriangleRenderOptions {
@@ -71,8 +81,14 @@ class Triangle {
   private cprojX: number;
   private cprojY: number;
 
-  // can be a color OR a texture key
-  private material: string;
+  // The registry's fourth slot, classified once. Readonly because the authored
+  // surface is geometry — it changes when the shape changes, which builds a new
+  // mesh — while the material above it is scene state that moves on its own.
+  private readonly authored: AuthoredMaterial;
+  // What the two of them come to, cached. Rewritten by setMaterial and read by
+  // fill(), so a swatch costs one resolution per triangle per click rather than
+  // one per triangle per frame.
+  private resolved: ResolvedMaterial;
 
   // optional UVs
   private uva?: UV;
@@ -93,7 +109,12 @@ class Triangle {
     this.a = a;
     this.b = b;
     this.c = c;
-    this.material = material;
+    this.authored = classifyMaterial(material);
+    // Seeded with the default rather than left undefined until someone pushes a
+    // material: the default is the identity of the blend, so a mesh that is
+    // built and drawn before Main gets to it draws exactly what the registry
+    // authored.
+    this.resolved = resolveMaterial(this.authored, DEFAULT_MESH_MATERIAL);
     this.uva = uva;
     this.uvb = uvb;
     this.uvc = uvc;
@@ -117,6 +138,14 @@ class Triangle {
   // instead.
   public get isClipped(): boolean {
     return this.a.isClipped || this.b.isClipped || this.c.isClipped;
+  }
+
+  // Re-resolves and re-caches, which is the whole cost of a material change on
+  // this side. Called through Mesh.setMaterial, never per frame, and idempotent
+  // for the same reason setTransform is: it derives from the authored slot
+  // rather than from whatever the last resolution left behind.
+  public setMaterial(material: MeshMaterial) {
+    this.resolved = resolveMaterial(this.authored, material);
   }
 
   // One save, one restore, on every path that reaches them. The cull exit leaves
@@ -192,9 +221,11 @@ class Triangle {
       return true;
     }
 
-    // Read at render time, never snapshotted at mesh-build time: a texture
-    // that finishes decoding after the mesh was built still appears.
-    const image = options.textures.get(this.material);
+    // The key is resolved, but the bitmap behind it is still looked up at render
+    // time and never snapshotted at mesh-build time: a texture that finishes
+    // decoding after the mesh was built still appears.
+    const key = this.resolved.textureKey;
+    const image = key === null ? undefined : options.textures.get(key);
 
     if (!image || !this.uva || !this.uvb || !this.uvc) {
       this.fillFlat(context);
@@ -244,7 +275,7 @@ class Triangle {
   }
 
   private fillFlat(context: CanvasRenderingContext2D) {
-    context.fillStyle = this.material;
+    context.fillStyle = this.resolved.fill;
     this.tracePath(context);
     context.fill();
   }

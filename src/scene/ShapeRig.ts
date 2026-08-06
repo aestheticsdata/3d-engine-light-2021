@@ -1,4 +1,5 @@
-// The shape's own attitude: where it rests, and the turntable it rests on.
+// The shape's own attitude: where it rests, how big it is, and the turntable it
+// rests on.
 //
 // It is the half of CameraRig that was never about the camera. The accumulator
 // lived there because E1a built the rig before the shape had any orientation of
@@ -30,12 +31,20 @@
 import Matrix3D from "@primitives/Matrix3D";
 
 // Every value a control can write. Partial at the call site so one slider moves
-// one number without the caller having to restate the other three.
-export interface ShapeAngles {
+// one number without the caller having to restate the other four.
+//
+// Not all five are angles, which is why this is no longer called that: spinRate
+// is a velocity and scale is a factor. Pose is the closest honest word for what
+// the rig is asked to hold.
+export interface ShapePose {
   pitch: number;
   yaw: number;
   roll: number;
   spinRate: number;
+  // 1 at rest, so the mesh arrives the size the registry authored it. The UI's
+  // 10..300 maps to 0.1..3.0 at the call site — the rig is given a factor, not a
+  // percentage.
+  scale: number;
 }
 
 // The turntable's angular velocity, as a direction. SPIN names the yaw
@@ -57,6 +66,7 @@ class ShapeRig {
   private yawDegrees: number;
   private rollDegrees: number;
   private spinDegreesPerSecond: number;
+  private scaleFactor: number;
   private spinMatrix: number[][];
 
   constructor() {
@@ -65,6 +75,7 @@ class ShapeRig {
     this.yawDegrees = 0;
     this.rollDegrees = 0;
     this.spinDegreesPerSecond = 0;
+    this.scaleFactor = 1;
     this.spinMatrix = this.matrix3D.identity();
   }
 
@@ -83,16 +94,18 @@ class ShapeRig {
     this.spinMatrix = this.matrix3D.multiply(this.deltaSpin(spun), this.spinMatrix);
   }
 
-  public setAngles(angles: Partial<ShapeAngles>) {
-    this.pitchDegrees = angles.pitch ?? this.pitchDegrees;
-    this.yawDegrees = angles.yaw ?? this.yawDegrees;
-    this.rollDegrees = angles.roll ?? this.rollDegrees;
-    this.spinDegreesPerSecond = angles.spinRate ?? this.spinDegreesPerSecond;
+  public setPose(next: Partial<ShapePose>) {
+    this.pitchDegrees = next.pitch ?? this.pitchDegrees;
+    this.yawDegrees = next.yaw ?? this.yawDegrees;
+    this.rollDegrees = next.roll ?? this.rollDegrees;
+    this.spinDegreesPerSecond = next.spinRate ?? this.spinDegreesPerSecond;
+    this.scaleFactor = next.scale ?? this.scaleFactor;
   }
 
-  // The one value RESET cannot reach through the store. The three angles and the
-  // spin rate are slices, so they come back through setAngles when the TRANSFORM
-  // rows read their defaults; the accumulator has no row of its own.
+  // The one value RESET cannot reach through the store. The three angles, the
+  // spin rate and the scale are all slices, so they come back through setPose
+  // when the TRANSFORM rows read their defaults; the accumulator has no row of
+  // its own.
   public reset() {
     this.spinMatrix = this.matrix3D.identity();
   }
@@ -100,12 +113,26 @@ class ShapeRig {
   // roll · pitch · yaw, the same composition the camera builds its own attitude
   // with, so a shape pitched 30° reads as the mirror of a camera elevated 30°
   // rather than as some third convention the console would then have to explain.
+  //
+  // The scale is innermost, and for once the position genuinely is free: a
+  // uniform scale commutes with every rotation, so this product is the same
+  // matrix wherever the factor sits in it. Innermost is chosen because it is
+  // what the sentence "scale the model, then pose it" reads as, and because it
+  // is the position a non-uniform scale would have to occupy if one ever
+  // arrived.
+  //
+  // Applied here rather than in the projection, which is where an earlier draft
+  // put it. The scale has to reach z before the camera does, or the near plane
+  // would judge unscaled depth and the painter's sort and the depth histogram
+  // would inherit the same error. Riding the mesh transform is what makes all
+  // three correct without any of them being told about it.
   private pose(): number[][] {
     const pitch = this.matrix3D.pitchMatrix(this.pitchDegrees);
     const yaw = this.matrix3D.yawMatrix(this.yawDegrees);
     const roll = this.matrix3D.rollMatrix(this.rollDegrees);
+    const scale = this.matrix3D.scaleMatrix(this.scaleFactor);
 
-    return this.matrix3D.multiply(roll, this.matrix3D.multiply(pitch, yaw));
+    return this.matrix3D.multiply(roll, this.matrix3D.multiply(pitch, this.matrix3D.multiply(yaw, scale)));
   }
 
   // One frame's worth of turntable: a single rotation about the fixed spin axis,

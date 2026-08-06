@@ -1,6 +1,7 @@
 import type Point3D from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
+import type { MeshMaterial } from "@rendering/material";
 import type RenderStats from "@rendering/RenderStats";
 
 // Three required fields — past R4's two-collaborator exemption — and
@@ -39,10 +40,18 @@ export interface MeshRenderPass {
   timed: boolean;
 }
 
+// The uniform factor a transform carries, read as the length of its first
+// column. Exact only for a linear part that is scale x rotation, which is the
+// only kind of matrix a mesh is ever handed: the rig composes a uniform scale
+// with three rotations and the camera contributes a rotation and a translation.
+const uniformScaleOf = (transform: number[][]): number =>
+  Math.sqrt(transform[0][0] ** 2 + transform[1][0] ** 2 + transform[2][0] ** 2);
+
 class Mesh {
   private readonly points: Point3D[];
   private readonly triangles: Triangle[];
   private readonly radius: number;
+  private scaledRadius: number;
 
   // Copied rather than aliased: the factory hands over the arrays it was
   // building, and a mesh whose geometry a caller can still push into is not a
@@ -51,13 +60,20 @@ class Mesh {
     this.points = [...options.points];
     this.triangles = [...options.triangles];
     this.radius = options.boundingRadius;
+    this.scaledRadius = options.boundingRadius;
   }
 
   // The histogram's fixed bin edges (E6) are camera.distance ± this, rather
   // than the submitted set's own per-frame min/max — a rotating mesh must not
   // make its own axis breathe.
+  //
+  // A *scaling* mesh must, though, and that is the difference E4a introduced:
+  // rotation is rigid and leaves the extent alone, so the authored radius was
+  // the whole answer until SCALE existed. At 3.0 every depth sample would fall
+  // outside a window folded from the registry's raw coordinates, and the
+  // histogram would pile up against both edges rather than describe the shape.
   public get boundingRadius(): number {
-    return this.radius;
+    return this.scaledRadius;
   }
 
   // What this mesh submits, for the GEOMETRY card. MeshFactory maps the
@@ -162,6 +178,23 @@ class Mesh {
   public setTransform(transform: number[][]) {
     for (const point of this.points) {
       point.setFromSource(transform);
+    }
+
+    // One sqrt per mesh per frame, which is what keeps boundingRadius describing
+    // the mesh that was just posed rather than the one the registry authored.
+    // Derived from the matrix rather than passed in, so nothing has to thread
+    // the SCALE row down through the render path to reach it.
+    this.scaledRadius = this.radius * uniformScaleOf(transform);
+  }
+
+  // The material half of setTransform above, and deliberately the same shape:
+  // one push over the triangles, idempotent, with the caller free to hand the
+  // same object to both meshes alive during a transition. It is a push rather
+  // than a held reference so nothing has to be resolved on the render path —
+  // the cost lands on the click that moved the swatch.
+  public setMaterial(material: MeshMaterial) {
+    for (const triangle of this.triangles) {
+      triangle.setMaterial(material);
     }
   }
 

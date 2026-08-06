@@ -10,6 +10,7 @@ import PrimitiveSection from "@ui/inspector/PrimitiveSection";
 import TransformSection from "@ui/inspector/TransformSection";
 
 import type { Data3D } from "@data/types";
+import type { TextureMode } from "@rendering/material";
 import type SliderRow from "@ui/inspector/controls/SliderRow";
 import type ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import type UIStateStore from "@ui/UIStateStore";
@@ -22,6 +23,9 @@ export interface ShapeTabOptions {
   onYaw: (degrees: number) => void;
   onRoll: (degrees: number) => void;
   onSpin: (degreesPerSecond: number) => void;
+  onScale: (factor: number) => void;
+  onTexture: (mode: TextureMode) => void;
+  onBaseColor: (css: string) => void;
   onOpacity: (sliderValue: number) => void;
 }
 
@@ -45,6 +49,7 @@ class ShapeTab {
       onYaw: options.onYaw,
       onRoll: options.onRoll,
       onSpin: options.onSpin,
+      onScale: options.onScale,
     });
 
     this.material = new MaterialSection({
@@ -52,6 +57,8 @@ class ShapeTab {
       textureGridSelector: "#textureGrid",
       swatchRowSelector: "#baseSwatches",
       store: options.store,
+      onTexture: options.onTexture,
+      onBaseColor: options.onBaseColor,
       onOpacity: options.onOpacity,
     });
   }

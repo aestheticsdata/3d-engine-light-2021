@@ -20,11 +20,11 @@ import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
+import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import RenderStats from "@rendering/RenderStats";
 import ShapeRig from "@scene/ShapeRig";
-import dogUrl from "@textures/images/border-collie.jpeg";
-import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
+import imageTextures from "@textures/textureKeys";
 import {
   DEFAULT_CAM_AZIM_DEGREES,
   DEFAULT_CAM_ELEV_DEGREES,
@@ -69,7 +69,8 @@ import type { ProjectionMode } from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
-import type { ShapeAngles } from "@scene/ShapeRig";
+import type { MeshMaterial } from "@rendering/material";
+import type { ShapePose } from "@scene/ShapeRig";
 import type FieldWriter from "@ui/FieldWriter";
 
 const TRANSITION_DURATION_MS = 1250;
@@ -129,6 +130,12 @@ class Main {
   private readonly camera: CameraController;
   private readonly rig: CameraRig;
   private readonly shapeRig: ShapeRig;
+  // One material for the whole scene, mutated in place rather than replaced.
+  // The binding is readonly and the object is not, which is the honest shape:
+  // there is exactly one material and every control writes into it, while
+  // buildMesh and the two change handlers below are the only things that push
+  // it at a mesh.
+  private readonly material: MeshMaterial;
   private readonly pointerOrbit: PointerOrbit;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
@@ -193,6 +200,9 @@ class Main {
     // constructed alongside it.
     this.rig = new CameraRig();
     this.shapeRig = new ShapeRig();
+    // Spread, not aliased: DEFAULT_MESH_MATERIAL is frozen and shared, and this
+    // one is written into on every swatch click.
+    this.material = { ...DEFAULT_MESH_MATERIAL };
     this.lastFrameTimestamp = performance.now();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
@@ -218,6 +228,9 @@ class Main {
       onYaw: (degrees) => this.changeShape({ yaw: degrees }),
       onRoll: (degrees) => this.changeShape({ roll: degrees }),
       onSpin: (degreesPerSecond) => this.changeShape({ spinRate: degreesPerSecond }),
+      onScale: (factor) => this.changeShape({ scale: factor }),
+      onTexture: (mode) => this.changeMaterial({ mode }),
+      onBaseColor: (css) => this.changeMaterial({ baseColor: css }),
       onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
     });
     this.pipeline = new RenderPipelinePanel();
@@ -346,10 +359,10 @@ class Main {
   // registry's first key is the shape the console opens on, and the entry module
   // has no business knowing which one that is.
   public async init(primitive: string = this.shapes.names[0]) {
-    await this.textures.load({
-      dog: dogUrl,
-      galaxy: galaxyUrl,
-    });
+    // The declared table rather than a literal spelled here: the same record is
+    // what classifies a triangle's fourth slot, so a texture cannot be loadable
+    // without being recognisable.
+    await this.textures.load(imageTextures);
 
     // Resolution is written once; it is the only thing left in the HUD that
     // never changes while the console is open. FOV left this list in COS-231 and
@@ -458,9 +471,26 @@ class Main {
     this.renderPausedFrame();
   }
 
-  // The same, for the shape's four.
-  private changeShape(angles: Partial<ShapeAngles>) {
-    this.shapeRig.setAngles(angles);
+  // The same, for the shape's five.
+  private changeShape(pose: Partial<ShapePose>) {
+    this.shapeRig.setPose(pose);
+    this.renderPausedFrame();
+  }
+
+  // The same again, for the surface. A chip moves the mode and a swatch moves
+  // the colour, and neither restates the other.
+  //
+  // Pushed at the meshes rather than read from them, which is what keeps the
+  // render path free of any resolution at all: the cost of a material change is
+  // one walk of the triangles, here, on the click. getActiveMeshes rather than
+  // getRenderables for the reason applyRigToActiveMeshes gives — mid-transition
+  // the renderables list can hold one mesh twice.
+  private changeMaterial(patch: Partial<MeshMaterial>) {
+    Object.assign(this.material, patch);
+    this.shapes.getActiveMeshes().forEach((mesh) => {
+      mesh.setMaterial(this.material);
+    });
+    this.repaintForMaterial();
     this.renderPausedFrame();
   }
 
@@ -584,7 +614,7 @@ class Main {
     // Derived once, here — the panel needs the key list, the MATERIAL row and
     // the status bar need the two-value label, and the three must not disagree.
     // Built on primitive change, never on the render path.
-    const material = new MaterialSummary(object3D);
+    const material = new MaterialSummary(object3D, this.material);
 
     this.sceneGraph.setMeshId(primitive);
     this.statusBar.setSelected(primitive);
@@ -592,6 +622,26 @@ class Main {
     this.shapeInfo.show(primitive, object3D, material);
     this.shapeInfo.setOpacity(this.pipeline.opacity);
     this.shapeStory.show(primitive, shapeInfo[primitive]);
+  }
+
+  // The surface-describing half of the above, for when the material moved rather
+  // than the shape: SHAPE INFO's MATERIAL and TEXTURES rows, and the one
+  // texLabel write behind both the HUD chip and the status bar segment. The
+  // name, the counts and the story are deliberately left alone — none of them
+  // changed, and rebuilding the story panel's links on every swatch click would
+  // drop one the keyboard was in.
+  private repaintForMaterial() {
+    const primitive = this.shapes.current;
+
+    if (!primitive) {
+      return;
+    }
+
+    const object3D = this.objects3D[primitive];
+    const summary = new MaterialSummary(object3D, this.material);
+
+    this.statusBar.setTexture(summary);
+    this.shapeInfo.show(primitive, object3D, summary);
   }
 
   private animateShapeInfoPanel(primitive: string) {
@@ -662,6 +712,9 @@ class Main {
     // without this the incoming shape holds a different attitude from the
     // outgoing one for the first frame of every switch.
     mesh.setTransform(this.rig.meshMatrix(this.shapeRig.matrix()));
+    // And surfaced, for exactly the same reason: a shape picked while SOLID is
+    // selected must arrive solid rather than authored for one frame.
+    mesh.setMaterial(this.material);
 
     return mesh;
   }
