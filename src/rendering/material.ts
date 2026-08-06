@@ -44,8 +44,18 @@ export interface MeshMaterial {
 // registry authored it.
 export type AuthoredMaterial = { kind: "color"; css: string; rgba: RGBA | null } | { kind: "texture"; key: string };
 
+// `rgba` is the numeric form of `fill`, kept rather than recomputed (E3a): the
+// key light multiplies the colour that actually reaches the canvas, which is the
+// product of the authored slot and the BASE swatch, not either one alone. Parsing
+// `fill` back per triangle per frame would be a second parse of a string this
+// function built from numbers it already had.
+//
+// Null means "do not light this": a texture key, or a colour cssColor could not
+// read. Both fall back to painting `fill` as-is, which is what they did before a
+// light existed.
 export interface ResolvedMaterial {
   fill: string;
+  rgba: RGBA | null;
   textureKey: string | null;
 }
 
@@ -64,11 +74,17 @@ export const classifyMaterial = (slot: string): AuthoredMaterial =>
   isTextureKey(slot) ? { kind: "texture", key: slot } : { kind: "color", css: slot, rgba: parseCssColor(slot) };
 
 export const resolveMaterial = (authored: AuthoredMaterial, material: MeshMaterial): ResolvedMaterial => {
+  // Parsed ahead of the branches rather than inside the multiply below, because
+  // SOLID needs the same numbers now: the key light shades a solid mesh exactly
+  // as it shades a blended one, so every branch that returns a colour has to
+  // return its channels beside it.
+  const base = parseCssColor(material.baseColor);
+
   // SOLID is the one mode that ignores the authored slot entirely, textures
   // included: every triangle becomes the base colour, which is what makes it the
   // mode for looking at a shape's geometry rather than its surface.
   if (material.mode === "solid") {
-    return { fill: material.baseColor, textureKey: null };
+    return { fill: material.baseColor, rgba: base, textureKey: null };
   }
 
   if (authored.kind === "texture") {
@@ -76,14 +92,17 @@ export const resolveMaterial = (authored: AuthoredMaterial, material: MeshMateri
     // kept from before this module existed. It is only ever reached by a
     // texture-authored triangle with no UVs, which the registry does not
     // contain, and a loud wrong colour is the right outcome if one appears.
-    return { fill: authored.key, textureKey: authored.key };
+    return { fill: authored.key, rgba: null, textureKey: authored.key };
   }
-
-  const base = parseCssColor(material.baseColor);
 
   if (!authored.rgba || !base) {
-    return { fill: authored.css, textureKey: null };
+    // The authored channels survive an unreadable BASE: the blend is what fails
+    // there, not the colour, so a shape still lights correctly while the swatch
+    // does nothing.
+    return { fill: authored.css, rgba: authored.rgba, textureKey: null };
   }
 
-  return { fill: formatRgba(multiplyColor(authored.rgba, base)), textureKey: null };
+  const blended = multiplyColor(authored.rgba, base);
+
+  return { fill: formatRgba(blended), rgba: blended, textureKey: null };
 };

@@ -20,6 +20,7 @@ import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
+import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import RenderStats from "@rendering/RenderStats";
 import ShapeRig from "@scene/ShapeRig";
@@ -38,6 +39,7 @@ import {
   DEFAULT_SHADOW,
   DEFAULT_SKY,
 } from "@ui/inspector/EnvironmentSection";
+import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
 import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
@@ -69,6 +71,7 @@ import type { ProjectionMode } from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
+import type { LightingValues } from "@rendering/Lighting";
 import type { MeshMaterial } from "@rendering/material";
 import type { ShapePose } from "@scene/ShapeRig";
 import type FieldWriter from "@ui/FieldWriter";
@@ -136,6 +139,12 @@ class Main {
   // buildMesh and the two change handlers below are the only things that push
   // it at a mesh.
   private readonly material: MeshMaterial;
+  // One light for the whole scene, and the same ownership shape as the material
+  // above: every control writes into it and nothing else holds one. Unlike the
+  // material it is also written per frame — it is world-fixed, so the eye-space
+  // direction has to follow the camera — which is why paint() pushes the view
+  // matrix at it rather than the light holding a rig reference of its own.
+  private readonly lighting: Lighting;
   private readonly pointerOrbit: PointerOrbit;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
@@ -143,6 +152,7 @@ class Main {
   // drawn count through the same store it subscribes to, so an unguarded
   // subscriber would re-enter renderPausedFrame on its own notification.
   private meshHidden: boolean;
+  private lightHidden: boolean;
   private renderedTriangles: number;
   // The frame clock, kept here because this is where the timestamp arrives, and
   // read once per frame for both rigs. The shape accumulates its spin against
@@ -172,6 +182,7 @@ class Main {
     this.viewportHud = new ViewportHUD(canvas, this.fields);
     this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
+    this.lightHidden = this.sceneGraph.isLightHidden();
     this.stage = stage;
     this.background = backgroundRenderer;
     this.camera = new CameraController(canvas);
@@ -203,6 +214,11 @@ class Main {
     // Spread, not aliased: DEFAULT_MESH_MATERIAL is frozen and shared, and this
     // one is written into on every swatch click.
     this.material = { ...DEFAULT_MESH_MATERIAL };
+    // Seeded through the same reader the sliders push through, so the opening
+    // light and a dragged one come off one code path. The LIGHTING slice is not
+    // registered yet — RenderTab builds the section further down — which is what
+    // the fallbacks in lightingValues() are for.
+    this.lighting = new Lighting(this.lightingValues());
     this.lastFrameTimestamp = performance.now();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
@@ -242,6 +258,7 @@ class Main {
       onWireframeToggle: (next) => this.pipeline.setWireframe(next),
       onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
       onFrameRateCap: (fps) => this.applyFrameRateCap(fps),
+      onLightingChange: () => this.applyLighting(),
     });
     this.worldTab = new WorldTab({
       store: this.uiState,
@@ -343,15 +360,25 @@ class Main {
     this.transport.bindReset(this.resetControls);
     this.syncPipelineReadouts();
 
-    // Hiding the mesh has to repaint immediately when the loop is not
-    // running; while it is, the next frame already picks it up.
+    // Hiding the mesh or the key light has to repaint immediately when the loop
+    // is not running; while it is, the next frame already picks it up. Both rows
+    // ride one detector because both end in the same repaint, and because the
+    // detector is what stops this subscriber re-entering on the drawn count it
+    // publishes through the store it is subscribed to.
     this.unsubscribe = this.uiState.subscribe(() => {
-      const hidden = this.sceneGraph.isMeshHidden();
-      if (hidden === this.meshHidden) {
+      const meshHidden = this.sceneGraph.isMeshHidden();
+      const lightHidden = this.sceneGraph.isLightHidden();
+
+      if (meshHidden === this.meshHidden && lightHidden === this.lightHidden) {
         return;
       }
-      this.meshHidden = hidden;
-      this.renderPausedFrame();
+
+      this.meshHidden = meshHidden;
+      this.lightHidden = lightHidden;
+      // applyLighting rather than a bare repaint: the light has to be told
+      // before the frame is drawn, and pushing it costs one trig pair even when
+      // it was the mesh row that moved.
+      this.applyLighting();
     });
   }
 
@@ -630,6 +657,31 @@ class Main {
   // name, the counts and the story are deliberately left alone — none of them
   // changed, and rebuilding the story panel's links on every swatch click would
   // drop one the keyboard was in.
+  // One push behind the four LIGHTING rows and the KEY_LIGHT toggle, for the
+  // reason changeMaterial is one push behind the swatches: the five values
+  // describe one light, and a per-control handler would let two of them reach it
+  // in an order that mattered.
+  private applyLighting() {
+    this.lighting.setValues(this.lightingValues());
+    this.renderPausedFrame();
+  }
+
+  // Read off the store rather than handed in by the section, because `enabled`
+  // is the scene graph's and the other four are the inspector's — this is the
+  // one place both are in scope, and assembling the record anywhere else would
+  // mean one of the two owners guessing at the other's value.
+  private lightingValues(): LightingValues {
+    const state = this.uiState.getState();
+
+    return {
+      azimuth: state.lightAzimuth ?? DEFAULT_AZIMUTH,
+      elevation: state.lightElevation ?? DEFAULT_ELEVATION,
+      ambient: state.lightAmbient ?? DEFAULT_AMBIENT,
+      specular: state.lightSpecular ?? DEFAULT_SPECULAR,
+      enabled: !this.sceneGraph.isLightHidden(),
+    };
+  }
+
   private repaintForMaterial() {
     const primitive = this.shapes.current;
 
@@ -839,13 +891,21 @@ class Main {
     // reads culling off the same options object the frame was drawn with, so
     // the card cannot describe a different frame than the one on screen.
     const submitted = this.sceneGraph.isMeshHidden() ? [] : renderables;
-    const options = { ...this.pipeline.getRenderOptions(), textures: this.textures };
+    // Named because two things read it now. The light is fixed in the world, so
+    // its eye-space direction is rebuilt against whatever the camera is doing
+    // this frame — off the same matrix the background pass gets, and never off
+    // meshMatrix(), which carries the turntable and E4a's scale.
+    const cameraTransform = this.rig.viewMatrix();
+
+    this.lighting.setCamera(cameraTransform, this.camera.projection.distance);
+
+    const options = { ...this.pipeline.getRenderOptions(), textures: this.textures, lighting: this.lighting };
 
     const stats = this.surface3D.render({
       renderables: submitted,
       options,
       timed,
-      cameraTransform: this.rig.viewMatrix(),
+      cameraTransform,
     });
 
     this.renderedTriangles = stats.drawn;

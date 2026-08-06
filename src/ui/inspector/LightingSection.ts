@@ -1,31 +1,37 @@
-// LIGHTING: the four sliders for a light that does not exist yet.
+// LIGHTING: the four sliders behind the key light.
 //
-// Triangle fills with the material's baked colour; no normal is ever
-// computed, so all four values are placeholders that persist and format but
-// change nothing about the frame until de-mock E3. The scene graph's
-// KEY_LIGHT row reads this same slice, so hiding it and moving these
-// sliders describe one fictional light, not two.
+// All four are real since E3a (COS-241). AZIMUTH and ELEVATION place one
+// directional light in the WORLD — around the vertical and above the ground
+// plane E5a built, not across the screen — AMBIENT is the floor the unlit side
+// of a shape falls to, and SPECULAR is the strength of a Blinn-Phong highlight
+// at a fixed shininess of 32. The scene graph's KEY_LIGHT row reads the same
+// light, and hiding it leaves ambient alone.
+//
+// The section pushes a bare notification rather than the four values, and that
+// is deliberate: `enabled` belongs to the scene graph, so a LightingValues
+// assembled here would be missing a field or guessing at one. Main reads all
+// five off the store in one place instead.
 
 import DOMScope from "@ui/DOMScope";
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
 import type UIStateStore from "@ui/UIStateStore";
+import type { UIState } from "@ui/UIStateStore";
 
 export const DEFAULT_AZIMUTH = 135;
 export const DEFAULT_ELEVATION = 42;
 export const DEFAULT_AMBIENT = 30;
 export const DEFAULT_SPECULAR = 55;
 
-const HINT_ID = "ph-lighting";
-const HINT_TEXT = "There is no light in this engine yet (de-mock E3).";
-
 export interface LightingSectionOptions {
   root: string;
   store: UIStateStore;
+  onChange: () => void;
 }
 
 class LightingSection {
   private readonly store: UIStateStore;
+  private readonly apply: () => void;
   private readonly azimuth: SliderRow;
   private readonly elevation: SliderRow;
   private readonly ambient: SliderRow;
@@ -33,9 +39,9 @@ class LightingSection {
 
   constructor(options: LightingSectionOptions) {
     const root = new DOMScope(document).require<HTMLElement>(options.root, "LIGHTING section is missing.");
-    const placeholder = { title: HINT_TEXT, describedBy: HINT_ID };
 
     this.store = options.store;
+    this.apply = options.onChange;
     // Four flat fields, not the nested lighting.{azimuth,…} object the ticket
     // asked for: registerSlice and resetAll both Object.assign the slice
     // (UIStateStore.ts), which is a shallow copy — a nested object would be
@@ -54,61 +60,55 @@ class LightingSection {
       min: 0,
       max: 360,
       value: DEFAULT_AZIMUTH,
-      placeholder,
       format: (value) => `${value}°`,
-      onInput: (value) => this.store.setState({ lightAzimuth: value }),
+      onInput: (value) => this.push({ lightAzimuth: value }),
     });
     this.elevation = new SliderRow({
       label: "ELEVATION",
       min: 0,
       max: 90,
       value: DEFAULT_ELEVATION,
-      placeholder,
       format: (value) => `${value}°`,
-      onInput: (value) => this.store.setState({ lightElevation: value }),
+      onInput: (value) => this.push({ lightElevation: value }),
     });
     this.ambient = new SliderRow({
       label: "AMBIENT",
       min: 0,
       max: 100,
       value: DEFAULT_AMBIENT,
-      placeholder,
       format: (value) => `${value}%`,
-      onInput: (value) => this.store.setState({ lightAmbient: value }),
+      onInput: (value) => this.push({ lightAmbient: value }),
     });
     this.specular = new SliderRow({
       label: "SPECULAR",
       min: 0,
       max: 100,
       value: DEFAULT_SPECULAR,
-      placeholder,
       format: (value) => `${value}%`,
-      onInput: (value) => this.store.setState({ lightSpecular: value }),
+      onInput: (value) => this.push({ lightSpecular: value }),
     });
 
-    root.append(
-      this.azimuth.element,
-      this.elevation.element,
-      this.ambient.element,
-      this.specular.element,
-      this.buildHint(),
-    );
+    root.append(this.azimuth.element, this.elevation.element, this.ambient.element, this.specular.element);
   }
 
+  // Writes the store's values into the rows AND pushes them at the light, the
+  // same two halves TransformSection's own sync carries: this is the RESET path,
+  // and a reset that moved the sliders without moving the light would leave the
+  // frame lit by the values the user had dragged to.
   public syncFromStore() {
     const state = this.store.getState();
+
     this.azimuth.setValue(state.lightAzimuth ?? DEFAULT_AZIMUTH);
     this.elevation.setValue(state.lightElevation ?? DEFAULT_ELEVATION);
     this.ambient.setValue(state.lightAmbient ?? DEFAULT_AMBIENT);
     this.specular.setValue(state.lightSpecular ?? DEFAULT_SPECULAR);
+
+    this.apply();
   }
 
-  private buildHint(): HTMLElement {
-    const hint = document.createElement("span");
-    hint.className = "placeholder-hint";
-    hint.id = HINT_ID;
-    hint.textContent = HINT_TEXT;
-    return hint;
+  private push(patch: Partial<UIState>) {
+    this.store.setState(patch);
+    this.apply();
   }
 }
 

@@ -99,6 +99,7 @@ describe("resolveMaterial", () => {
   it("keeps an authored texture, and its key, in authored mode", () => {
     expect(resolveMaterial(classifyMaterial("dog"), DEFAULT_MESH_MATERIAL)).toEqual({
       fill: "dog",
+      rgba: null,
       textureKey: "dog",
     });
   });
@@ -114,10 +115,12 @@ describe("resolveMaterial", () => {
 
     expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), material)).toEqual({
       fill: "rgb(255, 0, 0)",
+      rgba: [255, 0, 0, 1],
       textureKey: null,
     });
     expect(resolveMaterial(classifyMaterial("dog"), material)).toEqual({
       fill: "rgb(255, 0, 0)",
+      rgba: [255, 0, 0, 1],
       textureKey: null,
     });
   });
@@ -135,6 +138,51 @@ describe("resolveMaterial", () => {
 
     expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "checker" }))).toEqual(authored);
     expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "uvGrid" }))).toEqual(authored);
+  });
+});
+
+// What the key light multiplies (E3a/COS-241).
+//
+// The contract is one sentence — `rgba` is the numeric form of `fill` — and it
+// is worth its own block because breaking it is silent: the canvas goes on
+// painting `fill` correctly while the light shades a colour nobody can see, and
+// every visual check still passes.
+describe("the resolved channels", () => {
+  it("hands back the blended colour as numbers, not only as a string", () => {
+    const resolved = resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ baseColor: "rgb(128, 128, 128)" }));
+
+    expect(resolved.rgba).toEqual([0, 90, 45, 1]);
+    expect(resolved.fill).toBe(formatRgba([0, 90, 45, 1]));
+  });
+
+  // The blend is what an unreadable BASE breaks, not the colour. Dropping the
+  // channels here would unlight the shape as well as untint it.
+  it("keeps the authored channels when the base colour cannot be read", () => {
+    const resolved = resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ baseColor: "hsl(200 50% 40%)" }));
+
+    expect(resolved.fill).toBe(SPHERE_LIGHT);
+    expect(resolved.rgba).toEqual([0, 180, 89, 1]);
+  });
+
+  it("has no channels for a texture key or an unreadable authored colour", () => {
+    expect(resolveMaterial(classifyMaterial("dog"), DEFAULT_MESH_MATERIAL).rgba).toBeNull();
+    expect(resolveMaterial(classifyMaterial("hsl(200 50% 40%)"), DEFAULT_MESH_MATERIAL).rgba).toBeNull();
+  });
+
+  // Over the registry rather than over three hand-picked colours: this is the
+  // invariant Lighting relies on for every triangle it shades, and the blend has
+  // four branches that could each drift from it on their own.
+  it("agrees with its own fill string on every triangle of all twenty shapes", () => {
+    const material = materialOf({ baseColor: "rgb(128, 200, 255)" });
+    const disagreements = Object.entries(data).flatMap(([name, object3D]) =>
+      object3D.triangles
+        .map((triangle) => resolveMaterial(classifyMaterial(triangle[3]), material))
+        .filter((resolved) => resolved.rgba !== null)
+        .filter((resolved) => JSON.stringify(parseCssColor(resolved.fill)) !== JSON.stringify(resolved.rgba))
+        .map((resolved) => `${name}: ${resolved.fill}`),
+    );
+
+    expect(disagreements).toEqual([]);
   });
 });
 

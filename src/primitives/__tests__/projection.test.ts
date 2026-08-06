@@ -14,12 +14,16 @@
 // at once. The two arrive in the same constructor and it would be easy to make
 // one behave like the other by mistake.
 
+import cube from "@data/shapes/cube";
+import sphere from "@data/shapes/sphere";
 import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import Point3D from "@primitives/Point3D";
 import RenderTarget from "@primitives/RenderTarget";
+import Triangle from "@primitives/Triangle";
 import { describe, expect, it } from "vitest";
 
+import type { Object3D } from "@data/types";
 import type { CameraOptions } from "@primitives/Camera";
 
 const renderTarget = () => new RenderTarget({ width: 1024, height: 640 });
@@ -290,5 +294,67 @@ describe("Camera", () => {
     // Far, the same way round: z = 4920 sits exactly on 5000.
     expect(camera.clips(4920)).toBe(false);
     expect(camera.clips(4921)).toBe(true);
+  });
+});
+
+// The winding convention the key light reads a normal off (E3a/COS-241).
+//
+// Lighting takes the outward normal to be -(b-a) x (c-a), and that minus sign is
+// the whole ticket: get it backwards and every solid is lit from inside, which
+// looks like a plausible picture of a differently-lit solid rather than like a
+// bug. Nothing in the render path can catch it, because the sign never reaches
+// the cull — isFrontFacing works on projected coordinates and would go on
+// agreeing with itself.
+//
+// So it is pinned twice. The first case is the identity the ticket states, and
+// it is asserted under ORTHOGRAPHIC because that is where it is exact: the
+// projected cross product is s squared times Nraw.z only when all three vertices
+// share one s, which perspective does not give a face that runs away from the
+// eye. The second is the geometric claim the first is standing in for, and it
+// holds under any projection at all.
+describe("the face-normal sign convention", () => {
+  const rawNormal = (object3D: Object3D, indices: readonly number[]) => {
+    const [a, b, c] = indices.map((index) => object3D.points[index]);
+
+    return [
+      (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]),
+      (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]),
+      (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]),
+    ];
+  };
+
+  it("agrees with the 2D backface test on every face of the cube", () => {
+    const camera = new Camera({ focal: 300, magnification: 1, mode: "ORTHOGRAPHIC" });
+    const points = cube.points.map((point) => new Point3D(point[0], point[1], point[2], renderTarget(), camera));
+
+    const disagreements = cube.triangles.filter((triangle) => {
+      const [a, b, c, material] = triangle;
+      const face = new Triangle(points[a], points[b], points[c], material);
+
+      face.project(0, 0);
+
+      return face.isFrontFacing() !== rawNormal(cube, [a, b, c])[2] > 0;
+    });
+
+    expect(cube.triangles.length).toBeGreaterThan(0);
+    expect(disagreements).toEqual([]);
+  });
+
+  // Every face of a convex solid centred on the origin has its outward normal
+  // pointing away from that origin, so the dot product with any of its own
+  // vertices is positive. The sphere is in here as well as the cube because it
+  // is the shape with degenerate faces: those come out at exactly zero, which is
+  // the value Lighting's guard rejects rather than a sign it could get wrong.
+  it("points -Nraw away from the centre on every face of the cube and the sphere", () => {
+    [cube, sphere].forEach((object3D) => {
+      const inward = object3D.triangles.filter(([a, b, c]) => {
+        const normal = rawNormal(object3D, [a, b, c]);
+        const vertex = object3D.points[a];
+
+        return -(normal[0] * vertex[0] + normal[1] * vertex[1] + normal[2] * vertex[2]) < 0;
+      });
+
+      expect(inward).toEqual([]);
+    });
   });
 });
