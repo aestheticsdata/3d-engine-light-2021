@@ -64,8 +64,9 @@ export interface UIState {
   // baseColor holds the palette NAME, not the colour: the store stays readable
   // and MaterialSection is the only thing that resolves it.
   //
-  // uvScale is still inert (de-mock E4b) and is stored only so the console
-  // remembers the choice and RESET can undo it.
+  // uvScale became live with E4b. It tiles the two generated textures and is
+  // deliberately inert in AUTHORED and SOLID — resolveMaterial is where that is
+  // decided, not here and not the row.
   scale?: number;
   texture?: TextureMode;
   baseColor?: string;
@@ -74,8 +75,8 @@ export interface UIState {
   // --- RENDER tab -----------------------------------------------------------
   // zbuffer / dither / edgeAA are the placeholders left in this tab: no
   // rasteriser sits behind any of them (E3b, E3d), and they are stored only so
-  // RESET can undo the choice. uvScale on the SHAPE tab above is the only other
-  // one in the store.
+  // RESET can undo the choice. Since E4b they are the only three left in the
+  // whole store.
   //
   // The four light* values stopped being placeholders with E4a's successor
   // (E3a/COS-241). All four reach one directional key light, and the scene

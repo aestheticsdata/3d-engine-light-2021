@@ -43,8 +43,16 @@ const FACING_EYE = [at(0, 0, 0), at(1, 0, 0), at(0, 1, 0)] as const;
 const EDGE_ON = [at(0, 0, 0), at(0, 1, 0), at(0, 0, 1)] as const;
 const DEGENERATE = [at(0, 0, 0), at(0, 0, 0), at(0, 0, 0)] as const;
 
-const ORANGE: ResolvedMaterial = { fill: "rgba(200, 100, 40, 1)", rgba: [200, 100, 40, 1], textureKey: null };
-const TEXTURED: ResolvedMaterial = { fill: "dog", rgba: null, textureKey: "dog" };
+// uvScale is on every fixture below and read by none of them: it is the texture
+// path's field (E4b/COS-245), and the light never sees a UV. Stated once here
+// rather than explained four times.
+const ORANGE: ResolvedMaterial = {
+  fill: "rgba(200, 100, 40, 1)",
+  rgba: [200, 100, 40, 1],
+  textureKey: null,
+  uvScale: 1,
+};
+const TEXTURED: ResolvedMaterial = { fill: "dog", rgba: null, textureKey: "dog", uvScale: 1 };
 
 const lightingOf = (patch: Partial<LightingValues> = {}) => {
   const lighting = new Lighting({ ...HEADLIGHT, ...patch });
@@ -132,7 +140,7 @@ describe("Lighting fallbacks", () => {
   });
 
   it("hands back the unlit fill for a colour cssColor could not read", () => {
-    const unreadable: ResolvedMaterial = { fill: "hsl(200 50% 40%)", rgba: null, textureKey: null };
+    const unreadable: ResolvedMaterial = { fill: "hsl(200 50% 40%)", rgba: null, textureKey: null, uvScale: 1 };
 
     expect(fill(lightingOf({ ambient: 0 }), FACING_EYE, unreadable)).toBe("hsl(200 50% 40%)");
   });
@@ -150,7 +158,7 @@ describe("Lighting cache", () => {
 
   it("keeps two colours at the same shade apart", () => {
     const lighting = lightingOf({ ambient: 30 });
-    const blue: ResolvedMaterial = { fill: "rgba(0, 89, 150, 1)", rgba: [0, 89, 150, 1], textureKey: null };
+    const blue: ResolvedMaterial = { fill: "rgba(0, 89, 150, 1)", rgba: [0, 89, 150, 1], textureKey: null, uvScale: 1 };
 
     expect(fill(lighting, EDGE_ON)).not.toBe(fill(lighting, EDGE_ON, blue));
   });

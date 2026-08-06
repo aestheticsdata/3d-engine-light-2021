@@ -101,6 +101,7 @@ describe("resolveMaterial", () => {
       fill: "dog",
       rgba: null,
       textureKey: "dog",
+      uvScale: 1,
     });
   });
 
@@ -117,11 +118,13 @@ describe("resolveMaterial", () => {
       fill: "rgb(255, 0, 0)",
       rgba: [255, 0, 0, 1],
       textureKey: null,
+      uvScale: 1,
     });
     expect(resolveMaterial(classifyMaterial("dog"), material)).toEqual({
       fill: "rgb(255, 0, 0)",
       rgba: [255, 0, 0, 1],
       textureKey: null,
+      uvScale: 1,
     });
   });
 
@@ -131,13 +134,47 @@ describe("resolveMaterial", () => {
     expect(resolved.fill).toBe("hsl(200 50% 40%)");
   });
 
-  // The two procedural modes are declared and inert until E4b, which is what
-  // their chips claim: they store the choice and the canvas does not move.
-  it("falls the procedural modes through to authored until E4b builds them", () => {
-    const authored = resolveMaterial(classifyMaterial(SPHERE_LIGHT), DEFAULT_MESH_MATERIAL);
+  // A procedural mode overrides the authored slot the way SOLID does, and just
+  // as completely: the cube's bitmap faces sample the checker too, or the mode
+  // would be a checker on four sixths of a cube.
+  it("hands every triangle the generated key in a procedural mode, textures included", () => {
+    const material = materialOf({ mode: "checker", baseColor: "rgb(255, 0, 0)" });
 
-    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "checker" }))).toEqual(authored);
-    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "uvGrid" }))).toEqual(authored);
+    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), material).textureKey).toBe("checker");
+    expect(resolveMaterial(classifyMaterial("dog"), material).textureKey).toBe("checker");
+    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "uvGrid" })).textureKey).toBe("uvGrid");
+  });
+
+  // Reachable, unlike the authored-texture branch's fallback: the spherical
+  // projection can hand a face a degenerate UV triangle, and that face falls
+  // back to this colour. Carrying the channels is what keeps it lit.
+  it("falls a procedural face back to the base colour, with channels to light it by", () => {
+    const resolved = resolveMaterial(classifyMaterial("dog"), materialOf({ mode: "checker", baseColor: "#7ea6e0" }));
+
+    expect(resolved.fill).toBe("#7ea6e0");
+    expect(resolved.rgba).toEqual([0x7e, 0xa6, 0xe0, 1]);
+  });
+});
+
+// UV SCALE, and the one rule that keeps the console's first frame where it is.
+//
+// The row ships at 8. Applying that in AUTHORED would tile the cube's two bitmap
+// faces sixty-four times over on boot, which is why the scale is resolved here
+// rather than read off the mesh material at the fill.
+describe("the resolved tiling", () => {
+  it("is inert outside the procedural modes, whatever the row is set to", () => {
+    const material = materialOf({ uvScale: 16 });
+
+    expect(resolveMaterial(classifyMaterial("dog"), material).uvScale).toBe(1);
+    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), material).uvScale).toBe(1);
+    expect(resolveMaterial(classifyMaterial("dog"), materialOf({ mode: "solid", uvScale: 16 })).uvScale).toBe(1);
+  });
+
+  // Over the authored coordinates as well as the generated ones, so the cube
+  // does not tile at two densities across its own six faces.
+  it("carries the row's value in both procedural modes, for authored and generated UVs alike", () => {
+    expect(resolveMaterial(classifyMaterial("dog"), materialOf({ mode: "checker", uvScale: 16 })).uvScale).toBe(16);
+    expect(resolveMaterial(classifyMaterial(SPHERE_LIGHT), materialOf({ mode: "uvGrid", uvScale: 3 })).uvScale).toBe(3);
   });
 });
 

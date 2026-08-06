@@ -19,11 +19,13 @@ import PointerOrbit from "@input/PointerOrbit";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
+import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
 import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import RenderStats from "@rendering/RenderStats";
 import ShapeRig from "@scene/ShapeRig";
+import ProceduralTextures from "@textures/ProceduralTextures";
 import TextureRegistry from "@textures/TextureRegistry";
 import imageTextures from "@textures/textureKeys";
 import {
@@ -145,6 +147,13 @@ class Main {
   // direction has to follow the camera — which is why paint() pushes the view
   // matrix at it rather than the light holding a rig reference of its own.
   private readonly lighting: Lighting;
+  // The two textures the console paints for itself, and the class that fills
+  // with them. They are one field apart in this list and one line apart in
+  // changeMaterial for a reason: the mapper caches a CanvasPattern per texture
+  // and createPattern copies its source, so a repaint that did not invalidate
+  // would leave the checker painting the previous swatch forever.
+  private readonly procedural: ProceduralTextures;
+  private readonly mapper: AffineTextureMapper;
   private readonly pointerOrbit: PointerOrbit;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
@@ -222,6 +231,12 @@ class Main {
     this.lastFrameTimestamp = performance.now();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
+    // Adopted here rather than in init(), where the bitmaps are loaded: there is
+    // nothing to decode, so CHECKER and UV GRID resolve from the first frame
+    // while dog and galaxy are still in flight.
+    this.procedural = new ProceduralTextures(this.material.baseColor);
+    this.textures.adopt(this.procedural.sources);
+    this.mapper = new AffineTextureMapper();
     this.objects3D = data;
     this.renderedTriangles = 0;
     this.shapeInfo = new ShapeInfoPanel();
@@ -247,6 +262,7 @@ class Main {
       onScale: (factor) => this.changeShape({ scale: factor }),
       onTexture: (mode) => this.changeMaterial({ mode }),
       onBaseColor: (css) => this.changeMaterial({ baseColor: css }),
+      onUvScale: (factor) => this.changeMaterial({ uvScale: factor }),
       onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
     });
     this.pipeline = new RenderPipelinePanel();
@@ -514,6 +530,17 @@ class Main {
   // the renderables list can hold one mesh twice.
   private changeMaterial(patch: Partial<MeshMaterial>) {
     Object.assign(this.material, patch);
+
+    // A swatch, and only a swatch: the two procedural textures are drawn in the
+    // base colour, so they are repainted here and the pattern cache is dropped
+    // in the same breath. Neither half is optional — a repaint without the
+    // invalidate leaves the previous colour on screen for good, and an
+    // invalidate without the repaint costs one rebuild for nothing.
+    if (patch.baseColor !== undefined) {
+      this.procedural.redraw(this.material.baseColor);
+      this.mapper.invalidate();
+    }
+
     this.shapes.getActiveMeshes().forEach((mesh) => {
       mesh.setMaterial(this.material);
     });
@@ -899,7 +926,12 @@ class Main {
 
     this.lighting.setCamera(cameraTransform, this.camera.projection.distance);
 
-    const options = { ...this.pipeline.getRenderOptions(), textures: this.textures, lighting: this.lighting };
+    const options = {
+      ...this.pipeline.getRenderOptions(),
+      textures: this.textures,
+      lighting: this.lighting,
+      mapper: this.mapper,
+    };
 
     const stats = this.surface3D.render({
       renderables: submitted,

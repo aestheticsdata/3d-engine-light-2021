@@ -26,7 +26,18 @@ const imageTextures: Record<string, string> = {
   galaxy: galaxyUrl,
 };
 
-const declaredKeys: ReadonlySet<string> = new Set(Object.keys(imageTextures));
+// The two E4b generates rather than decodes. They have no URL — there is nothing
+// to fetch — but they are texture keys in every sense that matters here, and the
+// set derived below is what lets them be one without a second predicate.
+//
+// TextureMode spells its two procedural members with these same two strings, and
+// that is deliberate rather than a coincidence to tidy away: resolveMaterial
+// returns the chosen mode as the key, so the chip, the resolver and the registry
+// cannot name the same texture three different ways. Both ends import from here.
+export const CHECKER_KEY = "checker";
+export const UV_GRID_KEY = "uvGrid";
+
+const declaredKeys: ReadonlySet<string> = new Set([...Object.keys(imageTextures), CHECKER_KEY, UV_GRID_KEY]);
 
 // `unknown` rather than `string`, and the typeof guard is not defensive padding:
 // nothing in this project runs under strictNullChecks, so a malformed fourth

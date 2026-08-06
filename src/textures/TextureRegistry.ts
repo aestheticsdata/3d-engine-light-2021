@@ -11,9 +11,19 @@
 // the affected faces fall back to filling with the raw material string, which
 // paints "dog" as a CSS colour and silently renders black. A loud boot failure
 // is the correct outcome.
+//
+// Not every source is decoded, since E4b: the two procedural textures are
+// canvases this registry adopts rather than URLs it fetches. It holds them and
+// does not own them — ProceduralTextures repaints the same canvas objects in
+// place when the base colour moves, so a swatch never has to re-register
+// anything and this class never has to know a texture can change.
+
+// Both satisfy drawImage and createPattern, and both carry width and height,
+// which is everything the texture path asks of a source.
+export type TextureSource = HTMLImageElement | HTMLCanvasElement;
 
 class TextureRegistry {
-  private readonly images: Map<string, HTMLImageElement>;
+  private readonly images: Map<string, TextureSource>;
 
   constructor() {
     this.images = new Map();
@@ -27,7 +37,17 @@ class TextureRegistry {
     });
   }
 
-  public get(key: string): HTMLImageElement | undefined {
+  // Synchronous, and the asymmetry with load() above is the point: there is
+  // nothing to await for a texture that was drawn rather than fetched, so the
+  // procedural keys are resolvable from the first frame while dog and galaxy are
+  // still decoding.
+  public adopt(sources: Record<string, HTMLCanvasElement>) {
+    Object.entries(sources).forEach(([key, canvas]) => {
+      this.images.set(key, canvas);
+    });
+  }
+
+  public get(key: string): TextureSource | undefined {
     return this.images.get(key);
   }
 
