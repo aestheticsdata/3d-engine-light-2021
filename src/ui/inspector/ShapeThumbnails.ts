@@ -22,6 +22,7 @@ import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
+import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import Lighting from "@rendering/Lighting";
 import RenderStats from "@rendering/RenderStats";
 import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
@@ -108,6 +109,12 @@ class ShapeThumbnails {
 
     lighting.setCamera(pose, camera.distance);
 
+    // And its own texture mapper, for the same reason again. One per chip rather
+    // than one for the twenty: its pattern cache is worth having across the
+    // triangles of a single mesh, which is where the cube's 784 textured faces
+    // are, and a chip is painted once and thrown away.
+    const mapper = new AffineTextureMapper();
+
     // A throwaway accumulator: renderMesh (E6/COS-239) always writes through
     // one, but a thumbnail is painted once and nothing here reads its stats
     // back — the console's own telemetry describes the stage, not a picker
@@ -116,7 +123,7 @@ class ShapeThumbnails {
       context,
       offsetX: 0,
       offsetY: 0,
-      options: { textures: this.textures, lighting, cullBackfaces: true, opacity: 1 },
+      options: { textures: this.textures, lighting, mapper, cullBackfaces: true, opacity: 1 },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
       timed: false,

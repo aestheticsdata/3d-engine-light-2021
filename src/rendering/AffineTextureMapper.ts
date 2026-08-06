@@ -16,8 +16,8 @@
 //
 //    where (tx,ty) are texture-space coordinates and (sx,sy) are screen-space.
 //
-// 4) Clip to the projected triangle in screen space, then draw the full image
-//    through the transform. Only the clipped triangle region becomes visible.
+// 4) Give that transform to a repeating pattern and fill the projected triangle
+//    with it.
 //
 // This is fast and simple, but not perspective-correct:
 // - rotating faces can show stretching / shearing artifacts.
@@ -27,40 +27,84 @@
 // - uvDet is twice the signed area of the UV triangle.
 // - uvDet == 0 means the UV triangle is degenerate, so we skip rendering.
 // -----------------------------------------------------------------------------
+//
+// Step 4 used to be a clip to the triangle followed by one drawImage through the
+// transform, and E4b (COS-245) changed it for two reasons. The first is that it
+// could not tile: a UV outside [0..1] maps the triangle outside the drawn image,
+// so the face comes out blank, and UV SCALE is exactly tiling. The second is the
+// seam it left — clipping antialiases the triangle edge and drawImage
+// antialiases the image edge, and the two attenuate the same pixels twice, which
+// is the crosshatch the cube's 14x14 subdivided faces have always shown.
+//
+// One instance for the whole surface, not one per triangle, which reverses what
+// E6 chose. That was right while this class held nothing: an empty object per
+// triangle at mesh-build time cost nothing per frame. It holds a pattern cache
+// now, and 8192 copies of a two-entry cache is not a trade. It arrives through
+// TriangleRenderOptions, the seam textures and lighting already use.
+//
+// Nothing here allocates per frame beyond the caller's own request literal. The
+// pattern is cached, and setTransform copies the matrix it is handed rather than
+// keeping it, so one mutable DOMMatrix is rewritten for every triangle in the
+// scene. The screen coordinates arrive as six scalars rather than three Point2D
+// instances for the same reason — in a procedural mode every triangle takes this
+// path, and D8's own arithmetic about the options literal points the same way
+// about the points inside it.
 
 import type { UV } from "@data/types";
-import type Point2D from "@primitives/Point2D";
+import type { TextureSource } from "@textures/TextureRegistry";
 
-// Flat rather than two nested triples: this literal is built once per textured
-// triangle per frame, and one object costs less than one object holding two
-// fresh arrays.
+// Flat, and one object per textured triangle per frame — which D8 settled is
+// cheaper than the positional form's two fresh tuples, and cheaper still now
+// that the three Point2D instances have gone with them.
 export interface AffineDrawRequest {
   context: CanvasRenderingContext2D;
-  a: Point2D;
-  b: Point2D;
-  c: Point2D;
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
+  cx: number;
+  cy: number;
   uva: UV;
   uvb: UV;
   uvc: UV;
-  image: HTMLImageElement;
+  // The key as well as the source: the cache is keyed by name rather than by
+  // identity because the procedural canvases are repainted in place and stay the
+  // same two objects for the life of the console.
+  key: string;
+  image: TextureSource;
+  uvScale: number;
 }
 
 class AffineTextureMapper {
-  // Opens exactly one save/restore pair, after the degenerate-UV exit and closed
-  // before the return, so this leaves the canvas exactly as it found it.
-  // `setTransform` REPLACES the current transform rather than multiplying into
-  // it, which is why that restore is not optional: without it the next triangle
-  // inherits this one's texture-space basis and the whole mesh comes out
-  // skewed. The caller's own save is a separate, outer pair and stays the
-  // caller's — taking it over here would let its globalAlpha leak.
+  private readonly patterns: Map<string, CanvasPattern>;
+  private readonly transform: DOMMatrix;
+
+  constructor() {
+    this.patterns = new Map();
+    this.transform = new DOMMatrix();
+  }
+
+  // createPattern takes a COPY of its source, so a pattern built from a
+  // procedural canvas goes on painting the colour that canvas held when it was
+  // built. ProceduralTextures repaints in place, which means the swatch that
+  // repaints it has to call this — it is the one moment a cached pattern can be
+  // wrong, and nothing about the frame says so.
+  public invalidate() {
+    this.patterns.clear();
+  }
+
   public draw(request: AffineDrawRequest): boolean {
-    const { context, a, b, c, image } = request;
+    const { context } = request;
     const [u1, v1] = request.uva;
     const [u2, v2] = request.uvb;
     const [u3, v3] = request.uvc;
 
-    const w = image.width;
-    const h = image.height;
+    // The scale rides in the texture's dimensions rather than being applied to
+    // the UVs, which is the same multiply written once instead of six times: a
+    // face spanning one unit of UV now covers uvScale tiles of a pattern that
+    // repeats every image.width pixels.
+    const w = request.image.width * request.uvScale;
+    const h = request.image.height * request.uvScale;
 
     // UV in pixels
     const x1 = u1 * w,
@@ -76,33 +120,63 @@ class AffineTextureMapper {
       return false;
     }
 
-    const m11 = (a.x * (y2 - y3) + b.x * (y3 - y1) + c.x * (y1 - y2)) / uvDet;
-    const m12 = (a.y * (y2 - y3) + b.y * (y3 - y1) + c.y * (y1 - y2)) / uvDet;
+    const pattern = this.patternFor(context, request.key, request.image);
+    if (!pattern) {
+      return false;
+    }
 
-    const m21 = (a.x * (x3 - x2) + b.x * (x1 - x3) + c.x * (x2 - x1)) / uvDet;
-    const m22 = (a.y * (x3 - x2) + b.y * (x1 - x3) + c.y * (x2 - x1)) / uvDet;
+    const m11 = (request.ax * (y2 - y3) + request.bx * (y3 - y1) + request.cx * (y1 - y2)) / uvDet;
+    const m12 = (request.ay * (y2 - y3) + request.by * (y3 - y1) + request.cy * (y1 - y2)) / uvDet;
 
-    const dx = (a.x * (x2 * y3 - x3 * y2) + b.x * (x3 * y1 - x1 * y3) + c.x * (x1 * y2 - x2 * y1)) / uvDet;
+    const m21 = (request.ax * (x3 - x2) + request.bx * (x1 - x3) + request.cx * (x2 - x1)) / uvDet;
+    const m22 = (request.ay * (x3 - x2) + request.by * (x1 - x3) + request.cy * (x2 - x1)) / uvDet;
 
-    const dy = (a.y * (x2 * y3 - x3 * y2) + b.y * (x3 * y1 - x1 * y3) + c.y * (x1 * y2 - x2 * y1)) / uvDet;
+    const dx =
+      (request.ax * (x2 * y3 - x3 * y2) + request.bx * (x3 * y1 - x1 * y3) + request.cx * (x1 * y2 - x2 * y1)) / uvDet;
 
-    context.save();
+    const dy =
+      (request.ay * (x2 * y3 - x3 * y2) + request.by * (x3 * y1 - x1 * y3) + request.cy * (x1 * y2 - x2 * y1)) / uvDet;
 
-    // clip triangle in screen space
+    this.transform.a = m11;
+    this.transform.b = m12;
+    this.transform.c = m21;
+    this.transform.d = m22;
+    this.transform.e = dx;
+    this.transform.f = dy;
+    pattern.setTransform(this.transform);
+
+    // No save/restore and no context transform: the pattern carries the
+    // texture-space basis, so the path below is traced in the screen
+    // coordinates the caller already holds and the canvas is left exactly as it
+    // was found. That is what lets the key light's wash trace the same three
+    // points straight afterwards.
+    context.fillStyle = pattern;
     context.beginPath();
-    context.moveTo(a.x, a.y);
-    context.lineTo(b.x, b.y);
-    context.lineTo(c.x, c.y);
+    context.moveTo(request.ax, request.ay);
+    context.lineTo(request.bx, request.by);
+    context.lineTo(request.cx, request.cy);
     context.closePath();
-    context.clip();
-
-    // apply transform and draw image in UV space
-    context.setTransform(m11, m12, m21, m22, dx, dy);
-    context.drawImage(image, 0, 0);
-
-    context.restore();
+    context.fill();
 
     return true;
+  }
+
+  private patternFor(context: CanvasRenderingContext2D, key: string, image: TextureSource): CanvasPattern | null {
+    const cached = this.patterns.get(key);
+
+    if (cached) {
+      return cached;
+    }
+
+    // Null for a source with no decoded pixels yet. Returning it rather than
+    // caching it is what lets the next frame try again once the bitmap lands.
+    const built = context.createPattern(image, "repeat");
+
+    if (built) {
+      this.patterns.set(key, built);
+    }
+
+    return built;
   }
 }
 

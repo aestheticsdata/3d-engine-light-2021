@@ -18,14 +18,13 @@
 // what comes out of here.
 
 import { formatRgba, multiplyColor, parseCssColor } from "@rendering/cssColor";
-import { isTextureKey } from "@textures/textureKeys";
+import { CHECKER_KEY, isTextureKey, UV_GRID_KEY } from "@textures/textureKeys";
 
 import type { RGBA } from "@rendering/cssColor";
 
-// `checker` and `uvGrid` are declared but resolve as `authored` until E4b builds
-// the generators behind them, which is exactly what their chips promise: they
-// store the choice and change nothing. Declaring them now is what keeps the two
-// tickets from disagreeing about the vocabulary.
+// The two procedural members are spelled with the same strings as the texture
+// keys ProceduralTextures registers, and the branch below returns the mode
+// itself as the key. One vocabulary for the chip, the resolver and the registry.
 export type TextureMode = "authored" | "checker" | "uvGrid" | "solid";
 
 export interface MeshMaterial {
@@ -34,8 +33,9 @@ export interface MeshMaterial {
   // the palette and hands over what it resolved, so the engine never has to
   // know that a colour called "green" exists.
   baseColor: string;
-  // Nothing reads this yet — the tiling it scales is E4b's. It is declared here
-  // rather than added later so the model does not change shape twice.
+  // How many copies of a procedural texture cross one unit of UV. Read only in
+  // the two procedural modes — see ResolvedMaterial.uvScale below for why it
+  // cannot be read in the other two.
   uvScale: number;
 }
 
@@ -57,6 +57,14 @@ export interface ResolvedMaterial {
   fill: string;
   rgba: RGBA | null;
   textureKey: string | null;
+  // The tiling this triangle's texture is sampled at, resolved rather than read
+  // off the mesh material — which is what makes UV SCALE inert outside the two
+  // procedural modes. It has to be: the row ships at 8, and a scale that applied
+  // in AUTHORED would open the console on the cube wearing sixty-four dogs. In
+  // the procedural modes it applies to the cube's authored coordinates and to
+  // the nineteen generated sets alike, so one shape does not tile at two
+  // densities.
+  uvScale: number;
 }
 
 // White, as a literal rather than through --color-swatch-white: this is the
@@ -70,6 +78,11 @@ export const DEFAULT_MESH_MATERIAL: MeshMaterial = Object.freeze({
   uvScale: 8,
 });
 
+// One copy of the texture across one unit of UV, which is what the affine solve
+// did before a scale existed and is therefore what every non-procedural mode has
+// to keep resolving to.
+const UNSCALED = 1;
+
 export const classifyMaterial = (slot: string): AuthoredMaterial =>
   isTextureKey(slot) ? { kind: "texture", key: slot } : { kind: "color", css: slot, rgba: parseCssColor(slot) };
 
@@ -80,11 +93,25 @@ export const resolveMaterial = (authored: AuthoredMaterial, material: MeshMateri
   // return its channels beside it.
   const base = parseCssColor(material.baseColor);
 
+  // The two generated textures override the authored slot for the same reason
+  // SOLID does, and completely: every triangle samples the same texture, the
+  // cube's two bitmap faces included. A mode that left the dog showing would not
+  // be a checker on the cube, it would be a checker on four sixths of it.
+  //
+  // The fill beside the key is the base colour rather than the key string, and
+  // unlike the authored-texture branch below it is genuinely reachable: it is
+  // what a face falls back to when its UV triangle turns out degenerate, which
+  // the spherical projection can produce on any solid with two vertices on one
+  // ray. Carrying the channels means that face is still lit rather than flat.
+  if (material.mode === CHECKER_KEY || material.mode === UV_GRID_KEY) {
+    return { fill: material.baseColor, rgba: base, textureKey: material.mode, uvScale: material.uvScale };
+  }
+
   // SOLID is the one mode that ignores the authored slot entirely, textures
   // included: every triangle becomes the base colour, which is what makes it the
   // mode for looking at a shape's geometry rather than its surface.
   if (material.mode === "solid") {
-    return { fill: material.baseColor, rgba: base, textureKey: null };
+    return { fill: material.baseColor, rgba: base, textureKey: null, uvScale: UNSCALED };
   }
 
   if (authored.kind === "texture") {
@@ -92,17 +119,17 @@ export const resolveMaterial = (authored: AuthoredMaterial, material: MeshMateri
     // kept from before this module existed. It is only ever reached by a
     // texture-authored triangle with no UVs, which the registry does not
     // contain, and a loud wrong colour is the right outcome if one appears.
-    return { fill: authored.key, rgba: null, textureKey: authored.key };
+    return { fill: authored.key, rgba: null, textureKey: authored.key, uvScale: UNSCALED };
   }
 
   if (!authored.rgba || !base) {
     // The authored channels survive an unreadable BASE: the blend is what fails
     // there, not the colour, so a shape still lights correctly while the swatch
     // does nothing.
-    return { fill: authored.css, rgba: authored.rgba, textureKey: null };
+    return { fill: authored.css, rgba: authored.rgba, textureKey: null, uvScale: UNSCALED };
   }
 
   const blended = multiplyColor(authored.rgba, base);
 
-  return { fill: formatRgba(blended), rgba: blended, textureKey: null };
+  return { fill: formatRgba(blended), rgba: blended, textureKey: null, uvScale: UNSCALED };
 };

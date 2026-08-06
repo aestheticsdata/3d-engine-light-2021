@@ -14,14 +14,16 @@
 //    - uva/uvb/uvc define the (u,v) texture coordinates for each vertex.
 //
 // UV coordinates:
-// - u and v are normalized in [0..1].
+// - u and v are normalized in [0..1], except where UV SCALE tiles past 1.
 // - (0,0) is the top-left of the texture, (1,1) is the bottom-right.
 // - each triangle vertex (A,B,C) has its own UV (uva, uvb, uvc).
 //
 // Why UVs are optional:
-// - most primitives are still solid colors.
-// - only some objects (like the cube faces) need textures.
-// - keeping UVs optional avoids changing every triangle in the registry.
+// - only the cube's two subdivided faces are AUTHORED with any, and keeping the
+//   slots optional is what avoids changing every triangle in the registry.
+// - at runtime every triangle has them, since E4b: MeshFactory projects a set
+//   for the faces the registry left bare, so a procedural mode has something to
+//   sample on the other nineteen shapes.
 //
 // The affine mapping itself, and the notes explaining it, live with
 // AffineTextureMapper.
@@ -50,12 +52,11 @@
 // cannot reach them either — so a and b and c stay private and the only thing
 // that had to open up was Point3D's x and y.
 
-import Point2D from "@primitives/Point2D";
-import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rendering/material";
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
+import type AffineTextureMapper from "@rendering/AffineTextureMapper";
 import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type TextureRegistry from "@textures/TextureRegistry";
@@ -70,6 +71,9 @@ export interface TriangleRenderOptions {
   // colour, which is exactly what the console looked like before this ticket and
   // is not a frame anyone would look at twice.
   lighting: Lighting;
+  // One for the whole surface (E4b/COS-245), where E6 gave each triangle its
+  // own. It holds a pattern cache now, and a cache per triangle is not a cache.
+  mapper: AffineTextureMapper;
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
@@ -103,17 +107,12 @@ class Triangle {
   // one per triangle per frame.
   private resolved: ResolvedMaterial;
 
-  // optional UVs
+  // Optional in the signature, present in practice: MeshFactory fills these from
+  // the registry tuple where it has them and from the spherical projection where
+  // it does not, so every triangle in every mesh arrives with a set.
   private uva?: UV;
   private uvb?: UV;
   private uvc?: UV;
-
-  // One per triangle rather than one shared instance, which costs an empty
-  // object per triangle at mesh-build time and nothing at all per frame. The
-  // alternatives were a module-scope singleton — the shape this epic is
-  // removing everywhere else — or an eighth constructor argument on a
-  // constructor that has to stay spreadable from a registry tuple.
-  private readonly textureMapper: AffineTextureMapper;
 
   // Positional, and one of the constructors R4 exempts by name: MeshFactory
   // spreads a registry tuple straight into it, and the order of a, b, c is the
@@ -131,7 +130,6 @@ class Triangle {
     this.uva = uva;
     this.uvb = uvb;
     this.uvc = uvc;
-    this.textureMapper = new AffineTextureMapper();
     this.aprojX = 0;
     this.aprojY = 0;
     this.bprojX = 0;
@@ -223,6 +221,13 @@ class Triangle {
   // The raster pass, over one triangle already known to have survived
   // clip-cull: paints it and reports whether anything actually reached the
   // canvas, the same three-way branch render() always had.
+  //
+  // It reports true on every path today, and that is a change rather than an
+  // oversight (E4b/COS-245): the one branch that could fail was the textured
+  // one, and a failed texture now falls back to the flat fill instead of
+  // leaving the face unpainted. The boolean stays because it is what Mesh
+  // counts drawn triangles and fill rate off, and E3b's second backend has a
+  // real not-drawn state to report through it.
   public fill(context: CanvasRenderingContext2D, options: TriangleRenderOptions): boolean {
     context.save();
     context.globalAlpha = Math.min(1, Math.max(0, options.opacity ?? 1));
@@ -234,41 +239,15 @@ class Triangle {
       return true;
     }
 
-    // The key is resolved, but the bitmap behind it is still looked up at render
-    // time and never snapshotted at mesh-build time: a texture that finishes
-    // decoding after the mesh was built still appears.
-    const key = this.resolved.textureKey;
-    const image = key === null ? undefined : options.textures.get(key);
-
-    if (!image || !this.uva || !this.uvb || !this.uvc) {
-      this.fillFlat(context, options.lighting);
-      context.restore();
-
-      return true;
-    }
-
-    // The one place a Point2D still gets built: AffineTextureMapper's contract
-    // (D8) is a Point2D, not a pair of scalars, and only the textured branch —
-    // a handful of faces in the whole registry, not every triangle every
-    // frame — pays for it.
-    const drawn = this.textureMapper.draw({
-      context,
-      a: new Point2D(this.aprojX, this.aprojY),
-      b: new Point2D(this.bprojX, this.bprojY),
-      c: new Point2D(this.cprojX, this.cprojY),
-      uva: this.uva,
-      uvb: this.uvb,
-      uvc: this.uvc,
-      image,
-    });
-
-    if (drawn) {
+    if (this.drawTexture(context, options)) {
       this.shadeTexture(context, options.lighting);
+    } else {
+      this.fillFlat(context, options.lighting);
     }
 
     context.restore();
 
-    return drawn;
+    return true;
   }
 
   // The fill-rate accounting's own unit of work (E6/COS-239): the projected
@@ -282,6 +261,49 @@ class Triangle {
     const v2y = this.cprojY - this.aprojY;
 
     return Math.abs(v1x * v2y - v1y * v2x) / 2;
+  }
+
+  // False whenever the texture path cannot run, and every one of the four ways
+  // it can fail falls back to the flat fill rather than to nothing: no key, no
+  // decoded bitmap, no UVs, or a UV triangle the affine solve cannot invert.
+  //
+  // That last one is why this is a fallback rather than an early return. The
+  // spherical projection reads a direction and discards the distance, so two
+  // vertices on one ray get identical coordinates — reachable on the cross and
+  // the Menger sponge — and before E4b a face like that was silently not
+  // painted at all. A hole in a solid is worse than a face in its base colour.
+  //
+  // The key is resolved, but the bitmap behind it is still looked up per frame
+  // and never snapshotted at mesh-build time: a texture that finishes decoding
+  // after the mesh was built still appears.
+  private drawTexture(context: CanvasRenderingContext2D, options: TriangleRenderOptions): boolean {
+    const key = this.resolved.textureKey;
+
+    if (key === null || !this.uva || !this.uvb || !this.uvc) {
+      return false;
+    }
+
+    const image = options.textures.get(key);
+
+    if (!image) {
+      return false;
+    }
+
+    return options.mapper.draw({
+      context,
+      ax: this.aprojX,
+      ay: this.aprojY,
+      bx: this.bprojX,
+      by: this.bprojY,
+      cx: this.cprojX,
+      cy: this.cprojY,
+      uva: this.uva,
+      uvb: this.uvb,
+      uvc: this.uvc,
+      key,
+      image,
+      uvScale: this.resolved.uvScale,
+    });
   }
 
   private strokeWireframe(context: CanvasRenderingContext2D) {
@@ -307,8 +329,9 @@ class Triangle {
   // what makes it inherit globalAlpha — a half-transparent face gets a
   // half-transparent wash, which is the answer that composites correctly.
   //
-  // The mapper closes its own transform before returning, so the path traced
-  // here is in the same screen coordinates the fill above uses.
+  // The pattern fill carries the texture-space basis on the pattern rather than
+  // on the context, so the canvas is still in screen coordinates here and this
+  // traces the same three projected points the texture was just filled through.
   private shadeTexture(context: CanvasRenderingContext2D, lighting: Lighting) {
     const wash = lighting.overlayFor(this.a, this.b, this.c);
 

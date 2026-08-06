@@ -1,9 +1,16 @@
 // MATERIAL: how the surface is painted.
 //
-// Three of the four controls are real. OPACITY reaches the rasteriser through
+// All four controls are real. OPACITY reaches the rasteriser through
 // TriangleRenderOptions and has been live since before the refonte; the five
-// swatches and two of the four texture chips became live with E4a. What is left
-// unwired is CHECKER, UV GRID and UV SCALE, which need generators E4b builds.
+// swatches and two of the four texture chips became live with E4a, and E4b
+// generated the two textures behind CHECKER and UV GRID and gave UV SCALE
+// something to tile.
+//
+// UV SCALE does nothing in AUTHORED or SOLID, and that is resolved in
+// resolveMaterial rather than disabled here. The row ships at 8, so a scale that
+// applied to the cube's two bitmap faces would open the console on a wall of
+// dogs — and greying the row out in two of four modes would say the control was
+// unfinished, which is the opposite of what this ticket did to it.
 //
 // The structural reason textures could not be swapped at runtime is gone rather
 // than worked around. Materials are still baked per triangle in
@@ -47,8 +54,6 @@ const OPACITY_MIN = 0;
 const OPACITY_MAX = 100;
 const UV_MIN = 1;
 const UV_MAX = 16;
-const HINT_ID = "ph-shape-material";
-const HINT_TEXT = "Procedural textures and their tiling are not generated yet (de-mock E4b).";
 
 // The design's fourth chip is NO TEXTURE, which in an engine whose shapes ship
 // their own materials would either be a synonym for SOLID or the only state in
@@ -57,11 +62,12 @@ const HINT_TEXT = "Procedural textures and their tiling are not generated yet (d
 //
 // The ids are TextureMode's own values rather than a second vocabulary mapped
 // onto it: one union behind the chip and the branch in resolveMaterial, so
-// neither end can grow a value the other does not have.
-const TEXTURES: { id: TextureMode; label: string; placeholder?: { title: string; describedBy: string } }[] = [
-  { id: "checker", label: "CHECKER", placeholder: { title: HINT_TEXT, describedBy: HINT_ID } },
+// neither end can grow a value the other does not have. Since E4b the two
+// procedural ids are also the keys their textures are registered under.
+const TEXTURES: { id: TextureMode; label: string }[] = [
+  { id: "checker", label: "CHECKER" },
   { id: "solid", label: "SOLID" },
-  { id: "uvGrid", label: "UV GRID", placeholder: { title: HINT_TEXT, describedBy: HINT_ID } },
+  { id: "uvGrid", label: "UV GRID" },
   { id: "authored", label: "AUTHORED" },
 ];
 
@@ -76,6 +82,7 @@ export interface MaterialSectionOptions {
   store: UIStateStore;
   onTexture: (mode: TextureMode) => void;
   onBaseColor: (css: string) => void;
+  onUvScale: (factor: number) => void;
   onOpacity: (sliderValue: number) => void;
 }
 
@@ -124,11 +131,10 @@ class MaterialSection {
       max: UV_MAX,
       value: DEFAULT_UV_SCALE,
       format: (value) => `${value}×`,
-      onInput: (value) => this.store.setState({ uvScale: value }),
-      placeholder: { title: HINT_TEXT, describedBy: HINT_ID },
+      onInput: (value) => this.pickUvScale(value),
     });
 
-    options.root.append(this.opacity.element, this.uvScale.element, this.buildHint());
+    options.root.append(this.opacity.element, this.uvScale.element);
   }
 
   public get opacityRow(): SliderRow {
@@ -144,12 +150,15 @@ class MaterialSection {
     const texture = state.texture ?? DEFAULT_TEXTURE;
     const baseColor = state.baseColor ?? DEFAULT_BASE_COLOR;
 
+    const uvScale = state.uvScale ?? DEFAULT_UV_SCALE;
+
     this.textures.setActive(texture);
     this.setActiveSwatch(baseColor);
-    this.uvScale.setValue(state.uvScale ?? DEFAULT_UV_SCALE);
+    this.uvScale.setValue(uvScale);
 
     this.apply.onTexture(texture);
     this.apply.onBaseColor(this.cssFor(baseColor));
+    this.apply.onUvScale(uvScale);
   }
 
   // Buttons, not divs: a colour is a choice, and a choice has to be reachable
@@ -196,6 +205,13 @@ class MaterialSection {
     this.apply.onBaseColor(this.cssFor(name));
   }
 
+  // No setActive half, unlike the two above: a SliderRow already shows the value
+  // the drag produced, so this only has to store it and push it.
+  private pickUvScale(factor: number) {
+    this.store.setState({ uvScale: factor });
+    this.apply.onUvScale(factor);
+  }
+
   // The palette resolved rather than restated. The swatch already paints
   // var(--color-swatch-<name>), so reading its computed background is what keeps
   // colors.css the one place the five colours are written down — the engine gets
@@ -217,16 +233,6 @@ class MaterialSection {
       swatch.classList.toggle("is-active", active);
       swatch.setAttribute("aria-pressed", String(active));
     });
-  }
-
-  private buildHint(): HTMLElement {
-    const hint = document.createElement("span");
-
-    hint.className = "placeholder-hint";
-    hint.id = HINT_ID;
-    hint.textContent = HINT_TEXT;
-
-    return hint;
   }
 }
 

@@ -26,6 +26,7 @@ export interface ShapeTabOptions {
   onScale: (factor: number) => void;
   onTexture: (mode: TextureMode) => void;
   onBaseColor: (css: string) => void;
+  onUvScale: (factor: number) => void;
   onOpacity: (sliderValue: number) => void;
 }
 
@@ -59,6 +60,7 @@ class ShapeTab {
       store: options.store,
       onTexture: options.onTexture,
       onBaseColor: options.onBaseColor,
+      onUvScale: options.onUvScale,
       onOpacity: options.onOpacity,
     });
   }

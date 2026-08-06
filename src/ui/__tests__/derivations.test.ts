@@ -17,6 +17,8 @@ import type { Object3D } from "@data/types";
 
 const AUTHORED = DEFAULT_MESH_MATERIAL;
 const SOLID = { ...DEFAULT_MESH_MATERIAL, mode: "solid" as const };
+const CHECKER = { ...DEFAULT_MESH_MATERIAL, mode: "checker" as const };
+const UV_GRID = { ...DEFAULT_MESH_MATERIAL, mode: "uvGrid" as const };
 
 describe("MaterialSummary", () => {
   it("reads the cube as textured and the pyramid as solid", () => {
@@ -44,6 +46,23 @@ describe("MaterialSummary", () => {
 
   it("returns to the authored answer when the mode does", () => {
     expect(new MaterialSummary(cube, AUTHORED).label).toBe("TEXTURED");
+  });
+
+  // The two words the console could not say until E4b generated the textures
+  // behind them. They are a property of the material, not of the shape, so the
+  // pyramid — which authors no texture at all — reports them too.
+  it("names the generated texture in the two procedural modes, on any shape", () => {
+    expect(new MaterialSummary(cube, CHECKER).label).toBe("CHECKER");
+    expect(new MaterialSummary(pyramid, CHECKER).label).toBe("CHECKER");
+    expect(new MaterialSummary(pyramid, UV_GRID).label).toBe("UV GRID");
+  });
+
+  // SHAPE INFO prints the key list rather than the label, so the two have to
+  // agree: a mesh the bar calls CHECKER samples exactly one texture, and it is
+  // not the two the cube authored.
+  it("lists the generated key alone, replacing the ones the shape authored", () => {
+    expect(new MaterialSummary(cube, CHECKER).textureKeys).toEqual(["checker"]);
+    expect(new MaterialSummary(cube, UV_GRID).textureKeys).toEqual(["uvGrid"]);
   });
 
   // The whole reason this is a class: one pipeline behind both readings, and a
