@@ -1,81 +1,81 @@
-// The turntable's own contract: one smooth tumble about a fixed axis.
-//
-// This suite exists because the opposite shipped once. Growing three Euler
-// angles linearly and recomposing them every frame looks like a tumble in a
-// screenshot and is not one in motion — the effective axis wanders as the
-// angles grow, so the solid turns one way, then another, then another. The
-// assertion that separates the two is that the accumulated rotation's own angle
-// grows linearly with time, which is true of a fixed-axis rotation and false of
-// an Euler sweep.
+// The camera's own contract: the readout describes the viewpoint and nothing
+// else, and the mesh matrix is the view composed with whatever the shape is
+// doing. The turntable that used to live here moved to ShapeRig with COS-434,
+// and its cases went with it.
 
 import CameraRig from "@camera/CameraRig";
 import { describe, expect, it } from "vitest";
 
-// Rodrigues, backwards: the rotation angle of an orthonormal 3x3 satisfies
-// trace = 1 + 2cos(theta). Clamped because accumulated float error can push the
-// argument a hair outside acos's domain.
-const rotationAngleDegrees = (matrix: number[][]): number => {
-  const trace = matrix[0][0] + matrix[1][1] + matrix[2][2];
-  const cosine = Math.min(1, Math.max(-1, (trace - 1) / 2));
+const IDENTITY = [
+  [1, 0, 0, 0],
+  [0, 1, 0, 0],
+  [0, 0, 1, 0],
+  [0, 0, 0, 1],
+];
 
-  return (Math.acos(cosine) * 180) / Math.PI;
-};
-
-const spinFor = (seconds: number, steps: number, rate: number): number[][] => {
-  const rig = new CameraRig();
-
-  rig.setAngles({ pitch: 0, yaw: 0, roll: 0, spinRate: rate });
-
-  for (let step = 0; step < steps; step++) {
-    rig.advance(seconds / steps);
-  }
-
-  return rig.meshMatrix();
-};
-
-describe("CameraRig turntable", () => {
-  it("sweeps a constant angle per unit time, rather than wandering as Euler angles would", () => {
-    const rate = 122;
-    // Kept well under a half turn so acos stays on its monotonic branch and the
-    // comparison is about the motion rather than about wrapping.
-    const quarter = rotationAngleDegrees(spinFor(0.25, 25, rate));
-    const half = rotationAngleDegrees(spinFor(0.5, 50, rate));
-    const threeQuarters = rotationAngleDegrees(spinFor(0.75, 75, rate));
-
-    expect(half / quarter).toBeCloseTo(2, 2);
-    expect(threeQuarters / quarter).toBeCloseTo(3, 2);
-  });
-
-  it("lands on the same attitude however finely the same interval is stepped", () => {
-    const coarse = spinFor(0.5, 5, 122);
-    const fine = spinFor(0.5, 500, 122);
-
-    // A fixed-axis accumulation is exact under subdivision: R(a)R(b) = R(a+b)
-    // about one axis. This is what makes the tumble frame-rate independent, so
-    // the RENDER tab's 30fps cap cannot change where the shape ends up.
-    for (let row = 0; row < 3; row++) {
-      for (let column = 0; column < 3; column++) {
-        expect(fine[row][column]).toBeCloseTo(coarse[row][column], 6);
-      }
-    }
-  });
-
-  it("keeps the spin out of the camera readout, which describes the viewpoint alone", () => {
+describe("CameraRig readout", () => {
+  it("reports the angles it was given, normalised into (-180, 180]", () => {
     const rig = new CameraRig();
 
-    rig.setAngles({ pitch: 30, yaw: 45, roll: 0, spinRate: 122 });
-    rig.advance(1);
+    rig.setAngles({ pitch: 30, yaw: 45, roll: 0 });
 
     expect(rig.angles()).toEqual({ pitch: 30, yaw: 45, roll: 0 });
   });
 
-  it("returns to a clean identity spin on reset, so a paused console is not left mid-tumble", () => {
+  it("prints BACK as 180, not -180, so the readout matches the chip that set it", () => {
     const rig = new CameraRig();
 
-    rig.setAngles({ spinRate: 122 });
-    rig.advance(1.37);
-    rig.reset();
+    rig.setAngles({ yaw: 180 });
 
-    expect(rotationAngleDegrees(rig.meshMatrix())).toBeCloseTo(0, 6);
+    expect(rig.angles().yaw).toBe(180);
+  });
+});
+
+describe("CameraRig mesh matrix", () => {
+  it("is the view alone while the shape rests, which is what keeps the opening frame where it was", () => {
+    const rig = new CameraRig();
+
+    rig.setAngles({ pitch: 30, yaw: 45, roll: 0 });
+
+    const view = rig.viewMatrix();
+    const mesh = rig.meshMatrix(IDENTITY);
+
+    for (let row = 0; row < 4; row++) {
+      for (let column = 0; column < 4; column++) {
+        expect(mesh[row][column]).toBeCloseTo(view[row][column], 12);
+      }
+    }
+  });
+
+  it("puts the camera on the left, so the shape's own attitude is applied first", () => {
+    const rig = new CameraRig();
+    // A quarter turn about yaw, as an object matrix the camera has to apply
+    // before its own rotation rather than after it.
+    const quarterYaw = [
+      [0, 0, 1, 0],
+      [0, 1, 0, 0],
+      [-1, 0, 0, 0],
+      [0, 0, 0, 1],
+    ];
+
+    rig.setAngles({ pitch: 30, yaw: 45, roll: 0 });
+
+    const view = rig.viewMatrix();
+    const mesh = rig.meshMatrix(quarterYaw);
+
+    // C · O, computed here by hand: if the two were composed the other way the
+    // product would differ, because rotations about different axes do not
+    // commute.
+    for (let row = 0; row < 4; row++) {
+      for (let column = 0; column < 4; column++) {
+        const expected =
+          view[row][0] * quarterYaw[0][column] +
+          view[row][1] * quarterYaw[1][column] +
+          view[row][2] * quarterYaw[2][column] +
+          view[row][3] * quarterYaw[3][column];
+
+        expect(mesh[row][column]).toBeCloseTo(expected, 12);
+      }
+    }
   });
 });

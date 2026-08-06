@@ -1,8 +1,14 @@
 // TRANSFORM: the five rows that orient and spin the shape.
 //
-// Four are real and one is not. PITCH / YAW / ROLL are absolute degrees written
-// straight into the camera rig; SPIN is degrees per second on the same rig;
+// Four are real and one is not. PITCH / YAW / ROLL are the mesh's own absolute
+// degrees, written into ShapeRig; SPIN is degrees per second on the same rig;
 // SCALE has nothing behind it and says so.
+//
+// All four really are the shape's, which they had not been since E1a: that
+// ticket pointed the three angle rows at the camera because the rig had just
+// been built and they were the only way to move the viewpoint, and E1b then gave
+// the camera a mouse without anyone revisiting them (COS-434). The camera has
+// ELEV / AZIM / ROLL of its own in the WORLD tab now.
 //
 // The three angle rows carry a `°` suffix, which supersedes the rule the UI epic
 // shipped them under. That rule was right at the time: they were per-frame
@@ -13,25 +19,14 @@
 
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
-import type { EulerDegrees } from "@camera/CameraRig";
 import type UIStateStore from "@ui/UIStateStore";
 
-// ISO's own angles, so a shape arrives at a three-quarter view and RESET lands
-// on a preset the user can leave and click straight back to.
-//
-// Zero was tried first and is wrong. The rates these replaced (pitch 400, yaw
-// 400, roll 200 in engine space) were off-centre on all three axes precisely so
-// the shape would never be seen flat, and a turntable on yaw alone does not
-// reproduce that: pitch and roll stay at zero for the whole session, so the eye
-// sits in the object's equatorial plane and a cube is a square at the moment it
-// arrives. The spin sweeps the yaw away within seconds, which is fine — it is
-// the arrival that has to be oblique, and pitch is what keeps it that way.
-//
-// Roll stays at zero. It is the one axis with no second source: yaw has SPIN
-// and pitch has the presets, so a canted horizon here would be a permanent tilt
-// nothing else in the console ever expresses.
-export const DEFAULT_PITCH_DEGREES = 30;
-export const DEFAULT_YAW_DEGREES = 45;
+// The mesh opens in its authored rest pose, so all three are zero. The oblique
+// arrival the console needs is the camera's job and the camera's defaults own
+// it; a shape pre-posed here would be a rotation nothing in the registry asked
+// for, applied to all twenty primitives at once.
+export const DEFAULT_PITCH_DEGREES = 0;
+export const DEFAULT_YAW_DEGREES = 0;
 export const DEFAULT_ROLL_DEGREES = 0;
 // The yaw rate the per-frame sliders really ran at: 122 °/s, a three-second
 // revolution, with pitch and roll following in the rig's own proportions. 24
@@ -40,11 +35,11 @@ export const DEFAULT_ROLL_DEGREES = 0;
 export const DEFAULT_SPIN_DEGREES_PER_SECOND = 122;
 export const DEFAULT_SCALE = 100;
 
-// Pitch stops short of the pole because the rig is a turntable: roll is its own
-// axis, so there is nothing a ±90 pitch offers except a flip.
-const PITCH_LIMIT = 89;
-const YAW_LIMIT = 180;
-const ROLL_LIMIT = 180;
+// A full half-turn on all three. The ±89 the pitch row used to carry was the
+// camera's constraint — a turntable has a roll axis and nothing to gain from a
+// pole flip — and the shape inherited it by accident when these rows were
+// pointed at the viewpoint. A mesh has no pole.
+const ANGLE_LIMIT = 180;
 const SPIN_MIN = 0;
 // Twice the default, so the row's own default sits mid-track and there is
 // headroom above the rate the rig shipped with rather than a ceiling under it.
@@ -85,15 +80,15 @@ class TransformSection {
       scale: DEFAULT_SCALE,
     });
 
-    this.pitch = this.buildAngle("PITCH", PITCH_LIMIT, DEFAULT_PITCH_DEGREES, (value) => {
+    this.pitch = this.buildAngle("PITCH", ANGLE_LIMIT, DEFAULT_PITCH_DEGREES, (value) => {
       this.store.setState({ pitch: value });
       options.onPitch(value);
     });
-    this.yaw = this.buildAngle("YAW", YAW_LIMIT, DEFAULT_YAW_DEGREES, (value) => {
+    this.yaw = this.buildAngle("YAW", ANGLE_LIMIT, DEFAULT_YAW_DEGREES, (value) => {
       this.store.setState({ yaw: value });
       options.onYaw(value);
     });
-    this.roll = this.buildAngle("ROLL", ROLL_LIMIT, DEFAULT_ROLL_DEGREES, (value) => {
+    this.roll = this.buildAngle("ROLL", ANGLE_LIMIT, DEFAULT_ROLL_DEGREES, (value) => {
       this.store.setState({ roll: value });
       options.onRoll(value);
     });
@@ -134,29 +129,16 @@ class TransformSection {
     );
   }
 
-  // The other direction: the rig moved on its own — a preset today, a drag once
-  // E1b lands — and the three rows follow it. Deliberately does not call back
-  // into the rig, which already holds these values; a round trip here is how a
-  // preset ends up fighting the ease that is writing it.
-  //
-  // Rounded because the rows are integer-stepped: the thumb would snap while the
-  // read-out printed the raw float, which is two surfaces disagreeing about one
-  // number in a space of about four pixels.
-  public setAngleUi(angles: EulerDegrees) {
-    const pitch = Math.round(angles.pitch);
-    const yaw = Math.round(angles.yaw);
-    const roll = Math.round(angles.roll);
-
-    this.pitch.setValue(pitch);
-    this.yaw.setValue(yaw);
-    this.roll.setValue(roll);
-    this.store.setState({ pitch, yaw, roll });
-  }
-
   // Writes the store's values into the rows AND pushes them to the rig. Both
   // halves matter: this is the RESET path, and a reset that moved the sliders
-  // without moving the camera would leave the two disagreeing until the next
+  // without moving the shape would leave the two disagreeing until the next
   // drag.
+  //
+  // There is no write-back in the other direction any more, and its absence is
+  // the point: nothing moves the shape except these rows, so the hazard the
+  // deleted half existed to manage — a preset easing the same number a thumb is
+  // dragging — cannot arise on this side at all. It survives once, on the
+  // camera, as CameraSection.setCameraUi.
   public syncFromStore() {
     const state = this.store.getState();
     const pitch = state.pitch ?? DEFAULT_PITCH_DEGREES;
@@ -179,7 +161,7 @@ class TransformSection {
   // Symmetric about zero, which is what a range input can express and the old
   // engine-space bounds could not: neutral was 320 of 0..800 for pitch, 512 for
   // yaw and 0 of -1000..1200 for roll, a different fraction of the track on each
-  // of the three.
+  // of the three. All three share one limit now, so all three sit mid-track.
   private buildAngle(label: string, limit: number, value: number, onInput: (value: number) => void): SliderRow {
     return new SliderRow({
       label,
