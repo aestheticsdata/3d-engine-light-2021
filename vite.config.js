@@ -25,6 +25,7 @@ export default defineConfig({
       "@input": path.resolve(__dirname, "src/input"),
       "@textures": path.resolve(__dirname, "src/textures"),
       "@rendering": path.resolve(__dirname, "src/rendering"),
+      "@scene": path.resolve(__dirname, "src/scene"),
       "@ui": path.resolve(__dirname, "src/ui"),
     },
   },

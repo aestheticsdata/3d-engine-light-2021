@@ -18,6 +18,15 @@
 // not a leftover from when they were inert — the design never draws one
 // selected, because a preset is a one-shot write and not a mode the camera stays
 // in. The first drag after one leaves the viewpoint somewhere no chip names.
+//
+// ELEV / AZIM / ROLL joined them with COS-434, and the naming is deliberate. The
+// rows name what the user does — elevation above the horizon, azimuth around it
+// — and the engine goes on calling all three Euler angles, because that is what
+// they are: EulerDegrees, cam.rot, CameraWidget and the preset table are all
+// untouched, and the translation happens here and nowhere else. Do not "fix" the
+// inconsistency by renaming EulerDegrees. The shape has its own PITCH / YAW /
+// ROLL one tab over, and two identically-labelled trios is the thing this
+// avoids.
 
 import { DEFAULT_FOV, DEFAULT_ZOOM_SLIDER_VALUE } from "@app/CameraController";
 import viewPresets from "@camera/viewPresets";
@@ -25,12 +34,39 @@ import DOMScope from "@ui/DOMScope";
 import ChipGrid from "@ui/inspector/controls/ChipGrid";
 import SliderRow from "@ui/inspector/controls/SliderRow";
 
+import type { EulerDegrees } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
 import type { ProjectionMode } from "@primitives/Camera";
 import type UIStateStore from "@ui/UIStateStore";
 
 export const DEFAULT_PROJECTION: ProjectionMode = "PERSPECTIVE";
 
+// ISO's own angles, so a shape arrives at a three-quarter view and RESET lands
+// on a preset the user can leave and click straight back to.
+//
+// Zero was tried first and is wrong. The per-frame rates these replaced (pitch
+// 400, yaw 400, roll 200 in engine space) were off-centre on all three axes
+// precisely so the shape would never be seen flat, and a turntable on azimuth
+// alone does not reproduce that: elevation and roll would sit at zero for the
+// whole session, so the eye stays in the object's equatorial plane and a cube is
+// a square at the moment it arrives.
+//
+// It is forced as well as chosen. BackgroundRenderer draws the ground through
+// the same view matrix, so a camera resting at elevation 0 would put the floor
+// edge-on.
+//
+// Roll stays at zero. It is the one axis with no second source: elevation has
+// the presets behind it and azimuth has them too, so a canted horizon here would
+// be a permanent tilt nothing else in the console ever expresses.
+export const DEFAULT_CAM_ELEV_DEGREES = 30;
+export const DEFAULT_CAM_AZIM_DEGREES = 45;
+export const DEFAULT_CAM_ROLL_DEGREES = 0;
+
+// Elevation stops short of the pole because the rig is a turntable: roll is its
+// own axis, so there is nothing a ±90 offers except a flip.
+const ELEV_LIMIT = 89;
+const AZIM_LIMIT = 180;
+const CAM_ROLL_LIMIT = 180;
 const FOV_MIN = 15;
 const FOV_MAX = 120;
 const ZOOM_MIN = 0;
@@ -50,12 +86,18 @@ export interface CameraSectionOptions {
   onZoom: (sliderValue: number) => void;
   onProjection: (mode: ProjectionMode) => void;
   onViewPreset: (key: ViewPresetKey) => void;
+  onElev: (degrees: number) => void;
+  onAzim: (degrees: number) => void;
+  onCamRoll: (degrees: number) => void;
 }
 
 class CameraSection {
   private readonly store: UIStateStore;
   private readonly apply: CameraSectionOptions;
   private readonly projectionGrid: ChipGrid;
+  private readonly elev: SliderRow;
+  private readonly azim: SliderRow;
+  private readonly camRoll: SliderRow;
   private readonly fov: SliderRow;
   private readonly zoom: SliderRow;
 
@@ -69,6 +111,9 @@ class CameraSection {
       fov: DEFAULT_FOV,
       zoom: DEFAULT_ZOOM_SLIDER_VALUE,
       projection: DEFAULT_PROJECTION,
+      camElev: DEFAULT_CAM_ELEV_DEGREES,
+      camAzim: DEFAULT_CAM_AZIM_DEGREES,
+      camRoll: DEFAULT_CAM_ROLL_DEGREES,
     });
 
     const viewGrid = new ChipGrid({
@@ -92,6 +137,19 @@ class CameraSection {
     });
     this.projectionGrid.setChips(PROJECTIONS.map((key) => ({ id: key, label: key })));
     this.projectionGrid.setActive(DEFAULT_PROJECTION);
+
+    this.elev = this.buildAngle("ELEV", ELEV_LIMIT, DEFAULT_CAM_ELEV_DEGREES, (value) => {
+      this.store.setState({ camElev: value });
+      options.onElev(value);
+    });
+    this.azim = this.buildAngle("AZIM", AZIM_LIMIT, DEFAULT_CAM_AZIM_DEGREES, (value) => {
+      this.store.setState({ camAzim: value });
+      options.onAzim(value);
+    });
+    this.camRoll = this.buildAngle("ROLL", CAM_ROLL_LIMIT, DEFAULT_CAM_ROLL_DEGREES, (value) => {
+      this.store.setState({ camRoll: value });
+      options.onCamRoll(value);
+    });
 
     this.fov = new SliderRow({
       label: "FOV",
@@ -117,7 +175,10 @@ class CameraSection {
       },
     });
 
-    rows.append(this.fov.element, this.zoom.element);
+    // Orientation above the lens: where the camera is pointing is the thing a
+    // preset chip just changed, and the two rows that describe the lens do not
+    // move when one is pressed.
+    rows.append(this.elev.element, this.azim.element, this.camRoll.element, this.fov.element, this.zoom.element);
   }
 
   // Writes the store's values into the rows AND pushes them to the camera. Both
@@ -131,21 +192,29 @@ class CameraSection {
     const fov = state.fov ?? DEFAULT_FOV;
     const zoom = state.zoom ?? DEFAULT_ZOOM_SLIDER_VALUE;
     const projection = state.projection ?? DEFAULT_PROJECTION;
+    const elev = state.camElev ?? DEFAULT_CAM_ELEV_DEGREES;
+    const azim = state.camAzim ?? DEFAULT_CAM_AZIM_DEGREES;
+    const roll = state.camRoll ?? DEFAULT_CAM_ROLL_DEGREES;
 
     this.fov.setValue(fov);
     this.zoom.setValue(zoom);
     this.projectionGrid.setActive(projection);
+    this.elev.setValue(elev);
+    this.azim.setValue(azim);
+    this.camRoll.setValue(roll);
 
     this.apply.onFov(fov);
     this.apply.onZoom(zoom);
     this.apply.onProjection(projection);
+    this.apply.onElev(elev);
+    this.apply.onAzim(azim);
+    this.apply.onCamRoll(roll);
   }
 
-  // Mirrors TransformSection.setAngleUi: writes the row and the store but
-  // deliberately does not call options.onZoom — a pointer gesture already
-  // applied its own value to the camera before reaching here, and a second
-  // call would fight it exactly the way setAngleUi's own comment warns a
-  // preset would fight onPitch/onYaw/onRoll.
+  // Writes the row and the store but deliberately does not call options.onZoom —
+  // a pointer gesture already applied its own value to the camera before
+  // reaching here, and a second call would fight it exactly the way setCameraUi
+  // below would fight an ease it called back into.
   public setZoomUi(value: number) {
     const rounded = Math.round(value);
 
@@ -153,10 +222,42 @@ class CameraSection {
     this.store.setState({ zoom: rounded });
   }
 
+  // The other direction: the rig moved on its own — a preset, a drag, a
+  // double-tap — and the three rows follow it. Same contract as setZoomUi in the
+  // half that matters: it deliberately does not call back into the rig, which
+  // already holds these values. A round trip here is how a preset ends up
+  // fighting the ease that is writing it.
+  //
+  // Rounded because the rows are integer-stepped: the thumb would snap while the
+  // read-out printed the raw float, which is two surfaces disagreeing about one
+  // number in a space of about four pixels.
+  public setCameraUi(angles: EulerDegrees) {
+    const elev = Math.round(angles.pitch);
+    const azim = Math.round(angles.yaw);
+    const roll = Math.round(angles.roll);
+
+    this.elev.setValue(elev);
+    this.azim.setValue(azim);
+    this.camRoll.setValue(roll);
+    this.store.setState({ camElev: elev, camAzim: azim, camRoll: roll });
+  }
+
   private pickProjection(mode: ProjectionMode) {
     this.projectionGrid.setActive(mode);
     this.store.setState({ projection: mode });
     this.apply.onProjection(mode);
+  }
+
+  // Symmetric about zero, which is what a range input can express.
+  private buildAngle(label: string, limit: number, value: number, onInput: (value: number) => void): SliderRow {
+    return new SliderRow({
+      label,
+      min: -limit,
+      max: limit,
+      value,
+      format: (degrees) => `${degrees}°`,
+      onInput,
+    });
   }
 }
 

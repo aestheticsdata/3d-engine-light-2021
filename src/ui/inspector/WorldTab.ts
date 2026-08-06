@@ -10,6 +10,7 @@
 import CameraSection from "@ui/inspector/CameraSection";
 import EnvironmentSection from "@ui/inspector/EnvironmentSection";
 
+import type { EulerDegrees } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
 import type { ProjectionMode } from "@primitives/Camera";
 import type UIStateStore from "@ui/UIStateStore";
@@ -20,6 +21,9 @@ export interface WorldTabOptions {
   onZoom: (sliderValue: number) => void;
   onProjection: (mode: ProjectionMode) => void;
   onViewPreset: (key: ViewPresetKey) => void;
+  onElev: (degrees: number) => void;
+  onAzim: (degrees: number) => void;
+  onCamRoll: (degrees: number) => void;
   onLayersChange: () => void;
 }
 
@@ -37,6 +41,9 @@ class WorldTab {
       onZoom: options.onZoom,
       onProjection: options.onProjection,
       onViewPreset: options.onViewPreset,
+      onElev: options.onElev,
+      onAzim: options.onAzim,
+      onCamRoll: options.onCamRoll,
     });
 
     this.environment = new EnvironmentSection({
@@ -67,6 +74,13 @@ class WorldTab {
   // row and the store need to follow.
   public setZoomUi(value: number) {
     this.camera.setZoomUi(value);
+  }
+
+  // The three orientation rows alone, for a drag, a preset or a double-tap: each
+  // already applied its own angles to the rig before reaching Main, so only the
+  // rows and the store need to follow.
+  public setCameraUi(angles: EulerDegrees) {
+    this.camera.setCameraUi(angles);
   }
 }
 

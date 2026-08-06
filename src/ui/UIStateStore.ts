@@ -46,10 +46,11 @@ export interface UIState {
   drawnTriangles?: number;
 
   // --- SHAPE tab -----------------------------------------------------------
-  // Absolute degrees, written straight into CameraRig — there is no mapping
+  // Absolute degrees, written straight into ShapeRig — there is no mapping
   // between what the row shows and what the engine applies, which is what the
   // rate sliders these replaced needed a whole module for. spin is degrees per
-  // second on the same rig. Registered by TransformSection.
+  // second on the same rig. Registered by TransformSection. The camera's own
+  // three angles are camElev / camAzim / camRoll in the WORLD block below.
   pitch?: number;
   yaw?: number;
   roll?: number;
@@ -104,9 +105,18 @@ export interface UIState {
   //
   // shadow and fog have no engine at all (de-mock E5b, COS-247) and are stored
   // only so the console remembers the choice and RESET can undo it.
+  //
+  // camElev / camAzim / camRoll are the camera's own orientation, in the
+  // vocabulary its rows use: elevation above the horizon and azimuth around it.
+  // Prefixed because the SHAPE tab owns `roll` — one grep for `camRoll` finds
+  // the camera's, and the engine goes on calling all three Euler angles, which
+  // is what they are.
   fov?: number;
   zoom?: number;
   projection?: ProjectionMode;
+  camElev?: number;
+  camAzim?: number;
+  camRoll?: number;
   sky?: boolean;
   floor?: boolean;
   grid?: boolean;

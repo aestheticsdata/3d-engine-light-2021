@@ -21,9 +21,15 @@ import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
 import RenderStats from "@rendering/RenderStats";
+import ShapeRig from "@scene/ShapeRig";
 import dogUrl from "@textures/images/border-collie.jpeg";
 import galaxyUrl from "@textures/images/galaxy.jpeg";
 import TextureRegistry from "@textures/TextureRegistry";
+import {
+  DEFAULT_CAM_AZIM_DEGREES,
+  DEFAULT_CAM_ELEV_DEGREES,
+  DEFAULT_CAM_ROLL_DEGREES,
+} from "@ui/inspector/CameraSection";
 import {
   DEFAULT_FLOOR,
   DEFAULT_FOG,
@@ -35,7 +41,6 @@ import {
 import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
-import { DEFAULT_PITCH_DEGREES, DEFAULT_ROLL_DEGREES, DEFAULT_YAW_DEGREES } from "@ui/inspector/TransformSection";
 import WorldTab from "@ui/inspector/WorldTab";
 import MaterialSummary from "@ui/MaterialSummary";
 import { impliesWireframe } from "@ui/modeLabel";
@@ -57,13 +62,14 @@ import UIStateStore from "@ui/UIStateStore";
 import ViewportHUD from "@ui/ViewportHUD";
 
 import type { BootContext } from "@app/Bootstrapper";
-import type { RigAngles } from "@camera/CameraRig";
+import type { CameraAngles } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
 import type { Data3D } from "@data/data";
 import type { ProjectionMode } from "@primitives/Camera";
 import type Mesh from "@primitives/Mesh";
 import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
+import type { ShapeAngles } from "@scene/ShapeRig";
 import type FieldWriter from "@ui/FieldWriter";
 
 const TRANSITION_DURATION_MS = 1250;
@@ -122,6 +128,7 @@ class Main {
   private readonly textures: TextureRegistry;
   private readonly camera: CameraController;
   private readonly rig: CameraRig;
+  private readonly shapeRig: ShapeRig;
   private readonly pointerOrbit: PointerOrbit;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
@@ -130,10 +137,11 @@ class Main {
   // subscriber would re-enter renderPausedFrame on its own notification.
   private meshHidden: boolean;
   private renderedTriangles: number;
-  // The frame clock, kept here because this is where the timestamp arrives. The
-  // rig accumulates its spin against real elapsed time rather than per frame,
-  // which is what makes a revolution take the same fifteen seconds uncapped as
-  // it does under the RENDER tab's 30fps cap.
+  // The frame clock, kept here because this is where the timestamp arrives, and
+  // read once per frame for both rigs. The shape accumulates its spin against
+  // real elapsed time rather than per frame, which is what makes a revolution
+  // take the same wall-clock time uncapped as it does under the RENDER tab's
+  // 30fps cap.
   private lastFrameTimestamp: number;
 
   // The canvas arrives resolved. Main used to repeat the Bootstrapper's own
@@ -177,11 +185,14 @@ class Main {
       backgroundRenderer,
       stats: this.renderStats,
     });
-    // Before every widget that reads it. The SHAPE tab's sliders and the WORLD
-    // tab's presets write to it, the CAMERA card and the HUD read from it, and
-    // the render path applies its matrix — so it is one of the few collaborators
-    // whose construction order is load-bearing rather than incidental.
+    // Before every widget that reads it. The WORLD tab's rows and presets write
+    // to it, the CAMERA card and the HUD read from it, and the render path
+    // applies its matrix — so it is one of the few collaborators whose
+    // construction order is load-bearing rather than incidental. The shape's own
+    // rig has no reader outside the render path and only sits here to be
+    // constructed alongside it.
     this.rig = new CameraRig();
+    this.shapeRig = new ShapeRig();
     this.lastFrameTimestamp = performance.now();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
@@ -203,10 +214,10 @@ class Main {
         this.shapeTab.setActivePrimitive(primitive);
         this.shapes.request(primitive);
       },
-      onPitch: (degrees) => this.changeRig({ pitch: degrees }),
-      onYaw: (degrees) => this.changeRig({ yaw: degrees }),
-      onRoll: (degrees) => this.changeRig({ roll: degrees }),
-      onSpin: (degreesPerSecond) => this.changeRig({ spinRate: degreesPerSecond }),
+      onPitch: (degrees) => this.changeShape({ pitch: degrees }),
+      onYaw: (degrees) => this.changeShape({ yaw: degrees }),
+      onRoll: (degrees) => this.changeShape({ roll: degrees }),
+      onSpin: (degreesPerSecond) => this.changeShape({ spinRate: degreesPerSecond }),
       onOpacity: (value) => this.pipeline.setOpacityFromSlider(value),
     });
     this.pipeline = new RenderPipelinePanel();
@@ -225,6 +236,9 @@ class Main {
       onZoom: (value) => this.changeZoom(value),
       onProjection: (mode) => this.changeProjection(mode),
       onViewPreset: (key) => this.applyViewPreset(key),
+      onElev: (degrees) => this.changeCamera({ pitch: degrees }),
+      onAzim: (degrees) => this.changeCamera({ yaw: degrees }),
+      onCamRoll: (degrees) => this.changeCamera({ roll: degrees }),
       onLayersChange: () => this.syncWorldLayers(),
     });
     // After the WORLD tab because that is the order they read in, not because
@@ -436,21 +450,27 @@ class Main {
     this.renderPausedFrame();
   }
 
-  // The tail every TRANSFORM row shares. A patch rather than four methods,
-  // because a slider moves exactly one of the rig's four numbers and the other
-  // three must be left alone rather than restated at each call site.
-  private changeRig(angles: Partial<RigAngles>) {
+  // The tail every camera angle row shares. A patch rather than three methods,
+  // because a slider moves exactly one of the rig's three numbers and the other
+  // two must be left alone rather than restated at each call site.
+  private changeCamera(angles: Partial<CameraAngles>) {
     this.rig.setAngles(angles);
     this.renderPausedFrame();
   }
 
-  // Mirrors changeRig, but a drag has no SliderRow of its own already showing
-  // the new angle the way a TRANSFORM input does — the rows have to be pushed
-  // the numbers PointerOrbit computed, the same way applyViewPreset pushes them
-  // mid-ease.
+  // The same, for the shape's four.
+  private changeShape(angles: Partial<ShapeAngles>) {
+    this.shapeRig.setAngles(angles);
+    this.renderPausedFrame();
+  }
+
+  // Mirrors changeCamera, but a drag has no SliderRow of its own already showing
+  // the new angle the way an ELEV or AZIM input does — the rows have to be
+  // pushed the numbers PointerOrbit computed, the same way applyViewPreset
+  // pushes them mid-ease.
   private applyPointerOrbit(pitch: number, yaw: number) {
     this.rig.setAngles({ pitch, yaw });
-    this.shapeTab.setTransformUi(this.rig.angles());
+    this.worldTab.setCameraUi(this.rig.angles());
     this.renderPausedFrame();
   }
 
@@ -462,23 +482,24 @@ class Main {
     this.worldTab.setZoomUi(sliderValue);
   }
 
-  // A camera gesture, so it moves the camera and nothing else. It deliberately
-  // leaves the turntable running: rig.reset() would snap the object's attitude
-  // too, which reads as the shape jerking for a gesture the user aimed at the
-  // viewpoint. Zoom goes through applyPointerZoom rather than changeZoom so its
-  // own row follows. Deliberately not resetControls() either: a stray
-  // double-tap must not touch shading, materials or toggles — the toolbar RESET
-  // stays the only path that restores those.
+  // A camera gesture, so it moves the camera and nothing else — which it now
+  // genuinely does rather than nearly does. It leaves the shape's pose and its
+  // turntable exactly where they were: resetting those would read as the shape
+  // jerking for a gesture the user aimed at the viewpoint, and until COS-434 the
+  // three angles it writes were the shape's own rows. Zoom goes through
+  // applyPointerZoom rather than changeZoom so its own row follows. Deliberately
+  // not resetControls() either: a stray double-tap must not touch shading,
+  // materials or toggles — the toolbar RESET stays the only path for those.
   private applyPointerReset() {
     // The shared defaults rather than three literal zeros: the toolbar RESET
     // restores them through the store, and a double-tap that landed somewhere
     // else would be the one path in the console disagreeing about where home is.
     this.rig.setAngles({
-      pitch: DEFAULT_PITCH_DEGREES,
-      yaw: DEFAULT_YAW_DEGREES,
-      roll: DEFAULT_ROLL_DEGREES,
+      pitch: DEFAULT_CAM_ELEV_DEGREES,
+      yaw: DEFAULT_CAM_AZIM_DEGREES,
+      roll: DEFAULT_CAM_ROLL_DEGREES,
     });
-    this.shapeTab.setTransformUi(this.rig.angles());
+    this.worldTab.setCameraUi(this.rig.angles());
     this.applyPointerZoom(DEFAULT_ZOOM_SLIDER_VALUE);
   }
 
@@ -491,8 +512,8 @@ class Main {
     this.rig.applyPreset(key, this.loop.isPlaying);
     // The paused case, where the rig lands immediately and there is no frame to
     // carry the write-back. While the loop runs, renderFrame pushes the rows
-    // through the whole ease instead, so the thumbs travel with the shape.
-    this.shapeTab.setTransformUi(this.rig.angles());
+    // through the whole ease instead, so the thumbs travel with the camera.
+    this.worldTab.setCameraUi(this.rig.angles());
     this.renderPausedFrame();
   }
 
@@ -640,7 +661,7 @@ class Main {
     // authored rest pose, and startTransition runs outside the render path — so
     // without this the incoming shape holds a different attitude from the
     // outgoing one for the first frame of every switch.
-    mesh.setTransform(this.rig.meshMatrix());
+    mesh.setTransform(this.rig.meshMatrix(this.shapeRig.matrix()));
 
     return mesh;
   }
@@ -662,10 +683,16 @@ class Main {
     // preset actually landed on and leave the rows a fraction of a degree short.
     const easingPreset = this.rig.isEasingPreset;
 
-    this.rig.advance(this.elapsedSeconds(timestamp));
+    const elapsedSeconds = this.elapsedSeconds(timestamp);
+
+    // Both, off one reading of the clock: the camera steps an ease and the shape
+    // steps its turntable, and two calls to elapsedSeconds would have the second
+    // one see a zero gap.
+    this.rig.advance(elapsedSeconds);
+    this.shapeRig.advance(elapsedSeconds);
 
     if (easingPreset) {
-      this.shapeTab.setTransformUi(this.rig.angles());
+      this.worldTab.setCameraUi(this.rig.angles());
     }
 
     // Posed even while hidden, so showing the mesh again resumes the turn where
@@ -713,7 +740,7 @@ class Main {
   // unsampled frame must make zero performance.now() calls, this one included.
   private applyRigToActiveMeshes(timed: boolean) {
     const startedAt = timed ? performance.now() : 0;
-    const matrix = this.rig.meshMatrix();
+    const matrix = this.rig.meshMatrix(this.shapeRig.matrix());
 
     this.shapes.getActiveMeshes().forEach((mesh) => {
       mesh.setTransform(matrix);
@@ -811,12 +838,13 @@ class Main {
   // defaults and is restored here without this function being edited.
   private resetControls = () => {
     this.pipeline.reset();
-    // The two rig values with no slice of their own: the spin the turntable has
-    // wound up, and any preset ease still in flight. The three angles and the
+    // The two values with no slice of their own: any preset ease still in
+    // flight, and the spin the turntable has wound up. The seven angles and the
     // spin rate come back through the store below, which is what makes RESET
-    // return the shape to the pose it opened on rather than to the same three
-    // numbers at a random heading.
+    // return the shape to the pose it opened on rather than to the same numbers
+    // at a random heading.
     this.rig.reset();
+    this.shapeRig.reset();
     this.uiState.resetAll();
     // After resetAll, so the rows read the restored defaults — and it re-applies
     // them to the camera, which is what the slider bank's read-back used to do.
