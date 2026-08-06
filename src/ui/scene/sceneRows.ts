@@ -23,8 +23,13 @@ export interface SceneRow {
 // hidden. A literal would be four copies of the same string.
 export const MESH_ROW_ID = "mesh";
 
+// The light row is addressed by this constant for the same reason (E3a): Main
+// asks whether it is hidden on the render path and the row declares itself here,
+// so a literal would be two spellings of one id.
+export const LIGHT_ROW_ID = "light";
+
 export const PLACEHOLDER_NOTE =
-  "Not backed by a real scene object yet: the sky, floor and vignette are drawn per-pixel by BackgroundRenderer and there is no lighting model (de-mock E5 / E7).";
+  "Not backed by a real scene object yet: the sky, floor and vignette are drawn per-pixel by BackgroundRenderer (de-mock E5 / E7).";
 
 export const HINT_ID = "ph-scene-row";
 
@@ -34,7 +39,10 @@ const ROWS: readonly SceneRow[] = [
   // 2 is nominal: the checker floor is drawn per-pixel, not as two triangles.
   { id: "floor", kind: "PLN", label: "FLOOR_01", triangles: 2, placeholder: true },
   { id: "sky", kind: "ENV", label: "SKY_DOME", triangles: null, placeholder: true },
-  { id: "light", kind: "LGT", label: "KEY_LIGHT", triangles: null, placeholder: true },
+  // Backed by a real light since E3a: hiding this row drops the diffuse and
+  // specular terms off every face, which is a visible change to the frame rather
+  // than a dimmed label. It contributes no geometry, so the em dash stays.
+  { id: LIGHT_ROW_ID, kind: "LGT", label: "KEY_LIGHT", triangles: null, placeholder: false },
 ];
 
 export default ROWS;

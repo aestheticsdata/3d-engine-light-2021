@@ -42,6 +42,13 @@
 // composes the three in the same order, so anything outside Mesh that called
 // it — there is nothing today, but the method is public API — sees unchanged
 // behaviour.
+//
+// The key light (E3a/COS-241) enters at fill(), which is why the shading cost
+// lands in E6's RASTER bracket rather than TRANSFORM: it is per-drawn-triangle
+// work and the timer should say so. The face normal is computed by Lighting from
+// this triangle's own three vertices — the draft put a normal pass on Mesh, which
+// cannot reach them either — so a and b and c stay private and the only thing
+// that had to open up was Point3D's x and y.
 
 import Point2D from "@primitives/Point2D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
@@ -49,6 +56,7 @@ import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rende
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
+import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type TextureRegistry from "@textures/TextureRegistry";
 
@@ -57,6 +65,11 @@ export interface TriangleRenderOptions {
   // through to filling with the raw material string — "dog" as a fillStyle,
   // which paints black and throws nothing. Required makes that a compile error.
   textures: TextureRegistry;
+  // Required for the same reason (E3a/COS-241), and the failure it forecloses is
+  // quieter still: an optional light would leave every face at its authored
+  // colour, which is exactly what the console looked like before this ticket and
+  // is not a frame anyone would look at twice.
+  lighting: Lighting;
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
@@ -228,7 +241,7 @@ class Triangle {
     const image = key === null ? undefined : options.textures.get(key);
 
     if (!image || !this.uva || !this.uvb || !this.uvc) {
-      this.fillFlat(context);
+      this.fillFlat(context, options.lighting);
       context.restore();
 
       return true;
@@ -248,6 +261,10 @@ class Triangle {
       uvc: this.uvc,
       image,
     });
+
+    if (drawn) {
+      this.shadeTexture(context, options.lighting);
+    }
 
     context.restore();
 
@@ -274,8 +291,32 @@ class Triangle {
     context.stroke();
   }
 
-  private fillFlat(context: CanvasRenderingContext2D) {
-    context.fillStyle = this.resolved.fill;
+  // The light reads this triangle's own three vertices rather than a normal it
+  // was handed (E3a/COS-241). Everything it needs is already a field here, so
+  // nothing had to be widened but Point3D's two new getters — and because this
+  // runs from fill(), a triangle the clip or the cull rejected never pays for a
+  // normal it would not have drawn.
+  private fillFlat(context: CanvasRenderingContext2D, lighting: Lighting) {
+    context.fillStyle = lighting.fillFor(this.resolved, this.a, this.b, this.c);
+    this.tracePath(context);
+    context.fill();
+  }
+
+  // A textured face cannot be modulated by context.fill(), so it is darkened by
+  // a second pass over the same path. Inside the caller's save/restore, which is
+  // what makes it inherit globalAlpha — a half-transparent face gets a
+  // half-transparent wash, which is the answer that composites correctly.
+  //
+  // The mapper closes its own transform before returning, so the path traced
+  // here is in the same screen coordinates the fill above uses.
+  private shadeTexture(context: CanvasRenderingContext2D, lighting: Lighting) {
+    const wash = lighting.overlayFor(this.a, this.b, this.c);
+
+    if (wash === null) {
+      return;
+    }
+
+    context.fillStyle = wash;
     this.tracePath(context);
     context.fill();
   }

@@ -23,6 +23,7 @@ export interface RenderTabOptions {
   onWireframeToggle: (next: boolean) => void;
   onCullToggle: (next: boolean) => void;
   onFrameRateCap: (fps: number | null) => void;
+  onLightingChange: () => void;
 }
 
 class RenderTab {
@@ -57,6 +58,7 @@ class RenderTab {
     this.lighting = new LightingSection({
       root: "#lightingRows",
       store: options.store,
+      onChange: options.onLightingChange,
     });
   }
 

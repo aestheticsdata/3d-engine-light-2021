@@ -43,6 +43,21 @@ class Point3D {
     this.camera = camera;
   }
 
+  // All three, at last. z has been readable since the painter's sort needed a
+  // depth; x and y stayed private because nothing outside could use them for
+  // anything but a second projection. E3a is what changed that — a face normal
+  // is a cross product of two edges, and an edge needs all three components of
+  // both ends. E6 left these to "whichever of E3a or E5b lands first and
+  // actually needs it" (MeshFactory.build); this is that ticket, and E5b's
+  // Mesh.getBounds reads the same two rather than declaring a third.
+  public get xValue(): number {
+    return this.x;
+  }
+
+  public get yValue(): number {
+    return this.y;
+  }
+
   public get zValue(): number {
     return this.z;
   }

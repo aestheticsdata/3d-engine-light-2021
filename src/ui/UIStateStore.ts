@@ -72,10 +72,17 @@ export interface UIState {
   uvScale?: number;
 
   // --- RENDER tab -----------------------------------------------------------
-  // zbuffer / dither / edgeAA and the four light* values are de-mock E3
-  // placeholders, same as SHAPE tab's zoom/scale/texture/baseColor/uvScale
-  // above: no engine sits behind any of them yet, and they are stored only so
-  // RESET can undo the choice. shadingMode is different — it is chip-selection
+  // zbuffer / dither / edgeAA are the placeholders left in this tab: no
+  // rasteriser sits behind any of them (E3b, E3d), and they are stored only so
+  // RESET can undo the choice. uvScale on the SHAPE tab above is the only other
+  // one in the store.
+  //
+  // The four light* values stopped being placeholders with E4a's successor
+  // (E3a/COS-241). All four reach one directional key light, and the scene
+  // graph's KEY_LIGHT row switches that same light off — five controls, one
+  // light, which is why not one of them is held anywhere but here.
+  //
+  // shadingMode is different again — it is chip-selection
   // state that deliberately does NOT feed modeLabel(). The status bar, the HUD
   // and SHAPE INFO describe what the rasteriser actually does, and printing
   // GOURAUD there would be the same lie a CSS filter would have been. Do not

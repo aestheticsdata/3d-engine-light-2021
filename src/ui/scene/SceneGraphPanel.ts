@@ -7,7 +7,7 @@
 
 import DOMScope from "@ui/DOMScope";
 import SceneRowView from "@ui/scene/SceneRowView";
-import ROWS, { MESH_ROW_ID } from "@ui/scene/sceneRows";
+import ROWS, { LIGHT_ROW_ID, MESH_ROW_ID } from "@ui/scene/sceneRows";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
 import type UIStateStore from "@ui/UIStateStore";
@@ -60,6 +60,13 @@ class SceneGraphPanel {
 
   public isMeshHidden(): boolean {
     return this.isHidden(MESH_ROW_ID);
+  }
+
+  // The KEY_LIGHT row (E3a). Read by Main rather than by the render path — the
+  // light is pushed at Lighting on the click, the same way the four sliders are,
+  // so nothing asks this per frame.
+  public isLightHidden(): boolean {
+    return this.isHidden(LIGHT_ROW_ID);
   }
 
   // An arrow property because it is handed to store.subscribe as a value. A

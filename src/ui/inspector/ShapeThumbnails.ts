@@ -22,7 +22,9 @@ import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
+import Lighting from "@rendering/Lighting";
 import RenderStats from "@rendering/RenderStats";
+import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
 
 import type { Data3D } from "@data/types";
 import type TextureRegistry from "@textures/TextureRegistry";
@@ -86,9 +88,25 @@ class ShapeThumbnails {
     // Yaw times pitch, in that order, which is the single matrix equivalent of
     // the two sequential passes this replaces. A thumbnail is painted once and
     // never re-posed, so it needs none of the rig — only the same builders.
-    mesh.setTransform(
-      matrix3D.multiply(matrix3D.yawMatrix(VIEW_YAW_DEGREES), matrix3D.pitchMatrix(VIEW_PITCH_DEGREES)),
-    );
+    const pose = matrix3D.multiply(matrix3D.yawMatrix(VIEW_YAW_DEGREES), matrix3D.pitchMatrix(VIEW_PITCH_DEGREES));
+
+    mesh.setTransform(pose);
+
+    // Its own light too, at the shipped defaults, and posed by the same matrix
+    // the mesh is. A thumbnail is the real rasteriser or it is nothing, and an
+    // unlit chip beside a lit viewport would be the second source of truth this
+    // class exists to refuse. It does not follow the LIGHTING rows: the chips
+    // are painted once, from init(), and re-rendering twenty meshes on every
+    // slider tick to move a highlight 44px across would be a poor trade.
+    const lighting = new Lighting({
+      azimuth: DEFAULT_AZIMUTH,
+      elevation: DEFAULT_ELEVATION,
+      ambient: DEFAULT_AMBIENT,
+      specular: DEFAULT_SPECULAR,
+      enabled: true,
+    });
+
+    lighting.setCamera(pose, camera.distance);
 
     // A throwaway accumulator: renderMesh (E6/COS-239) always writes through
     // one, but a thumbnail is painted once and nothing here reads its stats
@@ -98,7 +116,7 @@ class ShapeThumbnails {
       context,
       offsetX: 0,
       offsetY: 0,
-      options: { textures: this.textures, cullBackfaces: true, opacity: 1 },
+      options: { textures: this.textures, lighting, cullBackfaces: true, opacity: 1 },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
       timed: false,
