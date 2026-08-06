@@ -1,4 +1,4 @@
-// Rotation matrices, built rather than remembered.
+// Transform matrices, built rather than remembered.
 //
 // This class used to hold three mutable 4x4 fields recomputed together from one
 // cos/sin pair, so `pitch`, `yaw` and `roll` were only ever valid for the angle
@@ -93,6 +93,20 @@ class Matrix3D {
       [1, 0, 0, 0],
       [0, 1, 0, 0],
       [0, 0, 1, 0],
+      [0, 0, 0, 1],
+    ];
+  }
+
+  // Uniform on all three axes, which is what the SCALE row means and all the
+  // console offers. A non-uniform scale would not commute with the rotations it
+  // composes with, so the order of the product would stop being free and the
+  // bounding radius would stop being one number — neither is worth having for a
+  // control nothing asks for.
+  public scaleMatrix(factor: number): number[][] {
+    return [
+      [factor, 0, 0, 0],
+      [0, factor, 0, 0],
+      [0, 0, factor, 0],
       [0, 0, 0, 1],
     ];
   }

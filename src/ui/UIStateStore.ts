@@ -21,6 +21,7 @@
 // pinned by src/ui/__tests__/UIStateStore.test.ts.
 
 import type { ProjectionMode } from "@primitives/Camera";
+import type { TextureMode } from "@rendering/material";
 import type { ShadingModeKey } from "@ui/modeLabel";
 
 // The RENDER LOOP chips. MAX is uncapped rather than a number, because rAF is
@@ -55,10 +56,18 @@ export interface UIState {
   yaw?: number;
   roll?: number;
   spin?: number;
-  // No engine behind these four yet (de-mock E4). They are stored rather than
-  // discarded so the console remembers the choice and RESET can undo it.
+  // texture and baseColor became live with E4a: the mode reaches every triangle
+  // through Mesh.setMaterial and the colour multiplies the authored one. The
+  // mode is typed by the engine rather than by this store, the same trade
+  // projection makes below — one union for the chip and for the branch in
+  // resolveMaterial, so neither end can grow a value the other does not have.
+  // baseColor holds the palette NAME, not the colour: the store stays readable
+  // and MaterialSection is the only thing that resolves it.
+  //
+  // uvScale is still inert (de-mock E4b) and is stored only so the console
+  // remembers the choice and RESET can undo it.
   scale?: number;
-  texture?: string;
+  texture?: TextureMode;
   baseColor?: string;
   uvScale?: number;
 
