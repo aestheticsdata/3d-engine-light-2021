@@ -82,3 +82,26 @@ export const multiplyColor = (authored: RGBA, base: RGBA): RGBA => [
 ];
 
 export const formatRgba = (rgba: RGBA): string => `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]})`;
+
+// Standard source-over: `over` composited on top of `under` at over's own
+// alpha. New with E3b/COS-242 — the painter path never needed this, because
+// context.fill() with globalAlpha set already blends each successive layer
+// (base fill, texture wash, fog veil) against whatever the canvas already
+// held. The rasteriser has no canvas to blend against mid-triangle, so this
+// is that same src-over step, run by hand, once per layer.
+//
+// Always returns full alpha: a composited colour has nothing further beneath
+// it in this chain to show through, and FrameBuffer.writePixel's own alpha
+// parameter is what blends the fully-composited result against the buffer's
+// existing pixel for OPACITY.
+export const blendRgba = (under: RGBA, over: RGBA): RGBA => {
+  const alpha = over[3];
+  const inverse = 1 - alpha;
+
+  return [
+    Math.round(over[0] * alpha + under[0] * inverse),
+    Math.round(over[1] * alpha + under[1] * inverse),
+    Math.round(over[2] * alpha + under[2] * inverse),
+    1,
+  ];
+};

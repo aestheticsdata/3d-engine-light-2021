@@ -52,17 +52,22 @@
 // cannot reach them either — so a and b and c stay private and the only thing
 // that had to open up was Point3D's x and y.
 
+import { blendRgba, parseCssColor } from "@rendering/cssColor";
 import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rendering/material";
 import { clipTriangleToNear } from "@rendering/nearPlaneClip";
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
 import type AffineTextureMapper from "@rendering/AffineTextureMapper";
+import type { RGBA } from "@rendering/cssColor";
 import type Fog from "@rendering/Fog";
 import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type { ClipVertex } from "@rendering/nearPlaneClip";
+import type Rasterizer from "@rendering/Rasterizer";
+import type { RasterFillRequest } from "@rendering/Rasterizer";
 import type TextureRegistry from "@textures/TextureRegistry";
+import type { TextureSource } from "@textures/TextureRegistry";
 
 export interface TriangleRenderOptions {
   // Required, not optional. An optional registry means a wiring mistake falls
@@ -104,6 +109,21 @@ export interface NearClipContext {
   offsetX: number;
   offsetY: number;
   cullBackfaces: boolean;
+}
+
+// One projected vertex, in the shape the rasteriser's edge-function math
+// consumes (E3b/COS-242) — screen-space x/y (the same aprojX/aprojY project()
+// already writes), 1/d (E2's eye-space depth, reciprocated once here rather
+// than per pixel), and the UV this vertex carries, or {0,0} when the
+// triangle has none — mirrored from nearClipVertices' own fallback, since a
+// textured request is never built for a triangle without UVs (see
+// rasterize() below).
+export interface RasterVertex {
+  x: number;
+  y: number;
+  invD: number;
+  u: number;
+  v: number;
 }
 
 class Triangle {
@@ -167,6 +187,10 @@ class Triangle {
 
   public get depth(): number {
     return (this.a.zValue + this.b.zValue + this.c.zValue) / 3;
+  }
+
+  public get resolvedMaterial(): ResolvedMaterial {
+    return this.resolved;
   }
 
   // Outside the view volume, which is the camera's question rather than this
@@ -292,6 +316,89 @@ class Triangle {
     const v2y = this.cprojY - this.aprojY;
 
     return Math.abs(v1x * v2y - v1y * v2x) / 2;
+  }
+
+  // The rasteriser's own per-vertex data (E3b/COS-242) — project() must
+  // already have run this frame, the same precondition fill() carries.
+  // eyeDistance is E2's Camera.distance, threaded the same way
+  // NearClipContext already threads it rather than giving this class a
+  // Camera reference of its own.
+  public rasterVertices(eyeDistance: number): [RasterVertex, RasterVertex, RasterVertex] {
+    return [
+      {
+        x: this.aprojX,
+        y: this.aprojY,
+        invD: 1 / (this.a.zValue + eyeDistance),
+        u: this.uva?.[0] ?? 0,
+        v: this.uva?.[1] ?? 0,
+      },
+      {
+        x: this.bprojX,
+        y: this.bprojY,
+        invD: 1 / (this.b.zValue + eyeDistance),
+        u: this.uvb?.[0] ?? 0,
+        v: this.uvb?.[1] ?? 0,
+      },
+      {
+        x: this.cprojX,
+        y: this.cprojY,
+        invD: 1 / (this.c.zValue + eyeDistance),
+        u: this.uvc?.[0] ?? 0,
+        v: this.uvc?.[1] ?? 0,
+      },
+    ];
+  }
+
+  // The depth-buffered backend's own entry point, alongside fill() above —
+  // called only when options.wireframe is falsy (Mesh.renderMesh keeps
+  // wireframe on fill() for both backends; see this file's header note).
+  // Builds exactly the colour data fill()'s own two branches
+  // (fillFlat+veilWithFog, or drawTexture+shadeTexture+veilWithFog) already
+  // compute, pre-blended per triangle rather than left for Rasterizer to
+  // call Lighting or Fog itself — the same separation fill() already keeps
+  // by resolving a CSS string before handing it to context.fillStyle.
+  public rasterize(rasterizer: Rasterizer, options: TriangleRenderOptions, eyeDistance: number): boolean {
+    const vertices = this.rasterVertices(eyeDistance);
+    const veilCss = options.fog.meshOverlay(this.depth);
+    const fogVeil = veilCss ? parseCssColor(veilCss) : null;
+    const hasUVs = this.uva !== undefined && this.uvb !== undefined && this.uvc !== undefined;
+    const textureImage =
+      this.resolved.textureKey !== null && hasUVs ? options.textures.get(this.resolved.textureKey) : undefined;
+
+    if (textureImage) {
+      const washCss = options.lighting.overlayFor(this.a, this.b, this.c);
+
+      return rasterizer.fillTriangle(this.textureFillRequest(vertices, textureImage, washCss, fogVeil, options));
+    }
+
+    const lit = options.lighting.fillRgba(this.resolved, this.a, this.b, this.c);
+    const flatColor = fogVeil ? blendRgba(lit, fogVeil) : lit;
+
+    return rasterizer.fillTriangle({
+      vertices,
+      texture: null,
+      flatColor,
+      textureWash: null,
+      textureFogVeil: null,
+      opacity: options.opacity ?? 1,
+    });
+  }
+
+  private textureFillRequest(
+    vertices: [RasterVertex, RasterVertex, RasterVertex],
+    image: TextureSource,
+    washCss: string | null,
+    fogVeil: RGBA | null,
+    options: TriangleRenderOptions,
+  ): RasterFillRequest {
+    return {
+      vertices,
+      texture: { key: this.resolved.textureKey as string, image, uvScale: this.resolved.uvScale },
+      flatColor: null,
+      textureWash: washCss ? parseCssColor(washCss) : null,
+      textureFogVeil: fogVeil,
+      opacity: options.opacity ?? 1,
+    };
   }
 
   // The near-plane half of the view-volume test (COS-418/E2b), replacing the

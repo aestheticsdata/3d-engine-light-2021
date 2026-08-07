@@ -21,10 +21,12 @@
 // faces of a closed solid, and the reason the draft's whole-mesh normal pass was
 // not worth keeping.
 
+import { parseCssColor } from "@rendering/cssColor";
 import { toEyeSpace, worldLightDirection } from "@rendering/lightDirection";
 import ShadeCache, { SHADE_STEPS, SPECULAR_STEPS } from "@rendering/ShadeCache";
 
 import type Point3D from "@primitives/Point3D";
+import type { RGBA } from "@rendering/cssColor";
 import type { Vec3 } from "@rendering/lightDirection";
 import type { ResolvedMaterial } from "@rendering/material";
 
@@ -49,6 +51,11 @@ const PERCENT = 100;
 // so every triangle in the first and last latitude band has two vertices in the
 // same place and a cross product of exactly zero.
 const DEGENERATE = 1e-9;
+
+// The unreadable-colour fallback shared with Fog's own UNPARSED constant:
+// white is the multiply's identity, so an unrecognised fill still shows
+// something rather than painting black.
+const UNSHADEABLE_FALLBACK: RGBA = [255, 255, 255, 1];
 
 // Stands in until the first frame calls setCamera. Main shades a mesh in
 // buildMesh, before the render path has run once, and reading the world
@@ -119,6 +126,21 @@ class Lighting {
     }
 
     return this.cache.fillFor(resolved.fill, resolved.rgba, this.shadeStep, this.specularStep);
+  }
+
+  // fillFor's numeric twin, for the rasteriser (E3b/COS-242): the same three
+  // branches — unlit resolved colour, degenerate face, cached shaded colour —
+  // ending in a tuple instead of a cssColor.formatRgba string. resolved.rgba
+  // is the one case fillFor never had to fall further than: a texture-keyed
+  // material's fill is its raw key string ("dog"), which cssColor cannot
+  // parse, so this is the one place that needs a fallback fillFor's CSS
+  // fillStyle never did.
+  public fillRgba(resolved: ResolvedMaterial, a: Point3D, b: Point3D, c: Point3D): RGBA {
+    if (resolved.rgba === null || !this.computeTerms(a, b, c)) {
+      return resolved.rgba ?? parseCssColor(resolved.fill) ?? UNSHADEABLE_FALLBACK;
+    }
+
+    return this.cache.rgbaFor(resolved.fill, resolved.rgba, this.shadeStep, this.specularStep);
   }
 
   // The textured path. context.fill() cannot modulate a drawImage, so a textured

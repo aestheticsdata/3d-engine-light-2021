@@ -125,6 +125,27 @@ describe("the fog a mesh is veiled by", () => {
   });
 });
 
+describe("Fog.version", () => {
+  it("starts at 0 and bumps once per setValues call", () => {
+    const fog = new Fog({ amount: 0, skyEnabled: true });
+    expect(fog.version).toBe(0);
+
+    fog.setValues({ amount: 10, skyEnabled: true });
+    expect(fog.version).toBe(1);
+
+    fog.setValues({ amount: 10, skyEnabled: false });
+    expect(fog.version).toBe(2);
+  });
+
+  it("does not bump on setCamera, which moves every frame while playing", () => {
+    const fog = new Fog({ amount: 10, skyEnabled: true });
+    fog.setCamera(500, 50);
+    fog.setCamera(510, 50);
+
+    expect(fog.version).toBe(0);
+  });
+});
+
 describe("the fog the ground fades under", () => {
   it("reads the projection denominator directly, with no eye distance added", () => {
     const fog = fogOf(100);

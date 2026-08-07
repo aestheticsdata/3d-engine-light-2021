@@ -39,10 +39,12 @@ const shadeChannel = (channel: number, shade: number, highlight: number): number
 
 class ShadeCache {
   private readonly fills: Map<string, (string | undefined)[]>;
+  private readonly rgbaFills: Map<string, (RGBA | undefined)[]>;
   private readonly overlays: (string | undefined)[];
 
   constructor() {
     this.fills = new Map();
+    this.rgbaFills = new Map();
     this.overlays = [];
   }
 
@@ -59,7 +61,26 @@ class ShadeCache {
       return cached;
     }
 
-    const built = this.shaded(rgba, shadeStep, specularStep);
+    const built = formatRgba(this.shadedRgba(rgba, shadeStep, specularStep));
+    slots[slot] = built;
+
+    return built;
+  }
+
+  // fillFor's numeric twin, for the rasteriser (E3b/COS-242): the same cache
+  // key and quantisation, minus the formatRgba call at the end — a triangle
+  // that fills 900 pixels needs three numbers per pixel, not a string parsed
+  // back apart 900 times.
+  public rgbaFor(fill: string, rgba: RGBA, shadeStep: number, specularStep: number): RGBA {
+    const slots = this.rgbaSlotsFor(fill);
+    const slot = shadeStep * SPECULAR_SLOTS + specularStep;
+    const cached = slots[slot];
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const built = this.shadedRgba(rgba, shadeStep, specularStep);
     slots[slot] = built;
 
     return built;
@@ -86,19 +107,19 @@ class ShadeCache {
     return built;
   }
 
-  // Built from the quantised values, never the raw ones. The string has to be
+  // Built from the quantised values, never the raw ones. The tuple has to be
   // the colour its slot claims to hold, or the second triangle to land in a slot
   // would be painted the first one's shade.
-  private shaded(rgba: RGBA, shadeStep: number, specularStep: number): string {
+  private shadedRgba(rgba: RGBA, shadeStep: number, specularStep: number): RGBA {
     const shade = shadeStep / SHADE_STEPS;
     const highlight = (specularStep / SPECULAR_STEPS) * CHANNEL_MAX;
 
-    return formatRgba([
+    return [
       shadeChannel(rgba[0], shade, highlight),
       shadeChannel(rgba[1], shade, highlight),
       shadeChannel(rgba[2], shade, highlight),
       rgba[3],
-    ]);
+    ];
   }
 
   private slotsFor(fill: string): (string | undefined)[] {
@@ -113,6 +134,19 @@ class ShadeCache {
     // two and six distinct colours.
     const slots: (string | undefined)[] = [];
     this.fills.set(fill, slots);
+
+    return slots;
+  }
+
+  private rgbaSlotsFor(fill: string): (RGBA | undefined)[] {
+    const existing = this.rgbaFills.get(fill);
+
+    if (existing) {
+      return existing;
+    }
+
+    const slots: (RGBA | undefined)[] = [];
+    this.rgbaFills.set(fill, slots);
 
     return slots;
   }

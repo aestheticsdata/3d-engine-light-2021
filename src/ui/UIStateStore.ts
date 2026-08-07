@@ -73,10 +73,11 @@ export interface UIState {
   uvScale?: number;
 
   // --- RENDER tab -----------------------------------------------------------
-  // zbuffer / dither / edgeAA are the placeholders left in this tab: no
-  // rasteriser sits behind any of them (E3b, E3d), and they are stored only so
-  // RESET can undo the choice. Since E4b they are the only three left in the
-  // whole store.
+  // dither / edgeAA are the placeholders left in this tab: no rasteriser
+  // stage sits behind either yet (E3c/E3d). zbuffer stopped being one with
+  // E3b (COS-242) — it now selects Surface3D's rasteriser backend for real,
+  // and is stored here for the same reason every live control is: RESET has
+  // to be able to undo it.
   //
   // The four light* values stopped being placeholders with E4a's successor
   // (E3a/COS-241). All four reach one directional key light, and the scene

@@ -14,6 +14,7 @@
 import Camera from "@primitives/Camera";
 import Point3D from "@primitives/Point3D";
 import RenderTarget from "@primitives/RenderTarget";
+import { parseCssColor } from "@rendering/cssColor";
 import Lighting from "@rendering/Lighting";
 import { describe, expect, it } from "vitest";
 
@@ -190,5 +191,22 @@ describe("Lighting texture overlay", () => {
 
   it("asks for no wash on a face with no area", () => {
     expect(lightingOf({ ambient: 0 }).overlayFor(...DEGENERATE)).toBeNull();
+  });
+});
+
+describe("Lighting.fillRgba", () => {
+  it("agrees exactly with fillFor's own string, parsed back apart, for a lit face", () => {
+    const css = lightingOf().fillFor(ORANGE, ...FACING_EYE);
+    const rgba = lightingOf().fillRgba(ORANGE, ...FACING_EYE);
+
+    expect(rgba).toEqual(parseCssColor(css));
+  });
+
+  it("returns the authored colour unchanged for a degenerate face, same as fillFor", () => {
+    expect(lightingOf().fillRgba(ORANGE, ...DEGENERATE)).toEqual(ORANGE.rgba);
+  });
+
+  it("falls back to white for a texture-keyed material with no rgba", () => {
+    expect(lightingOf().fillRgba(TEXTURED, ...FACING_EYE)).toEqual([255, 255, 255, 1]);
   });
 });

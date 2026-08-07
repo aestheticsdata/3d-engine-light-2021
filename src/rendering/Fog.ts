@@ -45,6 +45,12 @@ class Fog {
   private amount: number;
   private near: number;
   private eyeDistance: number;
+  // Bumped once per setValues call (E3b/COS-242) — never by setCamera, which
+  // runs every frame while the loop is playing. Surface3D's background
+  // snapshot depends on the FOG slider and the SKY DOME toggle, not on the
+  // camera distance a mesh happens to sit at, so this is the cheap signal it
+  // reads rather than re-deriving a hash of this class's private state.
+  private changeCount: number;
 
   constructor(values: FogValues) {
     this.veils = [];
@@ -52,6 +58,7 @@ class Fog {
     this.amount = values.amount / PERCENT;
     this.near = 0;
     this.eyeDistance = 0;
+    this.changeCount = 0;
   }
 
   // Lets a caller skip the whole fog path rather than calling into it once per
@@ -61,6 +68,10 @@ class Fog {
     return this.amount <= 0;
   }
 
+  public get version(): number {
+    return this.changeCount;
+  }
+
   public setValues(values: FogValues) {
     this.channels = parseCssColor(fogColor(values.skyEnabled)) ?? UNPARSED;
     this.amount = values.amount / PERCENT;
@@ -68,6 +79,7 @@ class Fog {
     // thing that can make a cached string wrong. The amount cannot: it moves
     // which slots get asked for, never what a slot means.
     this.veils.length = 0;
+    this.changeCount += 1;
   }
 
   // Called from Surface3D, which is where both numbers already are: it folds the
