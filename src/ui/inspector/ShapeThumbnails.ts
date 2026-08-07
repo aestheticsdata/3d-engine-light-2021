@@ -134,6 +134,8 @@ class ShapeThumbnails {
       options: { textures: this.textures, lighting, mapper, fog, cullBackfaces: true, opacity: 1 },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
+      near: camera.near,
+      far: camera.far,
       timed: false,
     });
 

@@ -108,6 +108,8 @@ class Surface3D {
         options,
         stats: this.stats,
         eyeDistance: this.camera.distance,
+        near: this.camera.near,
+        far: this.camera.far,
         timed,
       });
     }

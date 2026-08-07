@@ -7,12 +7,19 @@ class Point3D {
   private x: number;
   private y: number;
   private z: number;
-  // Held, not copied, and that is the difference from the render target below:
-  // the projection is one shared record every vertex reads through, so a
-  // slider writes one number rather than two fields on each of 3960 points. A
-  // mesh built before the camera has moved therefore cannot project at a stale
-  // focal length — there is only ever one.
+  // Held, not copied, and that is why convert3D2D differs from the render
+  // target below: the projection is one shared record every vertex reads
+  // through, so a slider writes one number rather than two fields on each of
+  // 3960 points. A mesh built before the camera has moved therefore cannot
+  // project at a stale focal length — there is only ever one.
   private readonly camera: Camera;
+  // Held as well, past construction (COS-418/E2b) — not for convert3D2D,
+  // which still reads only the cached numbers below, but so withPosition can
+  // build a sibling point sharing this one's exact projection basis. A
+  // near-plane clip fragment is a vertex with no registry entry to rebuild
+  // from every frame the way setFromSource does; it is built fresh instead,
+  // from whichever of its parent's own vertices withPosition is called on.
+  private readonly renderTarget: RenderTarget;
   private readonly centerX: number;
   private readonly centerY: number;
   private readonly targetScale: number;
@@ -25,11 +32,11 @@ class Point3D {
   private readonly sy: number;
   private readonly sz: number;
 
-  // The render target is read once here and its three numbers copied, not held.
-  // That is today's behaviour kept exactly: a mesh already on screen keeps
-  // projecting about the centre and scale it was built with, and a later
-  // resize does not move it. Following a resize would be an improvement, and
-  // it belongs to the ticket that owns resizing (E9b) rather than to this one.
+  // The render target's three numbers are read once here and cached below;
+  // convert3D2D reads only the cache, which is what keeps a mesh already on
+  // screen projecting about the centre and scale it was built with — a later
+  // resize does not move it, and following one would be an improvement that
+  // belongs to the ticket that owns resizing (E9b) rather than to this one.
   constructor(x: number, y: number, z: number, renderTarget: RenderTarget, camera: Camera) {
     this.x = x;
     this.y = y;
@@ -37,6 +44,7 @@ class Point3D {
     this.sx = x;
     this.sy = y;
     this.sz = z;
+    this.renderTarget = renderTarget;
     this.centerX = renderTarget.centerX;
     this.centerY = renderTarget.centerY;
     this.targetScale = renderTarget.scale;
@@ -80,6 +88,15 @@ class Point3D {
     const tmpY = this.centerY + this.y * scale;
 
     return new Point2D(tmpX, tmpY);
+  }
+
+  // A sibling point at a new position, under the same camera and render
+  // target this one holds — the one thing Triangle.emitFragment needs to
+  // turn nearPlaneClip's plain {x,y,z} back into something convert3D2D can
+  // project, without Triangle ever needing a RenderTarget or Camera
+  // reference of its own.
+  public withPosition(x: number, y: number, z: number): Point3D {
+    return new Point3D(x, y, z, this.renderTarget, this.camera);
   }
 
   // Mutates in place and returns nothing. No temporaries, and that is the

@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Object3D } from "@data/types";
 import type { CameraOptions } from "@primitives/Camera";
+import type { NearClipContext } from "@primitives/Triangle";
 
 const renderTarget = () => new RenderTarget({ width: 1024, height: 640 });
 
@@ -187,6 +188,39 @@ describe("setFromSource", () => {
   });
 });
 
+describe("withPosition", () => {
+  it("builds a sibling point at a new position under the same projection basis", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const point = new Point3D(100, 0, 0, target, camera);
+    const sibling = point.withPosition(0, 0, 0);
+
+    expect(sibling.zValue).toBe(0);
+    expect(sibling.convert3D2D().x).toBe(512);
+  });
+
+  it("follows the same camera as the point it was built from, not a snapshot of it", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const point = new Point3D(100, 0, 0, target, camera);
+    const sibling = point.withPosition(50, 0, 0);
+
+    camera.setMagnification(2);
+
+    expect(sibling.convert3D2D().x).toBeCloseTo(target.centerX + 50 * camera.scaleAt(0) * target.scale, 10);
+  });
+
+  it("is independent of the point it was built from once constructed", () => {
+    const point = new Point3D(100, 0, 0, renderTarget(), cameraOf());
+    const sibling = point.withPosition(0, 0, 50);
+
+    point.setFromSource(new Matrix3D().translation(1, 2, 3));
+
+    expect(sibling.zValue).toBe(50);
+    expect(point.zValue).toBe(3);
+  });
+});
+
 describe("Matrix3D", () => {
   // Every builder used to be recomputed from one cos/sin pair, so reading two of
   // them read one angle twice. Building them independently is what lets the rig
@@ -294,6 +328,119 @@ describe("Camera", () => {
     // Far, the same way round: z = 4920 sits exactly on 5000.
     expect(camera.clips(4920)).toBe(false);
     expect(camera.clips(4921)).toBe(true);
+  });
+});
+
+describe("Triangle.clipToNear", () => {
+  const context = (overrides: Partial<NearClipContext> = {}): NearClipContext => ({
+    near: 1,
+    far: 5000,
+    eyeDistance: 300,
+    offsetX: 0,
+    offsetY: 0,
+    cullBackfaces: true,
+    ...overrides,
+  });
+
+  // Front-facing under the same 2D winding test isFrontFacing uses — a=left,
+  // b=bottom, c=right, verified against the cross product by hand so this
+  // fixture is known-good rather than assumed.
+  const frontFacingAt = (camera: Camera, target: RenderTarget, z: number) => {
+    const a = new Point3D(-50, 50, z, target, camera);
+    const b = new Point3D(0, -50, z, target, camera);
+    const c = new Point3D(50, 50, z, target, camera);
+
+    return new Triangle(a, b, c, "#ff0000");
+  };
+
+  it("passes a wholly-in-front triangle through unchanged, allocating no new instance", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const triangle = frontFacingAt(camera, target, 100);
+
+    triangle.project(0, 0);
+
+    const out: Triangle[] = [];
+    triangle.clipToNear(context(), out);
+
+    // toBe, not toEqual: the point of this test is that the fast path
+    // allocates nothing, so `out[0]` must be the exact same instance, not a
+    // structurally-identical clone toEqual would also accept.
+    expect(out.length).toBe(1);
+    expect(out[0]).toBe(triangle);
+  });
+
+  it("drops a wholly-behind triangle entirely", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const a = new Point3D(-50, 50, -350, target, camera);
+    const b = new Point3D(0, -50, -350, target, camera);
+    const c = new Point3D(50, 50, -350, target, camera);
+    const triangle = new Triangle(a, b, c, "#ff0000");
+
+    triangle.project(0, 0);
+
+    const out: Triangle[] = [];
+    triangle.clipToNear(context(), out);
+
+    expect(out).toEqual([]);
+  });
+
+  it("splits a straddling triangle into two new, non-degenerate fragments", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const a = new Point3D(-50, 50, 100, target, camera);
+    const b = new Point3D(0, -50, 100, target, camera);
+    const c = new Point3D(50, 50, -350, target, camera);
+    const triangle = new Triangle(a, b, c, "#ff0000");
+
+    triangle.project(0, 0);
+
+    const out: Triangle[] = [];
+    triangle.clipToNear(context(), out);
+
+    expect(out.length).toBe(2);
+    out.forEach((fragment) => {
+      expect(fragment).not.toBe(triangle);
+      expect(Number.isFinite(fragment.screenArea())).toBe(true);
+      expect(fragment.screenArea()).toBeGreaterThan(0);
+    });
+    expect(out[0]).not.toBe(out[1]);
+  });
+
+  it("rejects a triangle with any vertex beyond the far plane, near test aside", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    const a = new Point3D(-50, 50, 4800, target, camera);
+    const b = new Point3D(0, -50, 100, target, camera);
+    const c = new Point3D(50, 50, 100, target, camera);
+    const triangle = new Triangle(a, b, c, "#ff0000");
+
+    triangle.project(0, 0);
+
+    const out: Triangle[] = [];
+    triangle.clipToNear(context(), out);
+
+    expect(out).toEqual([]);
+  });
+
+  it("skips the backface test and keeps the triangle when cullBackfaces is false", () => {
+    const camera = cameraOf();
+    const target = renderTarget();
+    // Reverse winding of frontFacingAt — back-facing under the 2D test.
+    const a = new Point3D(-50, 50, 100, target, camera);
+    const b = new Point3D(50, 50, 100, target, camera);
+    const c = new Point3D(0, -50, 100, target, camera);
+    const triangle = new Triangle(a, b, c, "#ff0000");
+
+    triangle.project(0, 0);
+    expect(triangle.isFrontFacing()).toBe(false);
+
+    const out: Triangle[] = [];
+    triangle.clipToNear(context({ cullBackfaces: false }), out);
+
+    expect(out.length).toBe(1);
+    expect(out[0]).toBe(triangle);
   });
 });
 

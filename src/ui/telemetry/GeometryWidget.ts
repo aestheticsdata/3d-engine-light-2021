@@ -119,8 +119,10 @@ class GeometryWidget {
     this.drawCalls = frame.drawCalls;
     // Nothing is culled while the test is off: every submitted triangle is
     // drawn, and the row must read 0 rather than reporting the degenerate-UV
-    // skips on their own.
-    this.culled = frame.cullBackfaces ? this.submitted - frame.drawn : 0;
+    // skips on their own. Clamped at 0 rather than left to go negative
+    // (COS-418/E2b): a triangle split at the near plane can draw as two
+    // fragments, so drawn can now exceed submitted for the frame it is in.
+    this.culled = frame.cullBackfaces ? Math.max(0, this.submitted - frame.drawn) : 0;
   }
 
   public render() {
