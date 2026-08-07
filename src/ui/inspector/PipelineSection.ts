@@ -2,9 +2,11 @@
 //
 // WIREFRAME and BACKFACE CULLING are real — RenderPipelinePanel owns both
 // booleans and the opacity side effect culling carries; this section only
-// renders the rows and forwards a click. Z-BUFFER, DITHERING and EDGE
-// ANTIALIAS have no rasteriser behind them yet (de-mock E3) and are pure
-// UIStateStore state with the placeholder affordance.
+// renders the rows and forwards a click. Z-BUFFER became real with E3b
+// (COS-242): the toggle now selects Surface3D's own rasteriser backend, so
+// it drops the placeholder affordance the other two still carry. DITHERING
+// and EDGE ANTIALIAS have no rasteriser behind them yet (de-mock E3c/E3d)
+// and stay pure UIStateStore state with the placeholder affordance.
 
 import DOMScope from "@ui/DOMScope";
 import ToggleRow from "@ui/inspector/controls/ToggleRow";
@@ -55,7 +57,6 @@ class PipelineSection {
     this.zbufferRow = new ToggleRow({
       label: "Z-BUFFER",
       on: DEFAULT_ZBUFFER,
-      placeholder,
       onToggle: (next) => this.store.setState({ zbuffer: next }),
     });
     this.ditherRow = new ToggleRow({

@@ -44,6 +44,7 @@ import {
   DEFAULT_SKY,
 } from "@ui/inspector/EnvironmentSection";
 import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
+import { DEFAULT_ZBUFFER } from "@ui/inspector/PipelineSection";
 import RenderTab from "@ui/inspector/RenderTab";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
@@ -600,6 +601,7 @@ class Main {
     if (patch.baseColor !== undefined) {
       this.procedural.redraw(this.material.baseColor);
       this.mapper.invalidate();
+      this.surface3D.invalidateTextures();
     }
 
     this.shapes.getActiveMeshes().forEach((mesh) => {
@@ -1078,6 +1080,7 @@ class Main {
       options,
       timed,
       cameraTransform,
+      zBufferEnabled: this.uiState.getState().zbuffer ?? DEFAULT_ZBUFFER,
     });
 
     this.renderedTriangles = stats.drawn;

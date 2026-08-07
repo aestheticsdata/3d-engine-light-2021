@@ -55,6 +55,10 @@ class Point3D {
     return this.y;
   }
 
+  // The depth buffer (E3b/COS-242) stores the reciprocal of this plus
+  // Camera.distance — Triangle.rasterVertices reads it directly rather than
+  // through a new getter, since eyeDistance is already threaded the same way
+  // NearClipContext threads it to clipToNear.
   public get zValue(): number {
     return this.z;
   }

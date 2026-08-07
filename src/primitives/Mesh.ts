@@ -2,6 +2,7 @@ import type Point3D from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
 import type { NearClipContext, TriangleRenderOptions } from "@primitives/Triangle";
 import type { MeshMaterial } from "@rendering/material";
+import type Rasterizer from "@rendering/Rasterizer";
 import type RenderStats from "@rendering/RenderStats";
 
 // Three required fields — past R4's two-collaborator exemption — and
@@ -43,6 +44,12 @@ export interface MeshRenderPass {
   // marked sampled. False means every pass below still runs — the mesh must
   // still be drawn — it just makes zero performance.now() calls doing it.
   timed: boolean;
+  // The depth-buffered backend, or null/undefined for the painter path
+  // (E3b/COS-242). Resolved once per frame by Surface3D — wireframe forces
+  // this to null even when Z-BUFFER is on, since a wireframe triangle never
+  // fills a pixel or tests a depth on either backend (Triangle.fill()'s own
+  // wireframe branch returns before anything the depth buffer could test).
+  rasterizer?: Rasterizer | null;
 }
 
 // The posed mesh's axis-aligned box in world coordinates (E5b/COS-247). Not the
@@ -202,7 +209,11 @@ class Mesh {
     const rasterStartedAt = pass.timed ? performance.now() : 0;
 
     for (const triangle of survivors) {
-      if (!triangle.fill(pass.context, pass.options)) {
+      const drawn = pass.rasterizer
+        ? triangle.rasterize(pass.rasterizer, pass.options, pass.eyeDistance)
+        : triangle.fill(pass.context, pass.options);
+
+      if (!drawn) {
         continue;
       }
 

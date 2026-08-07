@@ -128,6 +128,11 @@ class BackgroundRenderer {
   private gridEnabled: boolean;
   private shadowEnabled: boolean;
   private gridStepMetres: number;
+  // Bumped by setLayers/setWorld (E3b/COS-242) — the two calls that can move
+  // anything Surface3D's background snapshot depends on. resize() is not
+  // counted here: Surface3D already detects a resize itself, off the same
+  // renderTarget dimensions FrameBuffer.setSize reads.
+  private layersChangeCount: number;
 
   constructor(options: BackgroundRendererOptions) {
     this.width = options.width;
@@ -144,10 +149,15 @@ class BackgroundRenderer {
     this.gridEnabled = false;
     this.shadowEnabled = false;
     this.gridStepMetres = 4;
+    this.layersChangeCount = 0;
   }
 
   public get shadow(): boolean {
     return this.shadowEnabled;
+  }
+
+  public get layersVersion(): number {
+    return this.layersChangeCount;
   }
 
   public setLayers(layers: BackgroundLayers) {
@@ -155,6 +165,7 @@ class BackgroundRenderer {
     this.floorEnabled = layers.floor;
     this.gridEnabled = layers.grid;
     this.shadowEnabled = layers.shadow;
+    this.layersChangeCount += 1;
   }
 
   public setWorld(settings: WorldSettings) {
@@ -164,6 +175,7 @@ class BackgroundRenderer {
     // public and a caller that reaches it without going through that slider
     // — a test, a restored session — carries none of its guarantees.
     this.gridStepMetres = Math.max(1, settings.gridStepMetres);
+    this.layersChangeCount += 1;
   }
 
   // Every layer below derives its geometry from width/height at draw time
@@ -265,14 +277,95 @@ class BackgroundRenderer {
     context.restore();
   }
 
+  // The snapshot-able half of render() above (E3b/COS-242): sky, atmosphere,
+  // floor, grid — nothing that depends on the posed mesh. Surface3D calls
+  // this only on the frame its background-snapshot cache is invalid, via
+  // getImageData, and reuses the captured bytes on every frame after until
+  // something bumps layersVersion, the camera, or the render target size.
+  // Deliberately excludes the shadow (COS-247 made it depend on the mesh's
+  // own bounds every frame) and the vignette (paired with the shadow in
+  // renderPostMeshLayers below, since both blend over the mesh, not under
+  // it).
+  public renderSnapshotLayers(request: BackgroundRenderRequest) {
+    const { context, camera, renderTarget, cameraTransform, stats } = request;
+
+    context.save();
+    context.clearRect(0, 0, this.width, this.height);
+
+    const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
+    const horizon = ground.horizon();
+    const horizonY = renderTarget.centerY;
+
+    if (this.skyEnabled) {
+      const azimuth = Math.atan2(cameraTransform[2][0], cameraTransform[2][2]);
+      const focalPx = camera.focalLength * renderTarget.scale;
+
+      this.alignToHorizon(context, renderTarget, horizon, () => {
+        this.renderSky(context, azimuth, focalPx);
+        this.renderAtmosphere(context, horizonY);
+      });
+      stats.addDrawCall();
+      stats.addDrawCall();
+
+      if (this.skyImage) {
+        stats.addDrawCall();
+      }
+    } else {
+      context.fillStyle = chartTokens.bgApp;
+      context.fillRect(0, 0, this.width, this.height);
+      stats.addDrawCall();
+    }
+
+    if (!ground.isEyeBelowGround) {
+      this.paintFloorAndGrid({ request, ground, horizon, horizonY });
+    }
+
+    context.restore();
+  }
+
+  // The two layers renderSnapshotLayers cannot cover, drawn every frame
+  // after FrameBuffer.present() has already uploaded the mesh — the ground
+  // shadow, which reads the posed mesh's own bounds, and the vignette, which
+  // has always sat on top of everything render() drew. Both composite by
+  // ordinary alpha blending over whatever pixels the canvas already holds,
+  // mesh included — the same trade render()'s own vignette already made for
+  // the painter path; a depth buffer does not change it, because neither
+  // pass tests against one, they paint straight onto the canvas the way they
+  // always have. Runs regardless of eye-above/below-ground, unlike
+  // render()/renderGroundOverlay()'s own split of that case across two
+  // methods — the buffer's mesh pixels are already final by the time this
+  // runs, so there is nothing left for "the floor is in front of the mesh"
+  // to mean here.
+  public renderPostMeshLayers(request: BackgroundRenderRequest) {
+    const { context, camera, renderTarget, cameraTransform, stats } = request;
+    const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
+
+    context.save();
+    this.paintShadowLayer(request, ground);
+    this.renderVignette(context);
+    stats.addDrawCall();
+    context.restore();
+  }
+
   // The ground's three layers, in the order they stack: cells, then lines over
   // them, then the shadow over both. The shadow lives here rather than beside
   // the mesh loop precisely so it follows the ground — including the pass above,
   // where the eye has dropped under the plane and all three are painted over the
   // solids instead of behind them.
+  //
+  // Split into two calls (E3b/COS-242) rather than kept as one: renderSnapshotLayers
+  // above wants the first without the second, and renderPostMeshLayers wants
+  // the second without the first. render()/renderGroundOverlay() compose them
+  // back into exactly the same order they always drew, so this split changes
+  // nothing either one paints.
   private paintGround(pass: GroundPass) {
+    this.paintFloorAndGrid(pass);
+    this.paintShadowLayer(pass.request, pass.ground);
+  }
+
+  private paintFloorAndGrid(pass: GroundPass) {
     const { request, ground, horizon, horizonY } = pass;
-    const { context, renderTarget, fog, blobs, stats } = request;
+    const { context, renderTarget, fog, stats } = request;
 
     if (this.floorEnabled) {
       const floor = new GroundFloor({ ground, stepMetres: this.gridStepMetres, fog });
@@ -286,13 +379,19 @@ class BackgroundRenderer {
       new GroundGrid({ ground, stepMetres: this.gridStepMetres, fog }).draw(context);
       stats.addDrawCall();
     }
+  }
 
-    if (this.shadowEnabled) {
-      // The one background layer whose draw-call count depends on the scene
-      // rather than on a switch — two mid-transition, none while the near plane
-      // has rejected them — so it is the one that counts its own.
-      new GroundShadow(ground, fog).draw(context, blobs, stats);
+  private paintShadowLayer(request: BackgroundRenderRequest, ground: GroundProjection) {
+    if (!this.shadowEnabled) {
+      return;
     }
+
+    const { context, fog, blobs, stats } = request;
+
+    // The one background layer whose draw-call count depends on the scene
+    // rather than on a switch — two mid-transition, none while the near plane
+    // has rejected them — so it is the one that counts its own.
+    new GroundShadow(ground, fog).draw(context, blobs, stats);
   }
 
   // Runs `paint` in a frame where the ground's vanishing line is horizontal and

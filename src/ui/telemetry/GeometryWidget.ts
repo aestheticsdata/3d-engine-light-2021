@@ -12,6 +12,13 @@
 // Mesh, Surface3D and BackgroundRenderer are the only classes that know when a
 // fill(), stroke() or drawImage() actually happened.
 //
+// Under Z-BUFFER ON (E3b/COS-242), the background's own draw calls only
+// count on the frame Surface3D's snapshot cache actually rebuilds — a cached
+// frame reuses captured bytes with no canvas submission to count, so a lower
+// DRAW CALLS reading on that path is the honest number, not an undercount.
+// The mesh half of the count is unchanged: one per triangle that ended up
+// drawn, whichever backend drew it.
+//
 // The two halves are counted at different granularities on purpose. The checker
 // floor is 900 cell fills at the shipped grid step, which would bury the subject
 // of the frame under its scenery; the mesh is the subject, so its count stays
