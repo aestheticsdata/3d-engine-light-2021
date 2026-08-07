@@ -134,11 +134,13 @@ class Camera {
     return this.focal / this.depthAt(z);
   }
 
-  // Whole-vertex, and the caller rejects the whole triangle: a triangle
-  // straddling the near plane is dropped rather than split, so the artefact is a
-  // hole rather than the smear a mirrored vertex used to paint. Splitting it
-  // properly means Sutherland-Hodgman with UV interpolation, which is COS-418
-  // (E2b).
+  // Whole-vertex: true the moment this one vertex is outside the volume,
+  // near or far. Triangle.isClipped ORs it across all three and is what
+  // Triangle.render() — unused, kept only as documented public-API
+  // compatibility — still rejects a whole straddling triangle by. The real
+  // path splits instead: Triangle.clipToNear (COS-418/E2b) tests near and
+  // far itself, in eye-space depth, so it can tell "split" from "reject"
+  // apart, which this single boolean cannot.
   public clips(z: number): boolean {
     const depth = this.depthAt(z);
 

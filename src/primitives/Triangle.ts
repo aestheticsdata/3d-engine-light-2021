@@ -53,6 +53,7 @@
 // that had to open up was Point3D's x and y.
 
 import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rendering/material";
+import { clipTriangleToNear } from "@rendering/nearPlaneClip";
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
@@ -60,6 +61,7 @@ import type AffineTextureMapper from "@rendering/AffineTextureMapper";
 import type Fog from "@rendering/Fog";
 import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
+import type { ClipVertex } from "@rendering/nearPlaneClip";
 import type TextureRegistry from "@textures/TextureRegistry";
 
 export interface TriangleRenderOptions {
@@ -83,6 +85,20 @@ export interface TriangleRenderOptions {
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
+}
+
+// The four numbers and one flag clipToNear needs, built once per
+// Mesh.renderMesh call rather than once per triangle (R4) — near, far,
+// eyeDistance, the offset and the cull flag are the same for every triangle
+// in the pass, and building this literal on every one of the torus knot's
+// 7920 would be exactly the allocation the fast path below exists to avoid.
+export interface NearClipContext {
+  near: number;
+  far: number;
+  eyeDistance: number;
+  offsetX: number;
+  offsetY: number;
+  cullBackfaces: boolean;
 }
 
 class Triangle {
@@ -151,8 +167,8 @@ class Triangle {
   // Outside the view volume, which is the camera's question rather than this
   // triangle's: whole-vertex rejection, so one vertex outside drops all
   // three and the artefact is a hole rather than the smear a mirrored vertex
-  // used to paint. COS-418 (E2b) is what splits a straddling triangle
-  // instead.
+  // used to paint. Only render() still reads this — the real path splits a
+  // straddling triangle instead, through clipToNear (COS-418/E2b).
   public get isClipped(): boolean {
     return this.a.isClipped || this.b.isClipped || this.c.isClipped;
   }
@@ -273,6 +289,51 @@ class Triangle {
     return Math.abs(v1x * v2y - v1y * v2x) / 2;
   }
 
+  // The near-plane half of the view-volume test (COS-418/E2b), replacing the
+  // whole-triangle reject Mesh.renderMesh used to make. Pushes 0, 1 or 2
+  // triangles into `out`: itself, unchanged, when every vertex is in front —
+  // the out.push(this) path allocates nothing, which is what lets the
+  // overwhelming majority of triangles in any frame take exactly the path
+  // they took before this ticket — nothing when every vertex is behind, and
+  // one or two new fragment triangles, split at the plane by
+  // nearPlaneClip's Sutherland-Hodgman walk, when the triangle straddles it.
+  // The far plane keeps the old whole-triangle reject: this ticket only
+  // splits near, per its own scoping, since nothing in the registry reaches
+  // d = 5000 (see Camera.ts).
+  public clipToNear(context: NearClipContext, out: Triangle[]): void {
+    const da = this.a.zValue + context.eyeDistance;
+    const db = this.b.zValue + context.eyeDistance;
+    const dc = this.c.zValue + context.eyeDistance;
+
+    if (da > context.far || db > context.far || dc > context.far) {
+      return;
+    }
+
+    const aIn = da >= context.near;
+    const bIn = db >= context.near;
+    const cIn = dc >= context.near;
+
+    if (aIn && bIn && cIn) {
+      if (!context.cullBackfaces || this.isFrontFacing()) {
+        out.push(this);
+      }
+
+      return;
+    }
+
+    if (!aIn && !bIn && !cIn) {
+      return;
+    }
+
+    const polygon = clipTriangleToNear(this.nearClipVertices(), context.near, context.eyeDistance);
+
+    this.emitFragment(polygon[0], polygon[1], polygon[2], context, out);
+
+    if (polygon.length === 4) {
+      this.emitFragment(polygon[0], polygon[2], polygon[3], context, out);
+    }
+  }
+
   // False whenever the texture path cannot run, and every one of the four ways
   // it can fail falls back to the flat fill rather than to nothing: no key, no
   // decoded bitmap, no UVs, or a UV triangle the affine solve cannot invert.
@@ -381,6 +442,59 @@ class Triangle {
     context.lineTo(this.bprojX, this.bprojY);
     context.lineTo(this.cprojX, this.cprojY);
     context.closePath();
+  }
+
+  // The three vertices in the plain shape nearPlaneClip works in — camera
+  // space, pre-projection, with the UV each already carries, or {0,0} for an
+  // authored face with none. E4b guarantees every runtime triangle has a
+  // set, but the slots stay optional on the type the registry authors
+  // against, so the fallback lives here rather than being asserted away.
+  private nearClipVertices(): [ClipVertex, ClipVertex, ClipVertex] {
+    const [ua, va] = this.uva ?? [0, 0];
+    const [ub, vb] = this.uvb ?? [0, 0];
+    const [uc, vc] = this.uvc ?? [0, 0];
+
+    return [
+      { x: this.a.xValue, y: this.a.yValue, z: this.a.zValue, u: ua, v: va },
+      { x: this.b.xValue, y: this.b.yValue, z: this.b.zValue, u: ub, v: vb },
+      { x: this.c.xValue, y: this.c.yValue, z: this.c.zValue, u: uc, v: vc },
+    ];
+  }
+
+  // One fragment triangle from three polygon vertices nearPlaneClip
+  // returned. Reads this.a for the projection basis only — a, b and c share
+  // one camera and one render target, so it does not matter which of the
+  // three withPosition is called on. The resolved material is copied in
+  // directly rather than re-derived: resolveMaterial needs the scene's
+  // current MeshMaterial, which nothing at this call site holds, and
+  // resolved is not readonly, unlike authored — which is why rawMaterial()
+  // exists instead, to reproduce authored exactly through the constructor's
+  // own classifyMaterial rather than skip it.
+  private emitFragment(p0: ClipVertex, p1: ClipVertex, p2: ClipVertex, context: NearClipContext, out: Triangle[]) {
+    const fragment = new Triangle(
+      this.a.withPosition(p0.x, p0.y, p0.z),
+      this.a.withPosition(p1.x, p1.y, p1.z),
+      this.a.withPosition(p2.x, p2.y, p2.z),
+      this.rawMaterial(),
+      [p0.u, p0.v],
+      [p1.u, p1.v],
+      [p2.u, p2.v],
+    );
+
+    fragment.resolved = this.resolved;
+    fragment.project(context.offsetX, context.offsetY);
+
+    if (!context.cullBackfaces || fragment.isFrontFacing()) {
+      out.push(fragment);
+    }
+  }
+
+  // authored.css / authored.key is the exact string classifyMaterial was
+  // given in the first place, so handing it back to the constructor
+  // reproduces authored exactly rather than approximating it — cheap, and
+  // only ever paid on the rare straddling triangle.
+  private rawMaterial(): string {
+    return this.authored.kind === "texture" ? this.authored.key : this.authored.css;
   }
 }
 

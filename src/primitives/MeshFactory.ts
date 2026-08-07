@@ -1,8 +1,12 @@
 // Registry data in, a Mesh out.
 //
-// The single construction site of Point3D and Triangle in the repo, and this is
-// where that pays: the render target and the camera are resolved once, here,
-// instead of by every point for itself.
+// The single construction site of Point3D and Triangle FROM THE REGISTRY in
+// the repo, and this is where that pays: the render target and the camera are
+// resolved once, here, instead of by every point for itself. Triangle's own
+// clipToNear (COS-418/E2b) is the one other call site: a clip fragment has no
+// registry entry to rebuild from every frame, so it is built through
+// Point3D.withPosition and discarded at the end of the frame instead of
+// living in a mesh's points/triangles arrays.
 //
 // Pure. No DOM and no store. The camera arrives as a record rather than as a set
 // of values to copy, so there is no third step where the caller applies it —

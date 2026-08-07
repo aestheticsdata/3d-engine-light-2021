@@ -1,6 +1,6 @@
 import type Point3D from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
-import type { TriangleRenderOptions } from "@primitives/Triangle";
+import type { NearClipContext, TriangleRenderOptions } from "@primitives/Triangle";
 import type { MeshMaterial } from "@rendering/material";
 import type RenderStats from "@rendering/RenderStats";
 
@@ -34,6 +34,11 @@ export interface MeshRenderPass {
   // has never held a camera reference, and threading the one number this
   // needs is simpler than giving it one.
   eyeDistance: number;
+  // The view volume's own two planes (Camera.near/Camera.far), threaded the
+  // same way eyeDistance already is — Mesh has never held a Camera reference,
+  // and two more numbers is simpler than giving it one (COS-418/E2b).
+  near: number;
+  far: number;
   // Whether this frame is one of the one-in-six RenderStats.beginFrame()
   // marked sampled. False means every pass below still runs — the mesh must
   // still be drawn — it just makes zero performance.now() calls doing it.
@@ -163,6 +168,16 @@ class Mesh {
 
     const clipCullStartedAt = pass.timed ? performance.now() : 0;
     const survivors: Triangle[] = [];
+    // Built once per call rather than once per triangle — see NearClipContext
+    // on Triangle for why that matters to the fast path.
+    const clipContext: NearClipContext = {
+      near: pass.near,
+      far: pass.far,
+      eyeDistance: pass.eyeDistance,
+      offsetX: pass.offsetX,
+      offsetY: pass.offsetY,
+      cullBackfaces: pass.options.cullBackfaces ?? true,
+    };
 
     for (const triangle of this.triangles) {
       // Binned here, over every submitted triangle rather than only the
@@ -173,15 +188,11 @@ class Mesh {
       // triangle the near plane was about to reject.
       pass.stats.addDepthSample(triangle.depth + pass.eyeDistance);
 
-      if (triangle.isClipped) {
-        continue;
-      }
-
-      if ((pass.options.cullBackfaces ?? true) && !triangle.isFrontFacing()) {
-        continue;
-      }
-
-      survivors.push(triangle);
+      // Near-plane split, far-plane reject and the backface test all now
+      // live on this one call (COS-418/E2b) — a straddling triangle can
+      // push two fragments here instead of the one-or-none this loop saw
+      // before.
+      triangle.clipToNear(clipContext, survivors);
     }
 
     if (pass.timed) {
