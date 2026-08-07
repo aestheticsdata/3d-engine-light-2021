@@ -68,7 +68,14 @@ class ViewportHUD {
   // the stage at its own 1440 frame; what the rasteriser works at is the canvas
   // buffer, and that is the number worth showing.
   public seed() {
-    this.fields.write("resolution", `${this.canvas.width} × ${this.canvas.height}`);
+    this.setResolution(this.canvas.width, this.canvas.height);
+  }
+
+  // Main's resize path calls this directly (E9b/COS-250) rather than re-seeding
+  // from the canvas: the write has to land in the same call that already
+  // resized the backing store, not on whatever cadence a render happens to run.
+  public setResolution(width: number, height: number) {
+    this.fields.write("resolution", `${width} × ${height}`);
   }
 
   // FOV left the placeholder list in COS-231. It used to be seeded above as a

@@ -4,12 +4,14 @@
    both body paddings come from panel.css's two stacked modifiers. */
 
 @media (max-width: 899px) {
-  /* `1024 × 640 × 32` is the widest value in the mobile stats stack. It fits at
-     320px with room over, and this pair is what guarantees it keeps fitting:
-     the number never wraps and never shrinks, and a future longer label gives
-     way instead. Scoped to this card rather than declared on
-     .stat-row__value, which belongs to rows.css; cameraStats.css carries the
-     same pair for the same reason. */
+  /* `1024 × 640 × 32` was the only value this row could ever show pre-E9b; now
+     BUFFER tracks the live, pixel-budget-clamped backing store (COS-250), so a
+     wide mobile viewport at a high device pixel ratio can print a longer
+     string. This pair is what keeps that safe regardless: the number never
+     wraps and never shrinks, and the row itself grows with the same viewport
+     width that widened the string, so there is always room. Scoped to this
+     card rather than declared on .stat-row__value, which belongs to
+     rows.css; cameraStats.css carries the same pair for the same reason. */
   .system-stats .stat-row__value {
     min-width: 0;
     white-space: nowrap;

@@ -56,12 +56,10 @@ export const DEFAULT_FOV = 94;
 
 class CameraController {
   // The opposite side of the triangle the FOV mapping solves, and the aspect the
-  // CAMERA card prints. The canvas is read for both once here rather than held,
-  // so nothing in this class can start depending on a live canvas dimension E9b
-  // is going to move — and when it does, this constructor is the single call
-  // site that has to start following it.
-  private readonly halfHeight: number;
-  private readonly aspectRatio: number;
+  // CAMERA card prints. Read off the canvas at construction and again from
+  // resize() (E9b/COS-250) — the two call sites that may ever write them.
+  private halfHeight: number;
+  private aspectRatio: number;
   private readonly camera: Camera;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -146,6 +144,20 @@ class CameraController {
 
   public setProjection(mode: ProjectionMode) {
     this.camera.setMode(mode);
+  }
+
+  // The focal length moves to hold the angle the FOV row already showed —
+  // read before either field changes — rather than leaving it fixed while
+  // halfHeight moves under it, which would report a different vertical FOV
+  // at every size for a control nobody touched. The same coupling
+  // setFovDegrees already relies on; a resize is a FOV control the window
+  // itself is driving.
+  public resize(width: number, height: number) {
+    const fovDegrees = this.fieldOfViewDegrees;
+
+    this.halfHeight = height / 2;
+    this.aspectRatio = width / height;
+    this.camera.setFocal(this.focalFor(fovDegrees));
   }
 
   // The engine has a focal length, not a field of view, so the two are related

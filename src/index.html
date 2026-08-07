@@ -293,11 +293,14 @@
                shading off. Seeded to the resting mode for the same reason. -->
           <div class="viewport panel" data-shading-mode="flat">
 
-            <!-- The stage is the picture, not the card. The canvas is a fixed
-                 1024x640 raster that letterboxes inside a card of any other
-                 shape, and letterboxing is invisible to layout — a HUD anchored
-                 to the card would inset itself from the bars instead of from
-                 the image. Everything below is anchored to the stage. -->
+            <!-- The stage is the picture, not the card. 1024x640 is only the
+                 pre-observer seed (E9b/COS-250): Main's ResizeObserver keeps
+                 the backing store live from the first frame on, matching the
+                 stage's own box — which on desktop fills the card outright and
+                 on mobile still letterboxes at 16/10. Either way, letterboxing
+                 is invisible to layout — a HUD anchored to the card would inset
+                 itself from the bars instead of from the image. Everything
+                 below is anchored to the stage. -->
             <div class="viewport-stage">
               <canvas id="canvasID" width="1024" height="640">canvas not available in this browser</canvas>
 

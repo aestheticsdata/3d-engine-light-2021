@@ -7,9 +7,10 @@
    the tokens ticket allows.
    Anchored inside .viewport-hud, which is itself anchored to .viewport-stage
    rather than to the viewport card. That is what keeps the 10px inset measured
-   from the picture: the fixed 1024x640 canvas letterboxes inside a card of any
-   other shape, and letterboxing is invisible to layout, so a band anchored to
-   the card would inset itself from the bars instead. */
+   from the picture: on mobile the stage still letterboxes inside a card of any
+   other shape (desktop's stage now fills its card outright, E9b/COS-250), and
+   letterboxing is invisible to layout, so a band anchored to the card would
+   inset itself from the bars instead. */
 .quick-toggle-band {
   position: absolute;
   top: 40px;

@@ -85,6 +85,11 @@ export interface TriangleRenderOptions {
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
+  // Device pixels, not CSS pixels — the caller passes renderTarget.scale
+  // (E9b/COS-250), the same number every vertex is already projected through.
+  // A hardcoded 1 is a half-thickness hairline the moment the backing store
+  // renders above the reference height, DPR included.
+  lineWidth?: number;
 }
 
 // The four numbers and one flag clipToNear needs, built once per
@@ -257,7 +262,7 @@ class Triangle {
     // Unfogged, deliberately. A wireframe is the diagnostic view, and dissolving
     // the far edges is exactly what someone who switched to it is trying to see.
     if (options.wireframe) {
-      this.strokeWireframe(context);
+      this.strokeWireframe(context, options.lineWidth ?? 1);
       context.restore();
 
       return true;
@@ -377,9 +382,9 @@ class Triangle {
     });
   }
 
-  private strokeWireframe(context: CanvasRenderingContext2D) {
+  private strokeWireframe(context: CanvasRenderingContext2D, lineWidth: number) {
     context.strokeStyle = "rgba(10, 20, 60, 0.95)";
-    context.lineWidth = 1;
+    context.lineWidth = lineWidth;
     this.tracePath(context);
     context.stroke();
   }

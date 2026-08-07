@@ -122,4 +122,42 @@ describe("CameraController", () => {
     expect(camera.projection.focalLength).toBe(focal);
     expect(camera.distance).toBe(distance);
   });
+
+  // E9b/COS-250: a resize must not read as a silent FOV change. The focal
+  // length is free to move — it is what makes the angle possible at a new
+  // half-height — but the angle the console reports and renders at must not.
+  describe("resize", () => {
+    it("keeps the vertical field of view constant while the canvas height changes", () => {
+      const camera = controller();
+
+      camera.setFovDegrees(72);
+      const fovBefore = camera.fieldOfViewDegrees;
+      const focalBefore = camera.projection.focalLength;
+
+      camera.resize(1600, 900);
+
+      expect(camera.fieldOfViewDegrees).toBeCloseTo(fovBefore, 10);
+      // The angle only survives a taller or shorter canvas because the focal
+      // length moved to compensate — the same coupling setFovDegrees uses.
+      expect(camera.projection.focalLength).not.toBeCloseTo(focalBefore, 5);
+    });
+
+    it("tracks the aspect ratio of the new size", () => {
+      const camera = controller();
+
+      camera.resize(1600, 900);
+
+      expect(camera.aspect).toBeCloseTo(1600 / 900, 10);
+    });
+
+    it("holds the subject's size at the centre plane, the same invariant a focal change already holds", () => {
+      const camera = controller();
+      camera.setZoomFromSlider(DEFAULT_ZOOM_SLIDER_VALUE);
+      const framing = camera.projection.scaleAt(0);
+
+      camera.resize(1600, 900);
+
+      expect(camera.projection.scaleAt(0)).toBeCloseTo(framing, 10);
+    });
+  });
 });

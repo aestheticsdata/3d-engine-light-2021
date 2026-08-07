@@ -11,14 +11,19 @@ import type { MeshRenderRequest } from "@primitives/Surface3D";
 
 export interface ShapeTransitionContextOptions {
   duration: number;
-  travelX: number;
-  travelY: number;
+  width: number;
+  height: number;
+  margin: number;
 }
 
 class ShapeTransitionContext {
   private readonly durationMs: number;
-  private readonly travelXValue: number;
-  private readonly travelYValue: number;
+  // Kept rather than discarded after the constructor, so resize() can rederive
+  // travelX/travelY from a new width and height the same way it was derived
+  // the first time (E9b/COS-250).
+  private readonly marginValue: number;
+  private travelXValue: number;
+  private travelYValue: number;
   private current: Mesh | null;
   private incoming: Mesh | null;
   private outgoing: Mesh | null;
@@ -26,8 +31,9 @@ class ShapeTransitionContext {
 
   constructor(options: ShapeTransitionContextOptions) {
     this.durationMs = options.duration;
-    this.travelXValue = options.travelX;
-    this.travelYValue = options.travelY;
+    this.marginValue = options.margin;
+    this.travelXValue = options.width + options.margin;
+    this.travelYValue = options.height + options.margin;
     this.current = null;
     this.incoming = null;
     this.outgoing = null;
@@ -62,6 +68,14 @@ class ShapeTransitionContext {
 
   public get outgoingMesh(): Mesh | null {
     return this.outgoing;
+  }
+
+  // Rederives travelX/travelY from the stored margin, the same way the
+  // constructor derived them the first time — so a transition already in
+  // flight follows the new size on its very next tick (E9b/COS-250).
+  public resize(width: number, height: number) {
+    this.travelXValue = width + this.marginValue;
+    this.travelYValue = height + this.marginValue;
   }
 
   // A mesh arrives with nothing on screen: there is no outgoing shape to slide

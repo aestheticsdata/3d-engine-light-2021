@@ -120,8 +120,8 @@ interface GroundPass {
 }
 
 class BackgroundRenderer {
-  private readonly width: number;
-  private readonly height: number;
+  private width: number;
+  private height: number;
   private readonly skyImage: HTMLImageElement | null;
   private skyEnabled: boolean;
   private floorEnabled: boolean;
@@ -164,6 +164,15 @@ class BackgroundRenderer {
     // public and a caller that reaches it without going through that slider
     // — a test, a restored session — carries none of its guarantees.
     this.gridStepMetres = Math.max(1, settings.gridStepMetres);
+  }
+
+  // Every layer below derives its geometry from width/height at draw time
+  // rather than caching anything from them, so writing the two fields is the
+  // whole of it (E9b/COS-250) — there is no snapshot to invalidate here yet
+  // (see the FOR E3B note above).
+  public resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
   }
 
   // camera and renderTarget arrive on the request rather than as fields: this
@@ -324,6 +333,12 @@ class BackgroundRenderer {
   // `azimuth` pans it under yaw. A cylindrical panorama of focal f is 2*pi*f
   // wide, so one radian of turn is exactly f pixels of pan — no separate
   // calibration, and the sky tracks the ground's own vanishing directions.
+  //
+  // Unnegated, because the rig's eye looks down +z (viewPresets.ts): row 2 of
+  // cameraTransform gives azimuth = -yaw, so panning by +azimuth already turns
+  // the photograph the same way a yaw drag turns the ground under
+  // GroundProjection.project() — negating it here sent the sky one way while
+  // the ground went the other.
   private renderSky(context: CanvasRenderingContext2D, azimuth: number, focalPx: number) {
     // The rotated frame exposes the canvas corners, so every fill here is
     // oversized against the diagonal rather than the width.
@@ -352,7 +367,7 @@ class BackgroundRenderer {
     const centred = (this.width - drawWidth) / 2;
     // Wrapped into one image width so the tile indices below stay small however
     // many turns the camera has made.
-    const pan = (((-azimuth * focalPx - centred) % drawWidth) + drawWidth) % drawWidth;
+    const pan = (((azimuth * focalPx - centred) % drawWidth) + drawWidth) % drawWidth;
     const first = -Math.ceil((overscan + pan) / drawWidth);
     const last = Math.ceil((this.width + overscan) / drawWidth);
 

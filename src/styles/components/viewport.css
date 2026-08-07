@@ -12,51 +12,32 @@
    interim fit — is invisible to layout: the element's box stays the size of the
    card and only its painted content shrinks. A HUD anchored to that box would
    inset itself from the letterbox bars rather than from the image. Anchoring to
-   a box that is exactly the picture is the whole reason this element exists.
+   a box that is exactly the picture is the whole reason this element exists,
+   and it holds on both branches below even though only one of them still
+   letterboxes.
 
-   16/10 is not a choice: the backing store is 1024 x 640 = 1.6 exactly, and the
-   mobile card asks for 16/10 = 1.6 exactly. The two agree, so the picture fills
-   a phone card edge to edge — give or take the 1.2px of matte the card's own 1px
-   border leaves, since aspect-ratio applies to the border box and the content
-   box inside it is fractionally wider than 1.6. Sub-pixel matte is the right
-   side of that trade; the alternative is stretching the render.
+   Desktop fills the card outright now (E9b/COS-250): Main's ResizeObserver
+   reads this element's own box and resizes the canvas to match it every time
+   it changes, so the box IS the picture with nothing left to cap. `position:
+   absolute; inset: 0` needs no cq read at all — .viewport is already
+   `position: relative` (layout.css), so this is the whole rule.
 
-   The width is computed from both of the card's axes at once, and that is not
-   a flourish. `aspect-ratio` only re-derives the axis that is auto: with a
-   definite width, clamping max-width transfers to the height, but clamping
-   max-height does *not* transfer back to the width. A card shorter than 16/10
-   therefore squashes the picture instead of letterboxing it — measured at 21%
-   of horizontal stretch in a 1800x620 window, and 0.4% on every phone, where
-   the card's 1px border makes its content box very slightly wider than 1.6.
-   Taking the smaller of the two axes up front sidesteps the asymmetry: the
-   height then falls out of the ratio and can never be clamped.
+   Mobile keeps the pre-E9b shape, in the media query below: the card's own
+   `aspect-ratio: 16/10` (layout.css) still locks the picture's proportions,
+   independent of the resolution the observer now drives the backing store to
+   within that box. */
 
-   The third term is the epic's "scales down but never up" rule — the stage
-   stops at the backing store rather than resampling 1024 x 640 into a soft
-   picture. Lifting that cap is COS-250 (E9b), not this ticket.
-
-   The max-* pair below is the fallback for engines without size container
-   queries: same behaviour, minus the anti-squash. Neither ever binds once the
-   cq rule applies. */
-
-/* Required by the stage, not a style of the card: cqw/cqh need a size
+/* Required by the stage on the mobile branch below: cqw/cqh need a size
    container, and the card is the box the picture has to fit inside. It is safe
-   to contain — the card's own size comes from the shell's flex basis on desktop
-   and from its aspect-ratio on mobile, never from its contents. */
+   to contain — the card's own size comes from the shell's flex basis on
+   desktop and from its aspect-ratio on mobile, never from its contents. */
 .viewport {
   container-type: size;
 }
 
 .viewport-stage {
-  position: relative;
-  aspect-ratio: var(--size-canvas-ratio);
-  margin: auto;
-
-  width: 100%;
-  max-width: min(100%, var(--size-canvas-w));
-  max-height: min(100%, var(--size-canvas-h));
-
-  width: min(100cqw, calc(100cqh * var(--size-canvas-ratio)), var(--size-canvas-w));
+  position: absolute;
+  inset: 0;
 }
 
 .viewport-stage canvas {
@@ -465,6 +446,52 @@
    "not in mockup" is new spec restoring something the mobile design dropped. */
 
 @media (max-width: 899px) {
+  /* The pre-E9b formula, unchanged: the card's aspect-ratio still governs the
+     picture's shape here, so the stage still has to compute its own box
+     instead of simply filling the card the way the desktop rule now does.
+
+     16/10 is not a choice: the backing store opened at 1024 x 640 = 1.6
+     exactly, and the mobile card asks for 16/10 = 1.6 exactly. The two agree,
+     so the picture fills a phone card edge to edge — give or take the 1.2px of
+     matte the card's own 1px border leaves, since aspect-ratio applies to the
+     border box and the content box inside it is fractionally wider than 1.6.
+     Sub-pixel matte is the right side of that trade; the alternative is
+     stretching the render.
+
+     The width is computed from both of the card's axes at once, and that is
+     not a flourish. `aspect-ratio` only re-derives the axis that is auto: with
+     a definite width, clamping max-width transfers to the height, but
+     clamping max-height does *not* transfer back to the width. A card shorter
+     than 16/10 therefore squashes the picture instead of letterboxing it —
+     measured at 21% of horizontal stretch in a 1800x620 window, and 0.4% on
+     every phone, where the card's 1px border makes its content box very
+     slightly wider than 1.6. Taking the smaller of the two axes up front
+     sidesteps the asymmetry: the height then falls out of the ratio and can
+     never be clamped.
+
+     The third term is unchanged from before E9b/COS-250 — still the same
+     1024px ceiling, kept for continuity with the formula this branch is a
+     copy of — but it is not the constraint doing any work here: at every
+     width this media query applies to, 100cqw is already narrower than
+     --size-canvas-w, so the min() never reaches for it. Desktop is the branch
+     that dropped its own cap; this one never leaned on it.
+
+     The max-* pair below is the fallback for engines without size container
+     queries: same behaviour, minus the anti-squash. Neither ever binds once
+     the cq rule applies. */
+  .viewport-stage {
+    position: relative;
+    aspect-ratio: var(--size-canvas-ratio);
+    margin: auto;
+    inset: auto;
+
+    width: 100%;
+    max-width: min(100%, var(--size-canvas-w));
+    max-height: min(100%, var(--size-canvas-h));
+
+    width: min(100cqw, calc(100cqh * var(--size-canvas-ratio)), var(--size-canvas-w));
+  }
+
   .viewport-hud__top {
     top: var(--space-4);
     right: var(--space-4);

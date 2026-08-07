@@ -5,14 +5,11 @@
 // under vitest's node environment threw before a single assertion ran. These
 // tests exist because they can now be written at all.
 //
-// The capture-at-construction case is the one worth guarding. Copying the
-// render target's three numbers rather than holding the instance is what keeps
-// a mesh already on screen projecting about the centre and scale it was built
-// with; following a resize would be an improvement, and it belongs to the
-// resize ticket (E9b), not here. The camera is the opposite and is held rather
-// than copied, which is what lets one slider move every vertex of every mesh
-// at once. The two arrive in the same constructor and it would be easy to make
-// one behave like the other by mistake.
+// The live-follow case is the one worth guarding (E9b/COS-250). Point3D holds
+// the render target rather than copying its three numbers, the same way it
+// already held the camera — so a resize reaches every mesh already on screen
+// without anything rebuilding them, and dragging the window moves the picture
+// instead of leaving it stranded at the size it was built at.
 
 import cube from "@data/shapes/cube";
 import sphere from "@data/shapes/sphere";
@@ -97,13 +94,14 @@ describe("convert3D2D", () => {
     expect(far.convert3D2D().x).toBeLessThan(612);
   });
 
-  it("keeps the centre and scale it was built with when the render target later resizes", () => {
+  it("follows the render target it was built with when it later resizes", () => {
     const target = renderTarget();
     const point = new Point3D(0, 0, 0, target, cameraOf());
 
     target.setSize(400, 200);
 
-    expect(point.convert3D2D().x).toBe(512);
+    // 400 >> 1 = 200: the new centre, not the 512 the point opened on.
+    expect(point.convert3D2D().x).toBe(200);
   });
 
   // Why the camera record is shared rather than copied: a zoom used to be 3960

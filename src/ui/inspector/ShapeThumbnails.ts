@@ -5,14 +5,15 @@
 // thumbnail would be a second source of truth for what a shape looks like, and
 // it would be wrong the day COS-201 adds a solid nobody drew an icon for.
 //
-// Its own MeshFactory and RenderTarget, because the app's are bound to the
-// 1024x640 stage: Point3D caches the projection centre and scale per point at
-// construction, so a mesh built for the stage cannot be re-aimed at a 44px
-// thumbnail. referenceHeight is pinned to the thumbnail's own SIZE rather than
-// left at RenderTarget's 640 default, which is what keeps scale at exactly 1 —
-// this file's own camera and offsetFor() below were tuned assuming no extra
-// multiplier, and inheriting the stage's reference height would silently
-// shrink every thumbnail toward its own centre.
+// Its own MeshFactory and RenderTarget, because the app's is a genuinely
+// different target: the live stage renders at whatever the viewport resizes
+// to (E9b/COS-250), and a mesh sharing that RenderTarget would be projected at
+// the stage's own centre and scale, not a 44px thumbnail's. referenceHeight is
+// pinned to the thumbnail's own SIZE rather than left at RenderTarget's 640
+// default, which is what keeps scale at exactly 1 — this file's own camera and
+// offsetFor() below were tuned assuming no extra multiplier, and inheriting
+// the stage's reference height would silently shrink every thumbnail toward
+// its own centre.
 //
 // Rendered after the textures resolve, so the cube shows its galaxy face rather
 // than a hole — which is why Main calls this from init() and not from its
