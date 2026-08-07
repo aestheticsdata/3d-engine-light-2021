@@ -96,6 +96,12 @@ All restored elements are new spec, not extracted; mark them in CSS with a `/* n
 | frame ms (mobile) | `<n> ms` | real — a `data-field="frameMs"` node fed by `FieldWriter.write`. The frame-time ticket owns the single measured value (`performance.now()` around the `Surface3D.render` call, smoothed on the 90ms display gate); do not compute a second value from smoothed fps. Frame-time lands after this ticket, so the chip shows an em dash until it does |
 | Hint strip text (desktop only) | `drag orbit · scroll zoom` | placeholder — the canvas has no pointer handlers; de-mock `Orbit camera` |
 
+## Theatre mode (COS-445, post-ship)
+
+A square icon button, `#viewportExpandToggle`, sits in a new `.viewport-hud__top-right` cluster beside the camera readout — the one interactive child the HUD layer carries besides the quick toggles, so it is the one place besides `.quick-toggle-band` that opts back into `pointer-events: auto`. Clicking it writes `data-viewport="expanded"` on `#app` (owned by `src/ui/ViewportExpander.ts`) and every visual consequence is a CSS selector keyed off that attribute in `src/styles/layout.css` — the toolbar, both side columns, the telemetry block and the status bar all clamp to zero and leave the tab order, and `.viewport` grows to fill the freed space. Two inline SVG glyphs live in the button at once; `src/styles/components/hud.css` picks one per state.
+
+Blocked on [COS-250](https://linear.app/cosmokaat/issue/COS-250/e9b-resize-dpr-and-the-pixel-budget) for the part that matters: until the canvas can resize, expanding only grows the *card* to fill the window — the picture inside stays letterboxed at 16:10, scaled up to at most `--size-canvas-w`, same as it always has been. Do not read the current letterboxed look as a bug; COS-445 is explicitly scoped to the layout collapse, not the render target.
+
 ## Files
 
 - `src/index.html` — insert `.viewportStage > canvas#canvasID` plus the `.viewportHud` layer elements into the viewport card the shell skeleton provides. The shell ticket deletes the legacy `#canvasWrapper` and `canvas` CSS (D2); this ticket only changes markup.

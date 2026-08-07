@@ -335,59 +335,106 @@
                     </span>
                   </div>
 
-                  <!-- desktop camera readout -->
-                  <div class="hud-panel viewport-hud__camera">
-                    <div class="viewport-hud__cam-row">
-                      <span class="hud-panel__key">cam.pos</span>
-                      <span class="hud-panel__value" data-field="camPos">&mdash;</span>
-                    </div>
-                    <div class="viewport-hud__cam-row">
-                      <span class="hud-panel__key">cam.rot</span>
-                      <span class="hud-panel__value" data-field="camRot">&mdash;</span>
-                    </div>
-                    <div class="viewport-hud__cam-row">
-                      <span class="hud-panel__key">target</span>
-                      <span class="hud-panel__value" data-field="camTarget">&mdash;</span>
-                    </div>
-                    <div class="viewport-hud__cam-row">
-                      <span class="hud-panel__key">dist</span>
-                      <span class="hud-panel__value" data-field="camDist">&mdash;</span>
-                    </div>
-                  </div>
+                  <!-- Theatre mode (COS-445): the one interactive child this
+                       layer carries besides the quick toggles, so it is the
+                       one HUD icon that opts back into pointer-events. Two
+                       glyphs ship at once; layout.css/hud.css pick one off
+                       #app[data-viewport], the same shape TabGroup uses for
+                       data-tab. -->
+                  <div class="viewport-hud__top-right">
+                    <button
+                      type="button"
+                      id="viewportExpandToggle"
+                      class="hud-icon-btn viewport-hud__expand-btn"
+                      aria-pressed="false"
+                      aria-label="Expand viewport"
+                    >
+                      <svg
+                        class="hud-icon-btn__glyph hud-icon-btn__glyph--expand"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M1 5V1H5M11 1H15V5M15 11V15H11M5 15H1V11"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <svg
+                        class="hud-icon-btn__glyph hud-icon-btn__glyph--collapse"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M5 1V5H1M11 1V5H15M11 15V11H15M5 15V11H1"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
 
-                  <!-- mobile camera readout: the four rows above as three chips.
-                       Same data-field names, so FieldWriter keeps the two mounts
-                       in sync without either branch knowing about the other. -->
-                  <div class="viewport-hud__cam-chips">
-                    <span class="hud-chip">
-                      <span class="viewport-hud__k">frame</span>
-                      <span data-field="frameMs">&mdash;</span>
-                      <span class="viewport-hud__k">ms</span>
-                    </span>
-                    <span class="hud-chip viewport-hud__chip-stack">
-                      <span class="viewport-hud__stack-line">
-                        <span class="viewport-hud__k">pos</span>
-                        <span data-field="camPos">&mdash;</span>
+                    <!-- desktop camera readout -->
+                    <div class="hud-panel viewport-hud__camera">
+                      <div class="viewport-hud__cam-row">
+                        <span class="hud-panel__key">cam.pos</span>
+                        <span class="hud-panel__value" data-field="camPos">&mdash;</span>
+                      </div>
+                      <div class="viewport-hud__cam-row">
+                        <span class="hud-panel__key">cam.rot</span>
+                        <span class="hud-panel__value" data-field="camRot">&mdash;</span>
+                      </div>
+                      <div class="viewport-hud__cam-row">
+                        <span class="hud-panel__key">target</span>
+                        <span class="hud-panel__value" data-field="camTarget">&mdash;</span>
+                      </div>
+                      <div class="viewport-hud__cam-row">
+                        <span class="hud-panel__key">dist</span>
+                        <span class="hud-panel__value" data-field="camDist">&mdash;</span>
+                      </div>
+                    </div>
+
+                    <!-- mobile camera readout: the four rows above as three chips.
+                         Same data-field names, so FieldWriter keeps the two mounts
+                         in sync without either branch knowing about the other. -->
+                    <div class="viewport-hud__cam-chips">
+                      <span class="hud-chip">
+                        <span class="viewport-hud__k">frame</span>
+                        <span data-field="frameMs">&mdash;</span>
+                        <span class="viewport-hud__k">ms</span>
                       </span>
-                      <span class="viewport-hud__stack-line">
-                        <span class="viewport-hud__k">rot</span>
-                        <span data-field="camRot">&mdash;</span>
+                      <span class="hud-chip viewport-hud__chip-stack">
+                        <span class="viewport-hud__stack-line">
+                          <span class="viewport-hud__k">pos</span>
+                          <span data-field="camPos">&mdash;</span>
+                        </span>
+                        <span class="viewport-hud__stack-line">
+                          <span class="viewport-hud__k">rot</span>
+                          <span data-field="camRot">&mdash;</span>
+                        </span>
                       </span>
-                    </span>
-                    <span class="hud-chip viewport-hud__chip-stack">
-                      <span class="viewport-hud__stack-line">
-                        <span class="viewport-hud__k">fov</span>
-                        <span data-field="fov">&mdash;</span>
-                        <span class="viewport-hud__k">zoom</span>
-                        <span data-field="zoom">&mdash;</span>
+                      <span class="hud-chip viewport-hud__chip-stack">
+                        <span class="viewport-hud__stack-line">
+                          <span class="viewport-hud__k">fov</span>
+                          <span data-field="fov">&mdash;</span>
+                          <span class="viewport-hud__k">zoom</span>
+                          <span data-field="zoom">&mdash;</span>
+                        </span>
+                        <span class="viewport-hud__stack-line">
+                          <span class="viewport-hud__k">target</span>
+                          <span data-field="camTarget">&mdash;</span>
+                          <span class="viewport-hud__k">dist</span>
+                          <span data-field="camDist">&mdash;</span>
+                        </span>
                       </span>
-                      <span class="viewport-hud__stack-line">
-                        <span class="viewport-hud__k">target</span>
-                        <span data-field="camTarget">&mdash;</span>
-                        <span class="viewport-hud__k">dist</span>
-                        <span data-field="camDist">&mdash;</span>
-                      </span>
-                    </span>
+                    </div>
                   </div>
 
                 </div>
