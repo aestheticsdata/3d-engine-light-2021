@@ -50,6 +50,64 @@
   color: var(--color-text-primary);
 }
 
+/* ---- HUD icon button --------------------------------------------------------
+   The one glyph control the overlay carries: the theatre-mode expand/collapse
+   toggle (COS-445). Square, sized off --size-hud-chip rather than a token of
+   its own, so it lines up with the chip row it sits beside instead of
+   inventing a second square size. */
+
+.hud-icon-btn {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-hud-chip);
+  height: var(--size-hud-chip);
+  padding: 0;
+  background: var(--elevation-hud-bg);
+  border: var(--size-hairline) solid var(--elevation-hud-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-hud);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.hud-icon-btn:focus-visible {
+  outline: var(--size-mark) solid var(--color-accent);
+  outline-offset: var(--size-hairline);
+}
+
+@media (hover: hover) {
+  .hud-icon-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent-overlay-border);
+  }
+}
+
+.hud-icon-btn__glyph {
+  width: 14px;
+  height: 14px;
+}
+
+.hud-icon-btn__glyph--collapse {
+  display: none;
+}
+
+/* Off #app's own attribute rather than a class on the button: the same shape
+   TabGroup uses for data-tab, and it is what lets ViewportExpander write one
+   attribute and touch no class list. */
+#app[data-viewport="expanded"] .hud-icon-btn {
+  color: var(--color-accent);
+}
+
+#app[data-viewport="expanded"] .hud-icon-btn__glyph--expand {
+  display: none;
+}
+
+#app[data-viewport="expanded"] .hud-icon-btn__glyph--collapse {
+  display: block;
+}
+
 .quick-toggle {
   height: var(--size-chip-quick);
   padding: 0 var(--space-5);
@@ -84,7 +142,8 @@
 @media (max-width: 899px) {
   /* The denser background replaces the blur on mobile — deliberate asymmetry,
      backdrop-filter is expensive on phones and the extra alpha reads the same. */
-  .hud-chip {
+  .hud-chip,
+  .hud-icon-btn {
     background: var(--elevation-hud-bg-dense);
     backdrop-filter: none;
   }

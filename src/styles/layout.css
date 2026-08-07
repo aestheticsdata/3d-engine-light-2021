@@ -7,8 +7,44 @@
   gap: var(--size-stack-gap);
   width: 100%;
   min-height: 100vh;
+  /* A ceiling this shell never comes close to in normal operation — read on
+     for why it needs to be a concrete length rather than the property's own
+     `none` initial value. */
+  max-height: 300vh;
+  /* Permanent, not attribute-scoped. #app's own size is otherwise always
+     content-driven (min-height only, no max-height in the normal state below
+     300vh), so nothing here ever exceeds #app's own box for this to clip —
+     it is a no-op until theatre mode gives max-height a real ceiling to
+     enforce. */
+  overflow: hidden;
   padding: var(--size-page-pad);
   background: var(--color-bg-app);
+  /* Theatre mode (COS-445) is the only thing that ever changes gap/padding
+     after boot, so the transition lives on the always-on rule rather than
+     being restated in the attribute-scoped block below.
+
+     min-height / max-height are 0-duration but carry the opposite delay from
+     gap/padding, and the opposite delay from every child's own visibility
+     below. Restoring (attribute removed) is the direction this governs, and
+     it is *not* the same trick as `height`: a transition to or from the
+     keyword `auto` (or max-height's own initial `none`) is not animatable at
+     all per spec, delay or no delay — which is why #app is sized by
+     min-height/max-height sandwiched to equal values rather than by `height`,
+     and why the base rule above gives max-height a concrete 300vh rather than
+     leaving it at `none`. Without the delay, max-height reverts to that no-op
+     300vh the instant the attribute goes, while every child is still near its
+     collapsed max-height of its own — an unclamped #app measures whatever its
+     children's in-flight sizing happens to produce, which is how a 900px-tall
+     shell briefly read as 1100px mid-restore. Staying clamped to exactly the
+     viewport for the full fold, and only letting go at the very end, is what
+     keeps that window from ever being observable. The expanded rule below
+     carries the mirror image — 0 delay — so the clamp engages immediately on
+     the way in. */
+  transition:
+    gap var(--duration-base) var(--ease-standard),
+    padding var(--duration-base) var(--ease-standard),
+    min-height 0s var(--duration-base),
+    max-height 0s var(--duration-base);
 }
 
 /* ---- toolbar row ---------------------------------------------------------- */
@@ -26,6 +62,19 @@
   flex-direction: row;
   align-items: stretch;
   gap: var(--size-stack-gap);
+  /* 100vh is a ceiling this row never comes close to at its real 40px height —
+     max-height needs a concrete length to transition from, and none/auto
+     cannot interpolate with a length (COS-445). Permanent overflow: hidden is
+     what keeps the collapse-back direction clean: visibility returns to
+     visible before max-height has grown back to fit this row's content, and
+     without a clip here that content would spill out of the still-small box
+     rather than being hidden inside it. */
+  max-height: 100vh;
+  overflow: hidden;
+  transition:
+    max-height var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s;
 }
 
 /* Tracks the left column so the brand block and the sidebar under it stay
@@ -57,6 +106,10 @@
   flex: 1;
   gap: var(--size-stack-gap);
   min-height: 0;
+  /* Gap is the only thing theatre mode (COS-445) changes here: col-left and
+     col-right clamp themselves away, and the two 8px slivers their gap would
+     otherwise leave beside the viewport go with them. */
+  transition: gap var(--duration-base) var(--ease-standard);
 }
 
 /* Preferred width from the token, allowed to shrink, floored by --size-sidebar-min
@@ -68,6 +121,18 @@
   gap: var(--size-stack-gap);
   min-width: var(--size-sidebar-min);
   min-height: 0;
+  /* Same reasoning as .toolbar's max-height: a concrete ceiling this column
+     never reaches, so theatre mode's max-width: 0 has a length to animate
+     from (COS-445). overflow: hidden is permanent for the same reason as
+     .toolbar's — the collapse-back direction returns to visible before
+     max-width has grown back to fit this column's content. */
+  max-width: 100vw;
+  overflow: hidden;
+  transition:
+    max-width var(--duration-base) var(--ease-standard),
+    min-width var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s;
 }
 
 .scene-graph,
@@ -81,6 +146,10 @@
   flex-direction: column;
   gap: var(--size-stack-gap);
   min-width: 0;
+  /* The gap between .viewport and .telemetry, gone the same way .app-main's
+     goes (COS-445): telemetry clamps to zero, and its gap should not survive
+     it as a lingering strip under the picture. */
+  transition: gap var(--duration-base) var(--ease-standard);
 }
 
 /* Grows and shrinks with the column, floored so the scene never collapses. The
@@ -110,6 +179,18 @@
   flex-direction: column;
   gap: var(--size-stack-gap);
   min-height: var(--size-telemetry-min-h);
+  /* Same ceiling-with-headroom shape as .toolbar's max-height, so theatre
+     mode's collapse to 0 has a concrete length to animate from rather than
+     from `auto` (COS-445) — flex-basis stays auto and untouched here, since
+     an auto-basis flex item that clamps to max-height:0 still frees its share
+     of the column for .viewport's existing flex-grow to claim. */
+  max-height: 100vh;
+  overflow: hidden;
+  transition:
+    max-height var(--duration-base) var(--ease-standard),
+    min-height var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s;
 }
 
 /* Wraps rather than crushing: below roughly three card minimums the row breaks
@@ -137,6 +218,12 @@
   min-width: var(--size-inspector-min);
   min-height: 0;
   overflow: hidden;
+  max-width: 100vw;
+  transition:
+    max-width var(--duration-base) var(--ease-standard),
+    min-width var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s;
 }
 
 .inspector__body {
@@ -168,6 +255,11 @@
   flex: 0 0 var(--size-statusbar-h);
   flex-direction: row;
   align-items: center;
+  max-height: 100vh;
+  transition:
+    max-height var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s;
 }
 
 /* ---- desktop tab gating --------------------------------------------------- */
@@ -181,6 +273,105 @@
 #app[data-tab="render"] [data-panel="render"],
 #app[data-tab="world"] [data-panel="world"] {
   display: flex;
+}
+
+/* ---- theatre mode (COS-445) ------------------------------------------------
+   One attribute, written by ViewportExpander, the same shape TabGroup uses for
+   data-tab / data-mtab: no JS layout, every consequence a selector keyed off
+   #app[data-viewport="expanded"]. Shared between both branches — .viewport
+   exists identically in the DOM either way — with the mobile-only chrome
+   (app bar, action strip, quick toggles, framerate, tab strip, tab bodies,
+   RESET SCENE) collapsed separately inside the mobile block below, since those
+   elements only render there.
+
+   Nothing here touches .viewport itself. It is already the flexible child of
+   a flex column (flex: 3 1 var(--size-viewport-h)) — once every sibling clamps
+   its own max-height / max-width to 0, the flex algorithm freezes each of them
+   at that clamp and redistributes the freed space to whichever sibling is
+   still flexible, which is .viewport and only .viewport. That redistribution
+   re-runs on every animation frame against the live interpolated values, which
+   is what makes the fold continuous rather than a jump at either end. */
+
+#app[data-viewport="expanded"] {
+  gap: 0;
+  padding: 0;
+  /* Sandwiched to the same value rather than expressed as `height: 100dvh` —
+     see the base rule's comment for why: min/max both animate, height to/from
+     auto does not. dvh, not vh: a mobile URL bar makes 100vh taller than the
+     window, and that gap is exactly a scrollbar. Both carry the delayed-vs-
+     immediate transition together, so the pair can never cross (min briefly
+     exceeding max would hand the used height back to min, on a real phone
+     where dvh and vh genuinely differ). overflow: hidden is not restated —
+     it is permanent on the base rule now, since it only ever binds when
+     max-height does. */
+  min-height: 100dvh;
+  max-height: 100dvh;
+  transition:
+    gap var(--duration-base) var(--ease-standard),
+    padding var(--duration-base) var(--ease-standard),
+    min-height 0s,
+    max-height 0s;
+}
+
+#app[data-viewport="expanded"] .app-main,
+#app[data-viewport="expanded"] .col-center {
+  gap: 0;
+}
+
+/* padding: 0 and border-width: 0 are in every rule below for the same reason:
+   box-sizing: border-box cannot shrink a box's content area past 0, so once
+   max-height / max-width alone reaches a box's own padding + border, that sum
+   — not 0 — is the smallest the box can render. .status-bar carries .panel's
+   hairline border and its own vertical padding on mobile; without zeroing
+   both here, "collapsed" status bar still measured 20px tall, not 0. */
+
+#app[data-viewport="expanded"] .toolbar,
+#app[data-viewport="expanded"] .status-bar {
+  max-height: 0;
+  padding: 0;
+  border-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  /* Restated with the opposite visibility delay from the base rule: a
+     transition uses whichever ruleset applies *after* the change, so this
+     direction (folding away) waits for the fold to finish before leaving the
+     tab order, while the base rule's 0-delay is what makes restoring instant. */
+  transition:
+    max-height var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s var(--duration-base);
+}
+
+#app[data-viewport="expanded"] .col-left,
+#app[data-viewport="expanded"] .col-right {
+  max-width: 0;
+  min-width: 0;
+  padding: 0;
+  border-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  transition:
+    max-width var(--duration-base) var(--ease-standard),
+    min-width var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s var(--duration-base);
+}
+
+#app[data-viewport="expanded"] .telemetry {
+  max-height: 0;
+  min-height: 0;
+  padding: 0;
+  border-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  transition:
+    max-height var(--duration-base) var(--ease-standard),
+    min-height var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard),
+    visibility 0s var(--duration-base);
 }
 
 /* Mobile-only chrome, absent above the breakpoint. .gestures is the touch
@@ -228,6 +419,16 @@
     height: var(--size-appbar-h);
     padding: 0 var(--space-5);
     gap: var(--space-4-5);
+    /* Theatre mode (COS-445): sticky positioning is exactly why this one has
+       to reach visibility: hidden rather than stop at opacity: 0 — the layer
+       introduces no stacking context (D11), so a merely-transparent sticky
+       header would still paint over the expanded picture the moment it
+       scrolls. */
+    max-height: 100vh;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   /* The sticky header carries the brand on mobile. */
@@ -242,6 +443,15 @@
     gap: var(--space-2-5);
     padding: 0 0 var(--space-0-5);
     overflow-x: auto;
+    /* overflow-y, not overflow: the horizontal scroller stays live for its own
+       job; only the vertical axis needs a permanent clip, for the same
+       collapse-back reason as .toolbar (COS-445). */
+    overflow-y: hidden;
+    max-height: 100vh;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   .toolbar__actions > * {
@@ -262,6 +472,28 @@
     aspect-ratio: 16 / 10;
   }
 
+  /* Theatre mode (COS-445). The ratio has no replacement value to animate
+     toward — aspect-ratio cannot interpolate with "no constraint" any more
+     than max-height can interpolate with none — so this one flips instead of
+     tweening.
+
+     An explicit height, not flex: 1. .viewport carries container-type: size
+     for the stage's cqw/cqh below, and a size-contained flex item whose basis
+     is 0% — exactly what the flex: 1 shorthand sets — has nothing content-
+     derived to grow from under that containment: it measured 0x0 rather than
+     claiming the freed column, taking the stage and the whole HUD to zero
+     with it. #app is already pinned to exactly 100dvh with its padding and
+     gap both zeroed, so the picture's height is that figure directly, not a
+     grow share computed from it. Any leftover fraction of a pixel from a
+     sibling's own padding/border floor (see the desktop block above) runs
+     past the bottom of #app's box and is clipped by its overflow: hidden,
+     which is harmless since .viewport is the first non-collapsing item in
+     DOM order and therefore already has the space it asked for. */
+  #app[data-viewport="expanded"] .viewport {
+    height: 100dvh;
+    aspect-ratio: auto;
+  }
+
   .telemetry {
     min-height: 0;
   }
@@ -271,11 +503,22 @@
     order: 3;
     grid-template-columns: repeat(5, 1fr);
     gap: var(--space-2-5);
+    max-height: 100vh;
+    overflow: hidden;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   .framerate {
     order: 4;
     flex: none;
+    max-height: 100vh;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   #inspectorTabs {
@@ -285,12 +528,27 @@
   .mtabs {
     display: flex;
     order: 5;
+    max-height: 100vh;
+    overflow: hidden;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
-  /* Every tab panel shares one order value: only one is displayed at a time. */
+  /* Every tab panel shares one order value: only one is displayed at a time.
+     Four of the five carry display: none from the gate below at any moment;
+     the max-height / transition pair added here is inert on those and only
+     ever visible on whichever one data-mtab currently shows. */
   [data-mpanel] {
     order: 6;
     flex: none;
+    max-height: 100vh;
+    overflow: hidden;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   /* Undo the desktop data-panel gate before re-gating by data-mtab — the three
@@ -325,11 +583,93 @@
   .mobile-reset-slot {
     display: block;
     order: 8;
+    max-height: 100vh;
+    overflow: hidden;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s;
   }
 
   /* Desktop-only: the keyboard shortcuts it lists are not reachable on touch.
      The mobile equivalent is the GESTURES card, owned by the shortcuts ticket. */
   .shortcuts {
     display: none;
+  }
+
+  /* ---- theatre mode, mobile chrome (COS-445) -------------------------------
+     .status-bar needs no entry here: its shared, unconditional collapse rule
+     above already covers both branches, since nothing in this file re-targets
+     it by breakpoint beyond order / flex. Everything below only exists as a
+     mobile-promoted flex item, so its collapse has to be declared here too. */
+  #app[data-viewport="expanded"] .app-bar,
+  #app[data-viewport="expanded"] .toolbar__actions,
+  #app[data-viewport="expanded"] .quick-toggles,
+  #app[data-viewport="expanded"] .framerate,
+  #app[data-viewport="expanded"] .mtabs,
+  #app[data-viewport="expanded"] [data-mpanel],
+  #app[data-viewport="expanded"] .mobile-reset-slot {
+    max-height: 0;
+    /* padding + border-width: 0, same reason as the desktop block above — a
+       border-box element cannot be squeezed past its own padding and border
+       by max-height alone, and .app-bar's .panel border plus several of
+       these panels' own padding are exactly what left a residual here. */
+    padding: 0;
+    border-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    transition:
+      max-height var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      visibility 0s var(--duration-base);
+  }
+}
+
+/* ---- reduced motion (COS-445) -----------------------------------------------
+   Not nested inside max-width: 899px: the mobile-only selectors below are in
+   the DOM at every width (hidden by the unconditional display: none above the
+   mobile block), so cancelling their transition outside the breakpoint is
+   harmless and saves repeating the query twice.
+
+   Two specificity tiers, not one. #app[data-viewport="expanded"] .toolbar
+   outranks a bare .toolbar, so a single flat selector list would silently
+   lose to the expanded-state rule's own transition the moment both this query
+   and that attribute apply together — which is exactly the state a
+   reduced-motion user sees the instant they open theatre mode. Matching each
+   compound selector here, rather than trying to out-specificity it with
+   !important, is what makes transition: none actually win. */
+@media (prefers-reduced-motion: reduce) {
+  #app,
+  .toolbar,
+  .app-main,
+  .col-left,
+  .col-center,
+  .col-right,
+  .telemetry,
+  .status-bar,
+  .app-bar,
+  .toolbar__actions,
+  .quick-toggles,
+  .framerate,
+  .mtabs,
+  [data-mpanel],
+  .mobile-reset-slot {
+    transition: none;
+  }
+
+  #app[data-viewport="expanded"] .toolbar,
+  #app[data-viewport="expanded"] .status-bar,
+  #app[data-viewport="expanded"] .col-left,
+  #app[data-viewport="expanded"] .col-right,
+  #app[data-viewport="expanded"] .telemetry,
+  #app[data-viewport="expanded"] .app-bar,
+  #app[data-viewport="expanded"] .toolbar__actions,
+  #app[data-viewport="expanded"] .quick-toggles,
+  #app[data-viewport="expanded"] .framerate,
+  #app[data-viewport="expanded"] .mtabs,
+  #app[data-viewport="expanded"] [data-mpanel],
+  #app[data-viewport="expanded"] .mobile-reset-slot {
+    transition: none;
   }
 }

@@ -64,6 +64,7 @@ import GeometryWidget from "@ui/telemetry/GeometryWidget";
 import SystemWidget from "@ui/telemetry/SystemWidget";
 import ZBufferWidget from "@ui/telemetry/ZBufferWidget";
 import UIStateStore from "@ui/UIStateStore";
+import ViewportExpander from "@ui/ViewportExpander";
 import ViewportHUD from "@ui/ViewportHUD";
 
 import type { BootContext } from "@app/Bootstrapper";
@@ -101,6 +102,10 @@ class Main {
   private readonly fields: FieldWriter;
   private readonly statusBar: StatusBar;
   private readonly viewportHud: ViewportHUD;
+  // Boot-time and self-contained, like PointerOrbit: it resolves its own DOM
+  // node and owns its own listeners, so Main only needs the handle to release
+  // them again in dispose().
+  private readonly viewportExpander: ViewportExpander;
   private readonly sceneGraph: SceneGraphPanel;
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
@@ -196,6 +201,7 @@ class Main {
     this.fields = fields;
     this.statusBar = new StatusBar(this.fields);
     this.viewportHud = new ViewportHUD(canvas, this.fields);
+    this.viewportExpander = new ViewportExpander();
     this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.lightHidden = this.sceneGraph.isLightHidden();
@@ -460,6 +466,7 @@ class Main {
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
     this.pointerOrbit.dispose();
+    this.viewportExpander.dispose();
   }
 
   // The whole point of this class existing: at the seed 1024x640 canvas, scale

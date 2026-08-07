@@ -144,7 +144,29 @@
 /* The band at top: 40px is the quick-toggle row and belongs to COS-232.
    Nothing in this file may be placed there. */
 
-/* ---- top-right camera readout (desktop) ----------------------------------- */
+/* ---- top-right cluster: expand toggle + camera readout --------------------
+   One wrapper rather than a third space-between child (COS-445): .viewport-hud__top
+   already puts exactly two clusters at its ends, and a third item would land
+   in the gap between them instead of beside the readout. Row on desktop so the
+   button sits left of the panel; the mobile block below switches it to a
+   column so it sits above the stacked camera chips instead. */
+
+.viewport-hud__top-right {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* .viewport-hud is pointer-events:none so the overlay never swallows the
+   canvas's own drag-orbit (see the hud-root comment below). The camera panel
+   beside this button stays opted out on purpose — today a drag started over
+   the readout text passes through to orbit the camera, and this button must
+   not take that away by making its non-interactive sibling hit-testable too.
+   Only the control itself opts back in. */
+.viewport-hud__expand-btn {
+  pointer-events: auto;
+}
 
 .viewport-hud__camera {
   flex: 0 0 auto;
@@ -474,6 +496,17 @@
      projection, texture, resolution rather than the desktop order. */
   .viewport-hud__chip-res {
     order: 1;
+  }
+
+  /* Column rather than the desktop row, so the button sits above the stacked
+     camera chips instead of squeezed beside them — the pair together are
+     already close to the card's width budget (COS-218's note on the top-left
+     band and the mobile camera column not both fitting on one row applies
+     here too). */
+  .viewport-hud__top-right {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2-5);
   }
 
   /* The four-row readout is a desktop shape: at 148px minimum it would eat a
