@@ -19,6 +19,7 @@
 import GroundNearClip from "@rendering/GroundNearClip";
 import { GROUND_DEPTH_METRES, metresToUnits } from "@rendering/worldScale";
 
+import type Fog from "@rendering/Fog";
 import type { GroundVertex } from "@rendering/GroundNearClip";
 import type GroundProjection from "@rendering/GroundProjection";
 
@@ -29,15 +30,25 @@ const RIM_FADE_FRACTION = 0.25;
 const FLOOR_LIGHT_CELL = "rgba(244, 243, 238, 1)";
 const FLOOR_DARK_CELL = "rgba(122, 124, 128, 1)";
 
+// Three collaborators, so a named options object rather than a positional list
+// (R4). It was a positional pair until COS-247's fog joined it.
+export interface GroundFloorOptions {
+  ground: GroundProjection;
+  stepMetres: number;
+  fog: Fog;
+}
+
 class GroundFloor {
   private readonly ground: GroundProjection;
   private readonly clip: GroundNearClip;
   private readonly cellSize: number;
+  private readonly fog: Fog;
 
-  constructor(ground: GroundProjection, stepMetres: number) {
-    this.ground = ground;
-    this.clip = new GroundNearClip(ground);
-    this.cellSize = metresToUnits(stepMetres);
+  constructor(options: GroundFloorOptions) {
+    this.ground = options.ground;
+    this.clip = new GroundNearClip(options.ground);
+    this.cellSize = metresToUnits(options.stepMetres);
+    this.fog = options.fog;
   }
 
   // The two passes are public and separate rather than one draw(): the cells
@@ -79,7 +90,7 @@ class GroundFloor {
         const midX = xLeft + this.cellSize / 2;
         const midZ = zNear + this.cellSize / 2;
 
-        context.globalAlpha = this.fadeAt(midX, midZ);
+        context.globalAlpha = this.fadeAt(midX, midZ) * this.fogAt(midX, midZ);
         // Modulo twice, because row and col are signed now that the sheet is
         // centred — a bare % would give -1 and paint two light cells adjacent.
         context.fillStyle = (((row + col) % 2) + 2) % 2 === 0 ? FLOOR_LIGHT_CELL : FLOOR_DARK_CELL;
@@ -128,6 +139,22 @@ class GroundFloor {
     // Smoothstep rather than linear, so the disc meets full opacity without a
     // visible ring where the ramp begins.
     return remaining * remaining * (3 - 2 * remaining);
+  }
+
+  // Multiplied into the rim dissolve above rather than replacing it (COS-247).
+  // The two answer different questions: the rim says where the finite sheet
+  // ends, the fog says how much air is in the way, and at FOG 0 — the shipped
+  // default — this is exactly 1 and the sheet is the one E5a drew.
+  //
+  // Faded toward the sky rather than painted over, which is the same colour at
+  // the horizon and one pass fewer. The early exit is what keeps the default
+  // frame free of a depthAt call per cell.
+  private fogAt(x: number, z: number): number {
+    if (this.fog.isClear) {
+      return 1;
+    }
+
+    return this.fog.groundAlpha(this.ground.depthAt(x, z));
   }
 
   public drawFade(context: CanvasRenderingContext2D, horizonY: number, frameHeight: number) {

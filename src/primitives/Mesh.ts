@@ -40,6 +40,20 @@ export interface MeshRenderPass {
   timed: boolean;
 }
 
+// The posed mesh's axis-aligned box in world coordinates (E5b/COS-247). Not the
+// same quantity as boundingRadius above and not derivable from it: the radius is
+// deliberately orientation-invariant so the depth histogram's axis holds still,
+// while a shadow has to follow the silhouette the current pose actually casts.
+// E7's projectedBounds will be a third — screen space, after the divide.
+export interface MeshBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  minZ: number;
+  maxZ: number;
+}
+
 // The uniform factor a transform carries, read as the length of its first
 // column. Exact only for a linear part that is scale x rotation, which is the
 // only kind of matrix a mesh is ever handed: the rig composes a uniform scale
@@ -86,6 +100,38 @@ class Mesh {
 
   public get triangleCount(): number {
     return this.triangles.length;
+  }
+
+  // Folded on demand rather than cached, and called only while GROUND SHADOW is
+  // on — Surface3D reads the layer flag before it asks. The points hold whatever
+  // the frame's setTransform wrote, so the box describes the pose about to be
+  // drawn rather than the one the registry authored; caching it would need an
+  // invalidation path on every transform, for a fold over at most 4224 points
+  // that costs nothing beside the fill it precedes.
+  //
+  // A mesh with no points comes back with an inverted box rather than a zeroed
+  // one. Nothing in the registry is empty, and a caller that got zeros would
+  // draw a shadow at the origin instead of noticing.
+  public getBounds(): MeshBounds {
+    const bounds: MeshBounds = {
+      minX: Infinity,
+      maxX: -Infinity,
+      minY: Infinity,
+      maxY: -Infinity,
+      minZ: Infinity,
+      maxZ: -Infinity,
+    };
+
+    for (const point of this.points) {
+      bounds.minX = Math.min(bounds.minX, point.xValue);
+      bounds.maxX = Math.max(bounds.maxX, point.xValue);
+      bounds.minY = Math.min(bounds.minY, point.yValue);
+      bounds.maxY = Math.max(bounds.maxY, point.yValue);
+      bounds.minZ = Math.min(bounds.minZ, point.zValue);
+      bounds.maxZ = Math.max(bounds.maxZ, point.zValue);
+    }
+
+    return bounds;
   }
 
   // Three named passes over the same triangle array, replacing the one fused

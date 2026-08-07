@@ -28,8 +28,12 @@ export const MESH_ROW_ID = "mesh";
 // so a literal would be two spellings of one id.
 export const LIGHT_ROW_ID = "light";
 
+// E5 dropped out of this note when COS-247 closed it: both its stages have
+// landed and neither turned a layer into a scene object, which is what these two
+// rows are still waiting on. The layers themselves are entirely real — the WORLD
+// tab switches every one of them — so the claim is about the scene model alone.
 export const PLACEHOLDER_NOTE =
-  "Not backed by a real scene object yet: the sky, floor and vignette are drawn per-pixel by BackgroundRenderer (de-mock E5 / E7).";
+  "Not backed by a real scene object yet: the sky, floor and vignette are drawn per-pixel by BackgroundRenderer (de-mock E7).";
 
 export const HINT_ID = "ph-scene-row";
 

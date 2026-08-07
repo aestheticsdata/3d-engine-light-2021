@@ -1,19 +1,19 @@
 // ENVIRONMENT: what the scene is made of around the shape.
 //
-// Three of the four toggles are real. SKY DOME, CHECKER FLOOR and, since
-// COS-246 (E5a), GRID OVERLAY gate layers BackgroundRenderer actually paints,
-// and they are the controls in the console with a second surface showing the
-// same switch — the viewport's quick toggles carry SKY, FLOOR and GRID as
-// well. That is why all three write the store and none of them keeps a
+// All six controls are real, and the last two became so with COS-247 (E5b).
+// SKY DOME, CHECKER FLOOR and GRID OVERLAY gate layers BackgroundRenderer
+// paints, and they are the controls in the console with a second surface
+// showing the same switch — the viewport's quick toggles carry SKY, FLOOR and
+// GRID as well. That is why all of them write the store and none keeps a
 // private boolean: the owner re-reads the store and pushes the result back to
 // every surface, so the two can never drift. GRID STEP is real alongside GRID
-// OVERLAY, for the same reason and through the same onLayersChange callback —
-// it sizes both the grid's own spacing and the floor's checker cell.
+// OVERLAY, through the same onLayersChange callback — it sizes both the grid's
+// own spacing and the floor's checker cell.
 //
-// GROUND SHADOW and FOG still have nothing behind them — the renderer casts no
-// shadow and applies no fog curve. Both are de-mock E5b (COS-247), and they
-// are stored rather than discarded so the console remembers the choice and
-// RESET can undo it.
+// GROUND SHADOW and FOG raise that callback too, for the same reason and not
+// because they have a second surface: the fog's colour is SKY DOME's answer, so
+// the two have to be read in one pass, and one sync path over the whole slice is
+// simpler than a handler per control.
 
 import DOMScope from "@ui/DOMScope";
 import SliderRow from "@ui/inspector/controls/SliderRow";
@@ -22,28 +22,25 @@ import ToggleRow from "@ui/inspector/controls/ToggleRow";
 import type UIStateStore from "@ui/UIStateStore";
 
 // Sky and floor default on because both ran unconditionally before they were
-// switchable; grid defaults off because nothing draws one, and a switch reading
-// ON would claim something the canvas is not doing. The mockup ships all three
-// true — the console's defaults mirror the renderer, never the design.
+// switchable; grid and shadow default off, because the console's opening frame
+// is the one the renderer already drew and neither layer was in it.
+//
+// FOG ships at 0 rather than at the mockup's 18, and that is the same rule
+// rather than an exception to it: fog is a second fill over every drawn
+// triangle, and opening on a frame that costs more than the one this ticket
+// inherited — while looking different from it — is what the de-mock epic
+// refuses. The console's defaults mirror the renderer, never the design.
 export const DEFAULT_SKY = true;
 export const DEFAULT_FLOOR = true;
 export const DEFAULT_GRID = false;
 export const DEFAULT_SHADOW = false;
-export const DEFAULT_FOG = 18;
+export const DEFAULT_FOG = 0;
 export const DEFAULT_GRID_STEP = 4;
 
 const FOG_MIN = 0;
 const FOG_MAX = 100;
 const GRID_STEP_MIN = 1;
 const GRID_STEP_MAX = 20;
-
-// GROUND SHADOW and FOG are what still read this: neither has an engine behind
-// it yet (de-mock E5b, COS-247). GRID OVERLAY and GRID STEP left this hint when
-// COS-246 (E5a) made them real, and the GRID quick-toggle pill's own copy —
-// #ph-quick-grid, previously out in the viewport markup — went with them; a
-// pill with no placeholder attributes has nothing left to describe.
-const HINT_ID = "ph-world-layer";
-const HINT_TEXT = "This world layer is not drawn by the renderer yet (de-mock E5b).";
 
 export interface EnvironmentSectionOptions {
   togglesSelector: string;
@@ -67,7 +64,6 @@ class EnvironmentSection {
     const scope = new DOMScope(document);
     const toggles = scope.require<HTMLElement>(options.togglesSelector, "ENVIRONMENT toggles are missing.");
     const rows = scope.require<HTMLElement>(options.rowsSelector, "ENVIRONMENT rows are missing.");
-    const placeholder = { title: HINT_TEXT, describedBy: HINT_ID };
 
     this.store = options.store;
     this.store.registerSlice({
@@ -106,8 +102,10 @@ class EnvironmentSection {
     this.shadowRow = new ToggleRow({
       label: "GROUND SHADOW",
       on: DEFAULT_SHADOW,
-      placeholder,
-      onToggle: (next) => this.store.setState({ shadow: next }),
+      onToggle: (next) => {
+        this.store.setState({ shadow: next });
+        options.onLayersChange();
+      },
     });
 
     this.fog = new SliderRow({
@@ -115,9 +113,11 @@ class EnvironmentSection {
       min: FOG_MIN,
       max: FOG_MAX,
       value: DEFAULT_FOG,
-      placeholder,
       format: (value) => `${value}%`,
-      onInput: (value) => this.store.setState({ fog: value }),
+      onInput: (value) => {
+        this.store.setState({ fog: value });
+        options.onLayersChange();
+      },
     });
     // Raises onLayersChange, same as the toggles above: the value it writes
     // feeds BackgroundRenderer.setWorld, which sizes both the grid's spacing
@@ -141,7 +141,7 @@ class EnvironmentSection {
     this.gridStep.element.classList.add("slider-row--tight-bottom");
 
     toggles.append(this.skyRow.element, this.floorRow.element, this.gridRow.element, this.shadowRow.element);
-    rows.append(this.fog.element, this.gridStep.element, this.buildHint());
+    rows.append(this.fog.element, this.gridStep.element);
   }
 
   public syncFromStore() {
@@ -153,16 +153,6 @@ class EnvironmentSection {
     this.shadowRow.setOn(state.shadow ?? DEFAULT_SHADOW);
     this.fog.setValue(state.fog ?? DEFAULT_FOG);
     this.gridStep.setValue(state.gridStep ?? DEFAULT_GRID_STEP);
-  }
-
-  private buildHint(): HTMLElement {
-    const hint = document.createElement("span");
-
-    hint.className = "placeholder-hint";
-    hint.id = HINT_ID;
-    hint.textContent = HINT_TEXT;
-
-    return hint;
   }
 }
 

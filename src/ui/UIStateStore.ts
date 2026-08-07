@@ -120,8 +120,12 @@ export interface UIState {
   // live alongside grid — it sizes both the grid's spacing and the floor's
   // checker cell.
   //
-  // shadow and fog have no engine at all (de-mock E5b, COS-247) and are stored
-  // only so the console remembers the choice and RESET can undo it.
+  // shadow and fog became live with COS-247 (E5b) and were the last two in this
+  // tab: shadow gates a projected blob per posed mesh, and fog drives one
+  // exponential curve read by the mesh, the checker floor and the grid alike.
+  // fog also reaches back into sky — what the haze fades toward is the sky's own
+  // horizon colour with it on, and the app background with it off — which is why
+  // both are read in the same pass rather than by a handler each.
   //
   // camElev / camAzim / camRoll are the camera's own orientation, in the
   // vocabulary its rows use: elevation above the horizon and azimuth around it.

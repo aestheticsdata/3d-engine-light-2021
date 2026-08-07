@@ -5,8 +5,14 @@
 // differently. A row (constant z, varying x) sits at one depth for its whole
 // length, so one alpha describes it; a column (constant x, varying z) runs
 // from the eye to the horizon, so its fade is a gradient along the stroke
-// rather than a single number. Both use a plain linear falloff — E5b owns the
-// real fog curve this is standing in for until it lands.
+// rather than a single number.
+//
+// Both use a plain linear falloff, and COS-247 kept it rather than replacing it
+// with the fog curve as E5a expected. It turned out not to be standing in for
+// fog at all: it is this layer's rim dissolve, the depth-space twin of the
+// radius-based one GroundFloor draws its disc with, and without it the finite
+// grid ends in a visible edge at FOG 0 — which is the frame the whole de-mock
+// epic refuses to move. The fog multiplies on top of it instead.
 //
 // Rows are drawn far to near so the sub-pixel guard can compare each new row
 // only against the one immediately before it: near the horizon, consecutive
@@ -25,6 +31,7 @@ import GroundNearClip from "@rendering/GroundNearClip";
 import { GROUND_DEPTH_METRES, metresToUnits } from "@rendering/worldScale";
 import { chartTokens } from "@ui/chartTokens";
 
+import type Fog from "@rendering/Fog";
 import type GroundProjection from "@rendering/GroundProjection";
 
 const MIN_ROW_GAP_PX = 1.5;
@@ -42,15 +49,25 @@ const withAlpha = (hex: string, alpha: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+// Three collaborators, so a named options object rather than a positional list
+// (R4). It was a positional pair until COS-247's fog joined it.
+export interface GroundGridOptions {
+  ground: GroundProjection;
+  stepMetres: number;
+  fog: Fog;
+}
+
 class GroundGrid {
   private readonly ground: GroundProjection;
   private readonly clip: GroundNearClip;
   private readonly stepUnits: number;
+  private readonly fog: Fog;
 
-  constructor(ground: GroundProjection, stepMetres: number) {
-    this.ground = ground;
-    this.clip = new GroundNearClip(ground);
-    this.stepUnits = metresToUnits(stepMetres);
+  constructor(options: GroundGridOptions) {
+    this.ground = options.ground;
+    this.clip = new GroundNearClip(options.ground);
+    this.stepUnits = metresToUnits(options.stepMetres);
+    this.fog = options.fog;
   }
 
   public draw(context: CanvasRenderingContext2D) {
@@ -115,13 +132,15 @@ class GroundGrid {
     }
   }
 
-  // Linear in real eye depth rather than in world z, so the falloff stays put
-  // as the camera turns instead of sweeping round with it. E5b owns the real
-  // fog curve this stands in for.
+  // Linear in real eye depth rather than in world z, so the rim dissolve stays
+  // put as the camera turns instead of sweeping round with it. The fog is
+  // multiplied in here, off the same depth, so a line pays for one depthAt call
+  // whether or not there is weather.
   private fadeAt(x: number, z: number, near: number, span: number): number {
     const depth = this.ground.depthAt(x, z);
+    const rim = Math.max(0, Math.min(1, 1 - (depth - near) / span));
 
-    return Math.max(0, Math.min(1, 1 - (depth - near) / span));
+    return this.fog.isClear ? rim : rim * this.fog.groundAlpha(depth);
   }
 }
 

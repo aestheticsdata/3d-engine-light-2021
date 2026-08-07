@@ -23,6 +23,7 @@ import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
+import Fog from "@rendering/Fog";
 import Lighting from "@rendering/Lighting";
 import RenderStats from "@rendering/RenderStats";
 import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
@@ -115,6 +116,13 @@ class ShapeThumbnails {
     // are, and a chip is painted once and thrown away.
     const mapper = new AffineTextureMapper();
 
+    // Clear weather, always, and not the console's setting (E5b/COS-247). A chip
+    // is 44px of shape against a transparent tile with no ground and no horizon
+    // to recede into, so fog here would have nothing to fade toward and would
+    // simply wash the picker out. It does not follow the FOG row for the reason
+    // the light above does not follow the LIGHTING rows.
+    const fog = new Fog({ amount: 0, skyEnabled: false });
+
     // A throwaway accumulator: renderMesh (E6/COS-239) always writes through
     // one, but a thumbnail is painted once and nothing here reads its stats
     // back — the console's own telemetry describes the stage, not a picker
@@ -123,7 +131,7 @@ class ShapeThumbnails {
       context,
       offsetX: 0,
       offsetY: 0,
-      options: { textures: this.textures, lighting, mapper, cullBackfaces: true, opacity: 1 },
+      options: { textures: this.textures, lighting, mapper, fog, cullBackfaces: true, opacity: 1 },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
       timed: false,
