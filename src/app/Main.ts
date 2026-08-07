@@ -21,6 +21,7 @@ import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
+import Fog from "@rendering/Fog";
 import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import RenderStats from "@rendering/RenderStats";
@@ -147,6 +148,12 @@ class Main {
   // direction has to follow the camera — which is why paint() pushes the view
   // matrix at it rather than the light holding a rig reference of its own.
   private readonly lighting: Lighting;
+  // One fog for the whole scene, for the reason there is one light: it describes
+  // the air, so the mesh and the ground it stands on must read the same object
+  // rather than two that agree by hand. It is written per frame as well, from
+  // Surface3D — the near edge of the fog is the near edge of the subject, and
+  // only the render pass has folded the scene radius by then.
+  private readonly fog: Fog;
   // The two textures the console paints for itself, and the class that fills
   // with them. They are one field apart in this list and one line apart in
   // changeMaterial for a reason: the mapper caches a CanvasPattern per texture
@@ -228,6 +235,11 @@ class Main {
     // registered yet — RenderTab builds the section further down — which is what
     // the fallbacks in lightingValues() are for.
     this.lighting = new Lighting(this.lightingValues());
+    // At the shipped defaults, and both are read again by the first
+    // syncWorldLayers() call before a frame is ever painted — the ENVIRONMENT
+    // slice is registered further down, so this is the seed rather than the
+    // value the console opens on.
+    this.fog = new Fog({ amount: DEFAULT_FOG, skyEnabled: DEFAULT_SKY });
     this.lastFrameTimestamp = performance.now();
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
@@ -610,19 +622,24 @@ class Main {
   // GRID STEP raises the same callback (COS-246) even though it has no second
   // surface to reconcile: it still has to reach setWorld, and one sync path
   // reading the whole store is simpler than a second one for a single slider.
+  //
+  // GROUND SHADOW and FOG joined it with COS-247 for the same reason, and FOG
+  // has a second argument for joining it rather than getting a handler of its
+  // own: what the fog fades toward is SKY DOME's answer, so the amount and the
+  // sky flag have to be read in the same pass or a toggle can leave the colour
+  // describing the previous frame.
   private syncWorldLayers() {
     const state = this.uiState.getState();
+    const sky = state.sky ?? DEFAULT_SKY;
 
     this.background.setLayers({
-      sky: state.sky ?? DEFAULT_SKY,
+      sky,
       floor: state.floor ?? DEFAULT_FLOOR,
       grid: state.grid ?? DEFAULT_GRID,
       shadow: state.shadow ?? DEFAULT_SHADOW,
     });
-    this.background.setWorld({
-      fog: state.fog ?? DEFAULT_FOG,
-      gridStepMetres: state.gridStep ?? DEFAULT_GRID_STEP,
-    });
+    this.background.setWorld({ gridStepMetres: state.gridStep ?? DEFAULT_GRID_STEP });
+    this.fog.setValues({ amount: state.fog ?? DEFAULT_FOG, skyEnabled: sky });
     this.worldTab.syncEnvironmentUi();
     this.quickToggles.syncFromStore();
     this.renderPausedFrame();
@@ -931,6 +948,7 @@ class Main {
       textures: this.textures,
       lighting: this.lighting,
       mapper: this.mapper,
+      fog: this.fog,
     };
 
     const stats = this.surface3D.render({

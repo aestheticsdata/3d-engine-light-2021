@@ -5,28 +5,41 @@
 // its own clearRect whenever a background renderer exists, so removing this one
 // leaves every frame painted over the last.
 //
-// Two switches cover three of the five layers, and the pairing is not
+// Two switches cover three of the six layers, and the pairing is not
 // arbitrary. Sky and atmosphere go together because the atmosphere is the
 // horizon haze belonging to the sky — dropping the photograph and keeping its
 // glow leaves a bright band floating over a dark frame. The vignette has no
-// switch at all: it is the lens, not the scene. Shadow has a switch and no
-// renderer behind it yet — COS-247 (E5b) is what draws one.
+// switch at all: it is the lens, not the scene. Shadow got its renderer with
+// COS-247 (E5b), which is also where fog started multiplying into the two
+// ground layers.
 //
-// The floor and the grid share one GroundProjection, built fresh each call from
-// whichever Camera and RenderTarget the caller hands in — the same shared
-// projection every mesh vertex already goes through. Before COS-246 (E5a) the
-// floor carried its own focal length, eye height and vanishing point; that is
-// what let it disagree with the mesh the moment FOV or ORTHOGRAPHIC moved.
+// The floor, the grid and the shadow share one GroundProjection, built fresh
+// each call from whichever Camera and RenderTarget the caller hands in — the
+// same shared projection every mesh vertex already goes through. Before COS-246
+// (E5a) the floor carried its own focal length, eye height and vanishing point;
+// that is what let it disagree with the mesh the moment FOV or ORTHOGRAPHIC
+// moved.
+//
+// Every layer that paints adds one draw call (COS-247), where the whole pass
+// used to add one between them. Deliberately per LAYER and not per canvas
+// submission, unlike the mesh side's per-triangle count: the checker floor is
+// 900 fills at the shipped grid step, and counting them would bury the subject
+// of the frame under its scenery. What the card is worth reading for is that the
+// number now moves when a switch does.
+//
+// FOR E3B (COS-242): the background snapshot this class was expected to allow is
+// still viable, but not over the whole pass. Snapshot-able, because nothing in
+// them depends on the mesh: sky, sky bitmap, atmosphere, floor, grid. Not
+// snapshot-able, and to be drawn per frame after the meshes: the shadow, which
+// reads the posed mesh bounds every frame, and the vignette, which sits on top
+// of everything.
 
+import { SKY_HORIZON } from "@rendering/fogCurve";
 import GroundFloor from "@rendering/GroundFloor";
 import GroundGrid from "@rendering/GroundGrid";
 import GroundProjection from "@rendering/GroundProjection";
+import GroundShadow from "@rendering/GroundShadow";
 import { chartTokens } from "@ui/chartTokens";
-
-// A @ui import from inside @rendering, which is the wrong direction and is the
-// lesser evil: chartTokens is the one file sanctioned to hand-mirror colors.css
-// for canvas painting, and the alternative is a second mirror here. See its
-// header.
 
 // A @ui import from inside @rendering, which is the wrong direction and is the
 // lesser evil: chartTokens is the one file sanctioned to hand-mirror colors.css
@@ -35,7 +48,10 @@ import { chartTokens } from "@ui/chartTokens";
 
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
+import type Fog from "@rendering/Fog";
 import type { GroundHorizon } from "@rendering/GroundProjection";
+import type { ShadowBlob } from "@rendering/GroundShadow";
+import type RenderStats from "@rendering/RenderStats";
 
 // How much of the frame the sky photograph covers, and how far above the top
 // edge it starts.
@@ -59,14 +75,6 @@ export interface BackgroundLayers {
   shadow: boolean;
 }
 
-// Values a layer needs beyond an on/off switch. fog is stored, unread until
-// COS-247 gives it a curve to drive; gridStepMetres is real today — it sizes
-// both the grid's own spacing and, so the two agree, the floor's checker cell.
-export interface WorldSettings {
-  fog: number;
-  gridStepMetres: number;
-}
-
 // Bundled rather than three positional args (R4): context is the one every
 // other pass in this class already takes, camera and renderTarget are what
 // COS-246 adds so the ground projection can be built from whichever pair the
@@ -80,6 +88,35 @@ export interface BackgroundRenderRequest {
   // to answer to where the viewpoint is looking, and not at all to the spin
   // that turns the object in front of it.
   cameraTransform: number[][];
+  // On the request for the same reason camera and renderTarget are: this
+  // renderer is constructed in Bootstrapper, before Main exists to have built
+  // either. It is the SAME instance the render options carry to Triangle, which
+  // is what makes a shape and the floor under it fog by one curve rather than
+  // by two that agree by hand.
+  fog: Fog;
+  // One per posed mesh, folded by Surface3D and empty whenever GROUND SHADOW is
+  // off. Two of them mid-transition, each with its own screen offset.
+  blobs: readonly ShadowBlob[];
+  stats: RenderStats;
+}
+
+// Values a layer needs beyond an on/off switch. It sizes both the grid's own
+// spacing and, so the two agree, the floor's checker cell. FOG left this record
+// with COS-247 and went to the Fog above — it stopped being a number this class
+// stores and became a curve three layers evaluate.
+export interface WorldSettings {
+  gridStepMetres: number;
+}
+
+// The frame's request plus the three things both entry points derive from it
+// before handing it on. Not exported: the ground pass is this class's internal
+// seam, and it exists as a record only because the alternative is seven
+// positional arguments.
+interface GroundPass {
+  request: BackgroundRenderRequest;
+  ground: GroundProjection;
+  horizon: GroundHorizon;
+  horizonY: number;
 }
 
 class BackgroundRenderer {
@@ -90,7 +127,6 @@ class BackgroundRenderer {
   private floorEnabled: boolean;
   private gridEnabled: boolean;
   private shadowEnabled: boolean;
-  private fog: number;
   private gridStepMetres: number;
 
   constructor(options: BackgroundRendererOptions) {
@@ -98,16 +134,15 @@ class BackgroundRenderer {
     this.height = options.height;
     this.skyImage = options.skyImage ?? null;
     // Sky and floor on, because both ran unconditionally before they were
-    // switchable; grid and shadow off, fog and grid step at EnvironmentSection's
-    // own registered defaults, restated as literals rather than imported —
-    // Main's first syncWorldLayers() call (before the loop starts, before
-    // anything is ever painted) overwrites every one of these from the store,
-    // so nothing here is a value this renderer's own scene ever shows.
+    // switchable; grid and shadow off, grid step at EnvironmentSection's own
+    // registered default, restated as a literal rather than imported — Main's
+    // first syncWorldLayers() call (before the loop starts, before anything is
+    // ever painted) overwrites every one of these from the store, so nothing
+    // here is a value this renderer's own scene ever shows.
     this.skyEnabled = true;
     this.floorEnabled = true;
     this.gridEnabled = false;
     this.shadowEnabled = false;
-    this.fog = 18;
     this.gridStepMetres = 4;
   }
 
@@ -123,7 +158,6 @@ class BackgroundRenderer {
   }
 
   public setWorld(settings: WorldSettings) {
-    this.fog = settings.fog;
     // Floored at 1: GroundFloor divides the ground's depth span by this value,
     // and 0 would make that division infinite and its row loop never
     // terminate. GRID STEP's own slider floors at 1 already, but setWorld is
@@ -140,7 +174,7 @@ class BackgroundRenderer {
   // checker floor's own painter already did — the object is new, the pattern
   // is not.
   public render(request: BackgroundRenderRequest) {
-    const { context, camera, renderTarget, cameraTransform } = request;
+    const { context, camera, renderTarget, cameraTransform, stats } = request;
 
     context.save();
     context.clearRect(0, 0, this.width, this.height);
@@ -165,6 +199,16 @@ class BackgroundRenderer {
         this.renderSky(context, azimuth, focalPx);
         this.renderAtmosphere(context, horizonY);
       });
+      // Gradient, photograph and haze: three layers under one switch, counted
+      // separately because they really are three passes over the frame. The
+      // photograph is one whatever the yaw makes its tile count, which is the
+      // per-layer rule this class counts by.
+      stats.addDrawCall();
+      stats.addDrawCall();
+
+      if (this.skyImage) {
+        stats.addDrawCall();
+      }
     } else {
       // A flat fill rather than leaving the cleared canvas transparent, so the
       // frame is a dark image and not a hole. On screen the two are
@@ -177,6 +221,7 @@ class BackgroundRenderer {
       // to the sky.
       context.fillStyle = chartTokens.bgApp;
       context.fillRect(0, 0, this.width, this.height);
+      stats.addDrawCall();
     }
 
     // Only while the eye is above the plane. From below, the floor is in front
@@ -185,10 +230,11 @@ class BackgroundRenderer {
     // foreground is exactly what a scene with no depth buffer has to do by
     // hand.
     if (!ground.isEyeBelowGround) {
-      this.paintGround(context, ground, renderTarget, horizon, horizonY);
+      this.paintGround({ request, ground, horizon, horizonY });
     }
 
     this.renderVignette(context);
+    stats.addDrawCall();
 
     context.restore();
   }
@@ -206,26 +252,37 @@ class BackgroundRenderer {
     }
 
     context.save();
-    this.paintGround(context, ground, renderTarget, ground.horizon(), renderTarget.centerY);
+    this.paintGround({ request, ground, horizon: ground.horizon(), horizonY: renderTarget.centerY });
     context.restore();
   }
 
-  private paintGround(
-    context: CanvasRenderingContext2D,
-    ground: GroundProjection,
-    renderTarget: RenderTarget,
-    horizon: GroundHorizon,
-    horizonY: number,
-  ) {
+  // The ground's three layers, in the order they stack: cells, then lines over
+  // them, then the shadow over both. The shadow lives here rather than beside
+  // the mesh loop precisely so it follows the ground — including the pass above,
+  // where the eye has dropped under the plane and all three are painted over the
+  // solids instead of behind them.
+  private paintGround(pass: GroundPass) {
+    const { request, ground, horizon, horizonY } = pass;
+    const { context, renderTarget, fog, blobs, stats } = request;
+
     if (this.floorEnabled) {
-      const floor = new GroundFloor(ground, this.gridStepMetres);
+      const floor = new GroundFloor({ ground, stepMetres: this.gridStepMetres, fog });
 
       floor.drawCells(context);
       this.alignToHorizon(context, renderTarget, horizon, () => floor.drawFade(context, horizonY, this.height));
+      stats.addDrawCall();
     }
 
     if (this.gridEnabled) {
-      new GroundGrid(ground, this.gridStepMetres).draw(context);
+      new GroundGrid({ ground, stepMetres: this.gridStepMetres, fog }).draw(context);
+      stats.addDrawCall();
+    }
+
+    if (this.shadowEnabled) {
+      // The one background layer whose draw-call count depends on the scene
+      // rather than on a switch — two mid-transition, none while the near plane
+      // has rejected them — so it is the one that counts its own.
+      new GroundShadow(ground, fog).draw(context, blobs, stats);
     }
   }
 
@@ -275,7 +332,11 @@ class BackgroundRenderer {
     skyGradient.addColorStop(0, "#7db8ff");
     skyGradient.addColorStop(0.5, "#9bd3ff");
     skyGradient.addColorStop(0.82, "#f3d8e3");
-    skyGradient.addColorStop(1, "#f1e8ee");
+    // The one stop of the four that is shared, and shared with the fog: what the
+    // scene fades into at the horizon has to be what fog fades a surface toward,
+    // or the haze reads as a grey film over the frame. fogCurve owns the constant
+    // because it is the side that cannot be wrong about it.
+    skyGradient.addColorStop(1, SKY_HORIZON);
     context.fillStyle = skyGradient;
     context.fillRect(-overscan, -overscan, this.width + 2 * overscan, this.height + 2 * overscan);
 

@@ -57,6 +57,7 @@ import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rende
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
 import type AffineTextureMapper from "@rendering/AffineTextureMapper";
+import type Fog from "@rendering/Fog";
 import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type TextureRegistry from "@textures/TextureRegistry";
@@ -74,6 +75,11 @@ export interface TriangleRenderOptions {
   // One for the whole surface (E4b/COS-245), where E6 gave each triangle its
   // own. It holds a pattern cache now, and a cache per triangle is not a cache.
   mapper: AffineTextureMapper;
+  // Required rather than optional (E5b/COS-247), and the same instance the
+  // ground layers hold: fog is a property of the air in the scene, so a mesh
+  // that could be handed a different one — or none — is a mesh that can stand in
+  // clear weather on a fogged floor.
+  fog: Fog;
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
@@ -232,6 +238,8 @@ class Triangle {
     context.save();
     context.globalAlpha = Math.min(1, Math.max(0, options.opacity ?? 1));
 
+    // Unfogged, deliberately. A wireframe is the diagnostic view, and dissolving
+    // the far edges is exactly what someone who switched to it is trying to see.
     if (options.wireframe) {
       this.strokeWireframe(context);
       context.restore();
@@ -244,6 +252,8 @@ class Triangle {
     } else {
       this.fillFlat(context, options.lighting);
     }
+
+    this.veilWithFog(context, options.fog);
 
     context.restore();
 
@@ -340,6 +350,27 @@ class Triangle {
     }
 
     context.fillStyle = wash;
+    this.tracePath(context);
+    context.fill();
+  }
+
+  // Last of the passes over this path, over the flat fill and the textured one
+  // alike (E5b/COS-247). It is the same shape as the shade wash above and rides
+  // the same save/restore, so a half-transparent face gets a half-transparent
+  // veil — which is the answer that composites correctly against what is behind
+  // it.
+  //
+  // Null is the commonest answer and the reason this is cheap: FOG ships at 0,
+  // and even at full strength a face nearer than the threshold skips the fill
+  // rather than submitting a transparent path 8008 times a frame.
+  private veilWithFog(context: CanvasRenderingContext2D, fog: Fog) {
+    const veil = fog.meshOverlay(this.depth);
+
+    if (veil === null) {
+      return;
+    }
+
+    context.fillStyle = veil;
     this.tracePath(context);
     context.fill();
   }

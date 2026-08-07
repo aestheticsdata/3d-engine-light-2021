@@ -6,9 +6,17 @@
 // registry count is wrong: a shape transition puts two meshes on screen at
 // once, and hiding the mesh from the scene graph submits none at all. EDGES is
 // derived from TRIANGLES. DRAW CALLS is canvas submissions per frame — one per
-// drawn triangle plus one for the background pass — read off RenderStats
-// rather than derived here, since Mesh and Surface3D are the only classes that
-// know when a fill(), stroke() or drawImage() actually happened.
+// drawn triangle, plus one per background LAYER that painted (E5b/COS-247,
+// where it used to be one for the whole background pass whether that pass drew
+// two layers or six) — read off RenderStats rather than derived here, since
+// Mesh, Surface3D and BackgroundRenderer are the only classes that know when a
+// fill(), stroke() or drawImage() actually happened.
+//
+// The two halves are counted at different granularities on purpose. The checker
+// floor is 900 cell fills at the shipped grid step, which would bury the subject
+// of the frame under its scenery; the mesh is the subject, so its count stays
+// per triangle. What the row is worth reading for is that it now moves when an
+// ENVIRONMENT switch does.
 //
 // pushFrame() and render() are split the way FramerateWidget splits them, and
 // for the same reason: the push half runs on the paint path, where the

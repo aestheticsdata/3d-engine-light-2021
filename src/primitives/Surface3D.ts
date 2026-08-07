@@ -3,6 +3,7 @@ import type Mesh from "@primitives/Mesh";
 import type RenderTarget from "@primitives/RenderTarget";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
+import type { ShadowBlob } from "@rendering/GroundShadow";
 import type RenderStats from "@rendering/RenderStats";
 
 export interface MeshRenderRequest {
@@ -64,14 +65,23 @@ class Surface3D {
     const boundingRadius = Math.max(0, ...renderables.map((renderable) => renderable.mesh.boundingRadius));
 
     this.stats.setDepthRange(this.camera.distance - boundingRadius, this.camera.distance + boundingRadius);
+    // The same pair the depth bins are centred on, which is why the fog is aimed
+    // from here rather than from Main (E5b/COS-247): the scene radius exists only
+    // once this call has folded it, and the near edge of the fog is the near edge
+    // of the subject.
+    options.fog.setCamera(this.camera.distance, boundingRadius);
 
     const presentStartedAt = timed ? performance.now() : 0;
+    const blobs = this.shadowBlobs(renderables);
 
     this.backgroundRenderer?.render({
       context: this.surface3DContainer,
       camera: this.camera,
       renderTarget: this.renderTarget,
       cameraTransform,
+      fog: options.fog,
+      blobs,
+      stats: this.stats,
     });
     if (!this.backgroundRenderer) {
       this.surface3DContainer.clearRect(
@@ -80,10 +90,11 @@ class Surface3D {
         this.surface3DContainer.canvas.width,
         this.surface3DContainer.canvas.height,
       );
+      // The fallback's own submission. A real background pass counts one per
+      // layer it painted instead (E5b/COS-247), which is why this increment is
+      // no longer shared between the two branches.
+      this.stats.addDrawCall();
     }
-    // One submission either way: a real background pass or the clearRect
-    // fallback, PRESENT's own canvas call for the frame (E6/COS-239).
-    this.stats.addDrawCall();
 
     if (timed) {
       this.stats.addPresentMs(performance.now() - presentStartedAt);
@@ -109,9 +120,29 @@ class Surface3D {
       camera: this.camera,
       renderTarget: this.renderTarget,
       cameraTransform,
+      fog: options.fog,
+      blobs,
+      stats: this.stats,
     });
 
     return this.stats;
+  }
+
+  // Folded here rather than by the background renderer, because this is the
+  // class that holds the mesh list — and folded only while GROUND SHADOW is on,
+  // so an off switch costs a boolean read instead of a pass over 4224 points.
+  // The transition's screen offsets come along, or a shadow sits under the
+  // middle of the canvas while the shape it belongs to slides off the edge.
+  private shadowBlobs(renderables: MeshRenderRequest[]): readonly ShadowBlob[] {
+    if (!this.backgroundRenderer?.shadow) {
+      return [];
+    }
+
+    return renderables.map((renderable) => ({
+      bounds: renderable.mesh.getBounds(),
+      offsetX: renderable.offsetX ?? 0,
+      offsetY: renderable.offsetY ?? 0,
+    }));
   }
 }
 
