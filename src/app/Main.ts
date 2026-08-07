@@ -24,6 +24,7 @@ import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@renderin
 import Fog from "@rendering/Fog";
 import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
+import { dprEffectiveFor } from "@rendering/pixelBudget";
 import RenderStats from "@rendering/RenderStats";
 import ShapeRig from "@scene/ShapeRig";
 import ProceduralTextures from "@textures/ProceduralTextures";
@@ -106,6 +107,19 @@ class Main {
   // node and owns its own listeners, so Main only needs the handle to release
   // them again in dispose().
   private readonly viewportExpander: ViewportExpander;
+  // The ResizeObserver target (E9b/COS-250) — the picture's own box, not the
+  // card, for the reason ViewportHUD anchors to it rather than to .viewport:
+  // observing the card would fire on every theatre-mode fold as well as on a
+  // genuine resize.
+  private readonly viewportStage: HTMLElement;
+  // Null until init() constructs it (below), and disconnected in dispose() —
+  // one per page load, the same lifecycle as every other collaborator here
+  // that owns a live browser listener.
+  private resizeObserver: ResizeObserver | null;
+  // Coalesces the observer to one resize per animation frame: it fires on
+  // every intermediate layout during a drag, and each resize reallocates the
+  // backing store and repaints the whole background.
+  private pendingResizeRaf: number | null;
   private readonly sceneGraph: SceneGraphPanel;
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
@@ -202,6 +216,16 @@ class Main {
     this.statusBar = new StatusBar(this.fields);
     this.viewportHud = new ViewportHUD(canvas, this.fields);
     this.viewportExpander = new ViewportExpander();
+
+    const viewportStage = canvas.closest<HTMLElement>(".viewport-stage");
+
+    if (!viewportStage) {
+      throw new Error("Viewport stage is missing.");
+    }
+
+    this.viewportStage = viewportStage;
+    this.resizeObserver = null;
+    this.pendingResizeRaf = null;
     this.sceneGraph = new SceneGraphPanel(this.uiState);
     this.meshHidden = this.sceneGraph.isMeshHidden();
     this.lightHidden = this.sceneGraph.isLightHidden();
@@ -357,7 +381,11 @@ class Main {
     this.geometry = new GeometryWidget(this.fields);
     this.zBuffer = new ZBufferWidget();
     this.cameraStats = new CameraWidget({ fields: this.fields, camera: this.camera, rig: this.rig });
-    this.system = new SystemWidget(this.fields, canvas);
+    this.system = new SystemWidget({
+      fields: this.fields,
+      canvas,
+      onDprChange: () => this.handleDprChange(),
+    });
     this.fpsMeter = new FPSMeter(() => performance.now());
     this.loop = new RenderLoop({
       onFrame: (timestamp) => {
@@ -453,6 +481,14 @@ class Main {
     this.syncRunState();
     this.pipeline.syncOpacityAvailability();
     this.shapes.request(primitive);
+
+    // Constructed here rather than in the constructor (E9b/COS-250): observing
+    // fires once immediately with the stage's current size, and by this point
+    // there is a painted frame for that first call to repaint rather than an
+    // empty console still mid-boot.
+    this.resizeObserver = new ResizeObserver(this.onStageResize);
+    this.resizeObserver.observe(this.viewportStage);
+
     this.loop.start();
   }
 
@@ -467,14 +503,20 @@ class Main {
     this.system.dispose();
     this.pointerOrbit.dispose();
     this.viewportExpander.dispose();
+    this.resizeObserver?.disconnect();
+
+    if (this.pendingResizeRaf !== null) {
+      cancelAnimationFrame(this.pendingResizeRaf);
+    }
   }
 
   // The whole point of this class existing: at the seed 1024x640 canvas, scale
   // is exactly 1 and the centre is exactly what Viewport always gave — so
-  // introducing a render target moves nothing today, it only gives a later
-  // resize somewhere to land. Thrown rather than logged, because a silent
-  // drift here would move every vertex on screen and the console would look
-  // wrong without printing why.
+  // introducing a render target moved nothing on the day it landed, and
+  // resize() above is the call site that later gave it somewhere to go
+  // (E9b/COS-250). Thrown rather than logged, because a silent drift here
+  // would move every vertex on screen and the console would look wrong
+  // without printing why.
   private assertSeedFraming() {
     const { scale, centerX, centerY } = this.renderTarget;
 
@@ -565,6 +607,75 @@ class Main {
     });
     this.repaintForMaterial();
     this.renderPausedFrame();
+  }
+
+  // Assigning canvas.width/height clears the backing store, which is why this
+  // always ends in renderPausedFrame(): a running loop repaints on its own
+  // next frame regardless, but a paused console would otherwise show a blank
+  // canvas until something moved it again (E9b/COS-250).
+  //
+  // The early return compares against the canvas's own current size rather
+  // than tracking "did the CSS size change" separately: it is what makes a
+  // DPR-only change (same CSS box, new devicePixelRatio) fall through and
+  // repaint, since dprEffective alone already changes the candidate width and
+  // height.
+  private resize(cssWidth: number, cssHeight: number) {
+    const dprEffective = dprEffectiveFor(cssWidth, cssHeight, window.devicePixelRatio);
+    const width = Math.round(cssWidth * dprEffective);
+    const height = Math.round(cssHeight * dprEffective);
+
+    if (width === this.stage.canvas.width && height === this.stage.canvas.height) {
+      return;
+    }
+
+    this.stage.canvas.width = width;
+    this.stage.canvas.height = height;
+    this.renderTarget.setSize(width, height);
+    this.background.resize(width, height);
+    this.shapes.resize(width, height);
+    this.camera.resize(width, height);
+    this.viewportHud.setResolution(width, height);
+    this.system.setBuffer(width, height);
+    this.renderPausedFrame();
+  }
+
+  // Handed to ResizeObserver in init() and needs a bound this (R9). Coalesced
+  // to one resize per animation frame: the observer fires on every
+  // intermediate layout during a drag, and each resize below reallocates the
+  // backing store and repaints the whole background.
+  private onStageResize = (entries: ResizeObserverEntry[]) => {
+    const entry = entries[0];
+
+    if (!entry) {
+      return;
+    }
+
+    // CSS pixels, not device pixels: resize() derives its own dprEffective
+    // from these against the live devicePixelRatio, so both branches have to
+    // land in the same space contentRect's fallback is already in.
+    const box = entry.contentBoxSize?.[0];
+    const cssWidth = box ? box.inlineSize : entry.contentRect.width;
+    const cssHeight = box ? box.blockSize : entry.contentRect.height;
+
+    if (this.pendingResizeRaf !== null) {
+      cancelAnimationFrame(this.pendingResizeRaf);
+    }
+
+    this.pendingResizeRaf = requestAnimationFrame(() => {
+      this.pendingResizeRaf = null;
+      this.resize(cssWidth, cssHeight);
+    });
+  };
+
+  // SystemWidget's own matchMedia listener calls this (E9b/COS-250) rather
+  // than a second one arming here: dragging the window to a display with a
+  // different devicePixelRatio does not reliably fire ResizeObserver, and the
+  // CSS box has not changed, so the current size is read fresh rather than
+  // waiting on an event that will not come.
+  private handleDprChange() {
+    const rect = this.viewportStage.getBoundingClientRect();
+
+    this.resize(rect.width, rect.height);
   }
 
   // Mirrors changeCamera, but a drag has no SliderRow of its own already showing
@@ -956,6 +1067,10 @@ class Main {
       lighting: this.lighting,
       mapper: this.mapper,
       fog: this.fog,
+      // Device pixels, not CSS pixels: a hairline stroke at a backing store
+      // taller than the 640px reference would otherwise read half as thick on
+      // a DPR 2 display or on any resize above the seed size (E9b/COS-250).
+      lineWidth: this.renderTarget.scale,
     };
 
     const stats = this.surface3D.render({

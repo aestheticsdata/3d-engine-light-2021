@@ -9,11 +9,11 @@
 // uptime segment reads the field this class writes and starts no timer of its
 // own.
 //
-// Three of the five rows are computed once at boot. The canvas is a fixed
-// 1024x640 backing store that BackgroundRenderer, ShapeTransitionMachine and
-// every Point3D capture at construction, and there is no CSS scaling of the
-// backing store, so BUFFER and COLOR BUFFER cannot change while the console is
-// open. COS-250 (E9b) is what makes them recomputable.
+// BUFFER and COLOR BUFFER read the canvas once at boot the same way every
+// other seed-time row does, and recompute through setBuffer() whenever Main's
+// resize path changes the backing store (E9b/COS-250) — a live push, not a
+// second read of the canvas on some other cadence, so this card cannot
+// describe a buffer the renderer just moved past.
 //
 // JS HEAP prefers measureUserAgentSpecificMemory() (E6/COS-239): unlike
 // performance.memory it is unquantised and not Chromium-only by spec, but it
@@ -80,9 +80,20 @@ export const formatUptime = (elapsedMs: number): string => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
+export interface SystemWidgetOptions {
+  fields: FieldWriter;
+  canvas: HTMLCanvasElement;
+  // Re-runs Main's resize path when the display's own pixel ratio changes
+  // (E9b/COS-250) — dragging the window to another screen without resizing it
+  // does not fire ResizeObserver, and this is the one listener in the tree
+  // already keyed to devicePixelRatio, so a second one is not added beside it.
+  onDprChange?: () => void;
+}
+
 class SystemWidget {
   private readonly fields: FieldWriter;
   private readonly canvas: HTMLCanvasElement;
+  private readonly notifyDprChange: (() => void) | undefined;
   private readonly heapNodes: HTMLElement[];
   private readonly bootTime: number;
   private intervalId: number;
@@ -94,9 +105,10 @@ class SystemWidget {
   private lastIsolatedPollAt: number;
   private pollingIsolatedMemory: boolean;
 
-  constructor(fields: FieldWriter, canvas: HTMLCanvasElement) {
-    this.fields = fields;
-    this.canvas = canvas;
+  constructor(options: SystemWidgetOptions) {
+    this.fields = options.fields;
+    this.canvas = options.canvas;
+    this.notifyDprChange = options.onDprChange;
     // Resolved as nodes rather than reached through the writer because the
     // unavailable branch sets attributes and a class, not text.
     this.heapNodes = Array.from(document.querySelectorAll<HTMLElement>(HEAP_SELECTOR));
@@ -116,17 +128,21 @@ class SystemWidget {
     this.pollingIsolatedMemory = false;
   }
 
-  public seed() {
-    const width = this.canvas.width;
-    const height = this.canvas.height;
+  // U+00D7, as the design draws it — not the letter x. Called from seed() and
+  // again from Main's resize path (E9b/COS-250), so both writes go through one
+  // derivation rather than two that could disagree about BYTES_PER_PIXEL.
+  public setBuffer(width: number, height: number) {
     const megabytes = (width * height * BYTES_PER_PIXEL) / BYTES_PER_MB;
 
-    // U+00D7, as the design draws it — not the letter x.
     this.fields.write("sysBuffer", `${width} × ${height} × ${BITS_PER_PIXEL}`);
     // COLOR BUFFER, not the design's COLOR + DEPTH: that label's 3.43 MB counts
     // four bytes of depth this renderer does not allocate (see the z-buffer
     // card, which is a placeholder for exactly that reason).
     this.fields.write("sysColorBuffer", `${megabytes.toFixed(2)} MB`);
+  }
+
+  public seed() {
+    this.setBuffer(this.canvas.width, this.canvas.height);
 
     // Unavailable only when neither path answers — the isolated path is a
     // pending promise at this point, not an absent one, and marking the row
@@ -253,6 +269,7 @@ class SystemWidget {
   private onDprChange = () => {
     this.writeDpr();
     this.armDprListener();
+    this.notifyDprChange?.();
   };
 
   private writeUptime = () => {

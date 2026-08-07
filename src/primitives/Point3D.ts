@@ -7,22 +7,19 @@ class Point3D {
   private x: number;
   private y: number;
   private z: number;
-  // Held, not copied, and that is why convert3D2D differs from the render
-  // target below: the projection is one shared record every vertex reads
+  // Held, not copied: the projection is one shared record every vertex reads
   // through, so a slider writes one number rather than two fields on each of
   // 3960 points. A mesh built before the camera has moved therefore cannot
   // project at a stale focal length — there is only ever one.
   private readonly camera: Camera;
-  // Held as well, past construction (COS-418/E2b) — not for convert3D2D,
-  // which still reads only the cached numbers below, but so withPosition can
-  // build a sibling point sharing this one's exact projection basis. A
-  // near-plane clip fragment is a vertex with no registry entry to rebuild
-  // from every frame the way setFromSource does; it is built fresh instead,
-  // from whichever of its parent's own vertices withPosition is called on.
+  // Held the same way, since E9b/COS-250: convert3D2D reads its centre and
+  // scale live, which is what lets a resize reach a mesh already on screen
+  // without rebuilding it. Also what lets withPosition build a sibling point
+  // sharing this one's exact projection basis — a near-plane clip fragment is
+  // a vertex with no registry entry to rebuild from every frame the way
+  // setFromSource does, so it is built fresh instead, from whichever of its
+  // parent's own vertices withPosition is called on.
   private readonly renderTarget: RenderTarget;
-  private readonly centerX: number;
-  private readonly centerY: number;
-  private readonly targetScale: number;
   // The vertex as the registry authored it, kept for the life of the mesh. It is
   // what makes an orientation absolute rather than accumulated: every frame
   // rebuilds x/y/z from these three, so a pose is a matrix rather than a history
@@ -32,11 +29,6 @@ class Point3D {
   private readonly sy: number;
   private readonly sz: number;
 
-  // The render target's three numbers are read once here and cached below;
-  // convert3D2D reads only the cache, which is what keeps a mesh already on
-  // screen projecting about the centre and scale it was built with — a later
-  // resize does not move it, and following one would be an improvement that
-  // belongs to the ticket that owns resizing (E9b) rather than to this one.
   constructor(x: number, y: number, z: number, renderTarget: RenderTarget, camera: Camera) {
     this.x = x;
     this.y = y;
@@ -45,9 +37,6 @@ class Point3D {
     this.sy = y;
     this.sz = z;
     this.renderTarget = renderTarget;
-    this.centerX = renderTarget.centerX;
-    this.centerY = renderTarget.centerY;
-    this.targetScale = renderTarget.scale;
     this.camera = camera;
   }
 
@@ -83,9 +72,9 @@ class Point3D {
   // resolution, and multiplying rather than folding it into the focal is what
   // keeps vertical field of view constant at any render-target size.
   public convert3D2D(): Point2D {
-    const scale = this.camera.scaleAt(this.z) * this.targetScale;
-    const tmpX = this.centerX + this.x * scale;
-    const tmpY = this.centerY + this.y * scale;
+    const scale = this.camera.scaleAt(this.z) * this.renderTarget.scale;
+    const tmpX = this.renderTarget.centerX + this.x * scale;
+    const tmpY = this.renderTarget.centerY + this.y * scale;
 
     return new Point2D(tmpX, tmpY);
   }

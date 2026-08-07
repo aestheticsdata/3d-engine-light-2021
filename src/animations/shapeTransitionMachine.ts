@@ -27,8 +27,9 @@ class ShapeTransitionMachine {
 
     this.context = new ShapeTransitionContext({
       duration: options.duration ?? 650,
-      travelX: options.width + margin,
-      travelY: options.height + margin,
+      width: options.width,
+      height: options.height,
+      margin,
     });
 
     // A fresh state object per machine. That is only equivalent to the shared
@@ -59,6 +60,10 @@ class ShapeTransitionMachine {
 
   public syncClock(now: number) {
     this.machine.rebaseTime(now);
+  }
+
+  public resize(width: number, height: number) {
+    this.context.resize(width, height);
   }
 
   public playInitialEntrance(mesh: Mesh, now: number) {

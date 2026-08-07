@@ -106,6 +106,10 @@ class ShapeSwitcher {
     this.transitionMachine.syncClock(now);
   }
 
+  public resize(width: number, height: number) {
+    this.transitionMachine.resize(width, height);
+  }
+
   private startTransition(primitive: string, now: number) {
     this.onTransitionStart(primitive);
 

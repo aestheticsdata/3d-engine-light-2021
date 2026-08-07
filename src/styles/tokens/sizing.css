@@ -18,13 +18,12 @@
   --size-toolbar-h: 40px;
   --size-statusbar-h: 24px;
 
-  /* The canvas backing store, and therefore the ceiling on the stage that
-     carries it. While the canvas was the direct child of the viewport card its
-     intrinsic size was the ceiling on its own; the stage the HUD anchors to has
-     no intrinsic size, so "scales down but never up" has to be stated. Keep
-     these equal to the width/height attributes on canvas#canvasID — the same
-     pair BackgroundRenderer and ShapeTransitionMachine capture at construction.
-     COS-250 (E9b) is what lifts the cap. */
+  /* The canvas's pre-observer seed, not a ceiling any more (E9b/COS-250):
+     Main's ResizeObserver resizes the backing store live from here on, on both
+     branches. What still reads these two is canvas#canvasID's own width/height
+     attributes (the frame before the observer's first callback) and the mobile
+     stage formula in components/viewport.css, which still locks its box to
+     this ratio — desktop dropped the cap these used to place on it. */
   --size-canvas-w: 1024px;
   --size-canvas-h: 640px;
   /* Unitless, and equal to the pair above by construction: 1024 / 640 = 1.6.

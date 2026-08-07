@@ -103,6 +103,35 @@ describe("getRenderables", () => {
   });
 });
 
+describe("resize", () => {
+  // travelX/travelY have no getter of their own, so their effect is read the
+  // same way every other test in this file already reads it: through the
+  // offset an entrance opens on, at progress 0 where lerp(-travel, 0, 0) is
+  // exactly -travel.
+  it("moves the entrance offset to match the new width and height", () => {
+    const transitions = machine();
+
+    transitions.resize(2000, 1500);
+    transitions.playInitialEntrance(emptyMesh(), 0);
+
+    // Default margin is 160 (unset in the machine() factory above).
+    expect(transitions.getRenderables()[0].offsetY).toBe(-(1500 + 160));
+  });
+
+  it("carries the new travel distance into a switch started after the resize", () => {
+    const transitions = machine();
+
+    transitions.playInitialEntrance(emptyMesh(), 0);
+    transitions.update(DURATION);
+    transitions.resize(2000, 1500);
+    transitions.switchTo(emptyMesh(), DURATION);
+
+    const renderables = transitions.getRenderables();
+    expect(renderables[0].offsetX).toBe(0);
+    expect(renderables[1].offsetY).toBe(-(1500 + 160));
+  });
+});
+
 describe("getActiveMeshes", () => {
   it("dedupes by mesh identity, not by value", () => {
     const transitions = machine();

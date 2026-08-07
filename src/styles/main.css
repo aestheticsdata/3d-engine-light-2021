@@ -57,6 +57,19 @@ body {
   background: var(--color-bg-app);
 }
 
+/* #app's own overflow: hidden (layout.css) only clips #app's children — it
+   does nothing if #app's own border box comes out fractionally taller than
+   the true viewport, which 100dvh's rounding through several levels of
+   animated nested flex redistribution can do in theatre mode (COS-445). With
+   no cap of its own, body simply grows to match, and the document gets a real
+   scrollbar over a few stray pixels nothing was ever meant to show. Scoped to
+   theatre mode rather than applied unconditionally: the console's normal
+   layout is allowed to scroll when its content genuinely needs more than the
+   viewport, and this must not take that away. */
+body:has(#app[data-viewport="expanded"]) {
+  overflow: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
