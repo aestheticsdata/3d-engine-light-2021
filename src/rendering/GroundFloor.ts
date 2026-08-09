@@ -15,8 +15,17 @@
 // over half the frame. Cells behind the near plane are trimmed rather than
 // dropped — they are the largest on screen, so dropping one leaves a hole
 // across the foreground.
+//
+// COS-453: the near clip above only rejects what is behind the eye, not what
+// is simply off to the side or below the bottom of the frame — at the
+// default zoom, most of the sheet's 900 cells are one or the other. Each
+// cell's clipped corners are still projected every frame; isPolygonOnScreen
+// tests that projection's own bounding box against the canvas before the
+// fade, the fog or the fill run, so an invisible cell costs four divides and
+// nothing else.
 
 import GroundNearClip from "@rendering/GroundNearClip";
+import { isPolygonOnScreen } from "@rendering/screenVisibility";
 import { GROUND_DEPTH_METRES, metresToUnits } from "@rendering/worldScale";
 
 import type Fog from "@rendering/Fog";
@@ -57,6 +66,7 @@ class GroundFloor {
   // horizon's own frame and the first one in plain screen space.
   public drawCells(context: CanvasRenderingContext2D) {
     const reach = metresToUnits(GROUND_DEPTH_METRES);
+    const { width, height } = context.canvas;
 
     context.save();
     const half = Math.ceil(reach / this.cellSize);
@@ -82,6 +92,17 @@ class GroundFloor {
           continue;
         }
 
+        const projected = visible.map((corner) => this.ground.project(corner.x, corner.z));
+
+        // The corners already had to be projected to reach this line — what
+        // this skips is everything after it. Most of the sheet's 900 cells
+        // land outside the viewport at the default zoom, and this is the
+        // only thing between them and a fadeAt, a fogAt and a canvas fill
+        // they cannot be seen paying for (COS-453).
+        if (!isPolygonOnScreen(projected, width, height)) {
+          continue;
+        }
+
         // Faded by the cell's own depth rather than by a band painted across
         // the screen afterwards. The band was anchored to the horizon and had
         // to pick a side, so the moment a vertical drag carried the eye under
@@ -96,9 +117,7 @@ class GroundFloor {
         context.fillStyle = (((row + col) % 2) + 2) % 2 === 0 ? FLOOR_LIGHT_CELL : FLOOR_DARK_CELL;
         context.beginPath();
 
-        visible.forEach((corner, index) => {
-          const point = this.ground.project(corner.x, corner.z);
-
+        projected.forEach((point, index) => {
           if (index === 0) {
             context.moveTo(point.x, point.y);
           } else {
