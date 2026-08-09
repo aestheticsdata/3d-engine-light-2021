@@ -11,9 +11,14 @@
 //
 // What is left over, and therefore what this class owns:
 //   * the resolution string, read off the canvas rather than typed,
-//   * the data-shading-mode attribute on the viewport card,
 //   * fov, zoom and dist, and the camera readouts the rig feeds,
 //   * the axis gizmo.
+//
+// A data-shading-mode attribute on the viewport card used to be on that list. It
+// drove no CSS and was kept as the seam de-mock E3 would key real shading off —
+// E3c (COS-243) is that ticket, and it turned out to need nothing of the kind:
+// the six modes are branches in the rasteriser, not selectors, so the attribute
+// went rather than finally acquiring a reader.
 //
 // The projection chip is not on that list and belongs on the first one: it is a
 // `projection` field the status bar publishes, so the overlay and the bar cannot
@@ -31,7 +36,6 @@
 
 import { eulerDegreesLabel, vector3Label } from "@ui/cameraLabels";
 import DOMScope from "@ui/DOMScope";
-import { modeLabel } from "@ui/modeLabel";
 
 import type { AxisScreenDirection, EulerDegrees, Vector3 } from "@camera/CameraRig";
 import type FieldWriter from "@ui/FieldWriter";
@@ -46,7 +50,6 @@ const DISTANCE_UNIT = "u";
 const AXIS_KEYS = ["x", "y", "z"];
 
 class ViewportHUD {
-  private readonly card: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly fields: FieldWriter;
   private readonly gizmo: HTMLElement;
@@ -58,7 +61,6 @@ class ViewportHUD {
       throw new Error("Viewport card not found.");
     }
 
-    this.card = card;
     this.canvas = canvas;
     this.fields = fields;
     this.gizmo = new DOMScope(card).require<HTMLElement>(".viewport-hud__gizmo", "Viewport gizmo is missing.");
@@ -91,15 +93,6 @@ class ViewportHUD {
   // agree at every slider position.
   public setFov(degrees: number) {
     this.fields.write("fov", `${Math.round(degrees)}°`);
-  }
-
-  // Owns the attribute only. The chip's text is the same modeLabel() the status
-  // bar pushes through the writer, so the two cannot drift — there is one
-  // derivation and one write. The attribute drives no CSS today — it survives
-  // as the seam de-mock E3 will key real shading off, so do not delete this
-  // write because it looks dead.
-  public setMode(wireframeEnabled: boolean) {
-    this.card.setAttribute("data-shading-mode", modeLabel(wireframeEnabled).toLowerCase());
   }
 
   // The distance is passed in rather than recomputed: Main owns the focal

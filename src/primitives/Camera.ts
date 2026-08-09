@@ -135,12 +135,16 @@ class Camera {
   }
 
   // Whole-vertex: true the moment this one vertex is outside the volume,
-  // near or far. Triangle.isClipped ORs it across all three and is what
-  // Triangle.render() — unused, kept only as documented public-API
-  // compatibility — still rejects a whole straddling triangle by. The real
-  // path splits instead: Triangle.clipToNear (COS-418/E2b) tests near and
-  // far itself, in eye-space depth, so it can tell "split" from "reject"
-  // apart, which this single boolean cannot.
+  // near or far. Triangle used to OR it across all three for its own
+  // pre-E6 render(), which E3c/COS-243 removed along with that method; what
+  // reads it now is Mesh's POINTS pass, which draws bare vertices and so has
+  // no triangle-level clip to hide behind — a vertex behind the eye divides
+  // by a negative depth and lands mirrored across the vanishing point.
+  //
+  // A filled triangle takes the other path and splits instead:
+  // Triangle.clipToNear (COS-418/E2b) tests near and far itself, in eye-space
+  // depth, so it can tell "split" from "reject" apart, which this single
+  // boolean cannot.
   public clips(z: number): boolean {
     const depth = this.depthAt(z);
 

@@ -18,7 +18,7 @@ export const DEFAULT_DITHER = false;
 export const DEFAULT_EDGE_AA = true;
 
 const HINT_ID = "ph-pipeline-stage";
-const HINT_TEXT = "This pipeline stage is not implemented yet (de-mock E3).";
+const HINT_TEXT = "This pipeline stage is not implemented yet (de-mock E3d).";
 
 export interface PipelineSectionOptions {
   root: string;

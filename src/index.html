@@ -286,12 +286,7 @@
 
         <div class="col-center">
 
-          <!-- data-shading-mode is written by ViewportHUD from the one exported
-               modeLabel(), the same helper the status bar reads, so the chip,
-               the attribute and the SHAPE INFO row cannot disagree. It drives no
-               styling today; it survives as the seam de-mock E3 will key real
-               shading off. Seeded to the resting mode for the same reason. -->
-          <div class="viewport panel" data-shading-mode="flat">
+          <div class="viewport panel">
 
             <!-- The stage is the picture, not the card. 1024x640 is only the
                  pre-observer seed (E9b/COS-250): Main's ResizeObserver keeps
@@ -953,7 +948,6 @@
                 </div>
                 <div class="render-section__head">
                   <span class="section-title">SHADING MODE</span>
-                  <span class="panel__note">PREVIEW</span>
                 </div>
                 <div class="render-section__body render-section__body--card" id="shadingSection">
                   <div class="chip-grid" id="shadingChips"></div>

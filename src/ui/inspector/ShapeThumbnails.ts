@@ -1,7 +1,7 @@
 // One small rendered picture of each primitive, painted once.
 //
 // It is the real mesh through the real rasteriser, not an icon set: the same
-// MeshFactory, the same Triangle.render, the same baked materials. A drawn
+// MeshFactory, the same Mesh.renderMesh, the same baked materials. A drawn
 // thumbnail would be a second source of truth for what a shape looks like, and
 // it would be wrong the day COS-201 adds a solid nobody drew an icon for.
 //
@@ -132,7 +132,19 @@ class ShapeThumbnails {
       context,
       offsetX: 0,
       offsetY: 0,
-      options: { textures: this.textures, lighting, mapper, fog, cullBackfaces: true, opacity: 1 },
+      // FLAT, always, and not the console's setting, for the reason the fog
+      // above is not either (E3c/COS-243): a picker chip is a 44px silhouette
+      // whose job is to say which shape it is, and DEPTH would make all twenty
+      // the same grey blob while POINTS would leave most of them nearly empty.
+      options: {
+        textures: this.textures,
+        lighting,
+        mapper,
+        fog,
+        shadingMode: "FLAT",
+        cullBackfaces: true,
+        opacity: 1,
+      },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
       near: camera.near,

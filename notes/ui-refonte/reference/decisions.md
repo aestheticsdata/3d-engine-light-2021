@@ -37,7 +37,7 @@ The prefix list gains `--layer-*` and `--opacity-*` so `--layer-sticky` and `--o
 | Value | Owner | Everyone else |
 | -- | -- | -- |
 | `sceneObjectId` | shell, `src/ui/sceneObjectId.ts`, snake-case rule → `TORUS_KNOT_01` | import it |
-| `modeLabel` | render-tab owns `shadingMode` in `UIStateStore` and exports `modeLabel()` | import it |
+| shading mode | the engine owns the vocabulary, `src/rendering/shadingMode.ts` — the `ShadingMode` union and `SHADING_MODES` | import the union, print it |
 | `MaterialSummary` | shape-info owns the derivation, values `TEXTURED` / `SOLID` | take the instance |
 | `frameMs` | frame-time, measured with `performance.now()` around the render call | import it |
 | uptime clock | system owns the `setInterval(…, 1000)` and the formatter | status reads it via `FieldWriter.write` |

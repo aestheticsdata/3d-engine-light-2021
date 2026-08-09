@@ -1,8 +1,11 @@
 // SHADING MODE: the six-chip grid that picks how faces are shaded.
 //
-// Only WIRE has a rasteriser behind it today. The other five persist a
-// cosmetic pick and carry the placeholder affordance — this section renders
-// no CSS filter and asserts nothing about the canvas for them.
+// All six are backed by a real branch since E3c/COS-243 — POINTS and WIRE draw
+// no surface at all, FLAT and GOURAUD light one, DEPTH and NORMALS encode a
+// channel instead of a colour — so the placeholder affordance this section
+// carried on four of them is gone rather than reworded. The chips read their
+// labels off SHADING_MODES rather than restating the six words, which is what
+// keeps them agreeing with the status bar, the viewport HUD and SHAPE INFO.
 //
 // WIRE and the PIPELINE WIREFRAME toggle are two views of one boolean
 // (RenderPipelinePanel owns it). syncFromWireframe() is the echo back from
@@ -12,62 +15,37 @@
 // returns early when they already agree, which is what stops a GOURAUD pick
 // from being overwritten back to FLAT by its own echo.
 
-import DOMScope from "@ui/DOMScope";
+import { impliesWireframe, SHADING_MODES } from "@rendering/shadingMode";
 import ChipGrid from "@ui/inspector/controls/ChipGrid";
-import { impliesWireframe } from "@ui/modeLabel";
 
+import type { ShadingMode } from "@rendering/shadingMode";
 import type { ChipDescriptor } from "@ui/inspector/controls/ChipGrid";
-import type { ShadingModeKey } from "@ui/modeLabel";
 import type UIStateStore from "@ui/UIStateStore";
 
-const DEFAULT_MODE: ShadingModeKey = "FLAT";
-const HINT_ID = "ph-shading-mode";
+// Exported because Main reads the slice off the store to build the frame's
+// render options and needs the same fallback this section registers, the way
+// PipelineSection already exports DEFAULT_ZBUFFER for the Z-BUFFER toggle.
+export const DEFAULT_SHADING_MODE: ShadingMode = "FLAT";
 
-const CHIPS: ChipDescriptor[] = [
-  {
-    id: "POINTS",
-    label: "POINTS",
-    placeholder: { title: "POINTS shading is not implemented yet (de-mock E3).", describedBy: HINT_ID },
-  },
-  { id: "WIRE", label: "WIRE" },
-  { id: "FLAT", label: "FLAT" },
-  {
-    id: "GOURAUD",
-    label: "GOURAUD",
-    placeholder: { title: "GOURAUD shading is not implemented yet (de-mock E3).", describedBy: HINT_ID },
-  },
-  {
-    id: "DEPTH",
-    label: "DEPTH",
-    placeholder: { title: "DEPTH shading is not implemented yet (de-mock E3).", describedBy: HINT_ID },
-  },
-  {
-    id: "NORMALS",
-    label: "NORMALS",
-    placeholder: { title: "NORMALS shading is not implemented yet (de-mock E3).", describedBy: HINT_ID },
-  },
-];
+const CHIPS: ChipDescriptor[] = SHADING_MODES.map((mode) => ({ id: mode, label: mode }));
 
 export interface ShadingSectionOptions {
   chipGridSelector: string;
-  hintRoot: string;
   store: UIStateStore;
-  onSelect: (mode: ShadingModeKey) => void;
+  onSelect: (mode: ShadingMode) => void;
 }
 
 class ShadingSection {
   private readonly store: UIStateStore;
   private readonly chips: ChipGrid;
-  private readonly onSelect: (mode: ShadingModeKey) => void;
-  private currentMode: ShadingModeKey;
+  private readonly onSelect: (mode: ShadingMode) => void;
+  private currentMode: ShadingMode;
 
   constructor(options: ShadingSectionOptions) {
-    const hintRoot = new DOMScope(document).require<HTMLElement>(options.hintRoot, "SHADING MODE section is missing.");
-
     this.store = options.store;
     this.onSelect = options.onSelect;
-    this.currentMode = DEFAULT_MODE;
-    this.store.registerSlice({ shadingMode: DEFAULT_MODE });
+    this.currentMode = DEFAULT_SHADING_MODE;
+    this.store.registerSlice({ shadingMode: DEFAULT_SHADING_MODE });
 
     this.chips = new ChipGrid({
       selector: options.chipGridSelector,
@@ -76,9 +54,7 @@ class ShadingSection {
       onPick: this.pick,
     });
     this.chips.setChips(CHIPS);
-    this.chips.setActive(DEFAULT_MODE);
-
-    hintRoot.append(this.buildHint());
+    this.chips.setActive(DEFAULT_SHADING_MODE);
   }
 
   public syncFromWireframe(wireframeEnabled: boolean) {
@@ -86,31 +62,23 @@ class ShadingSection {
     if (wireframeEnabled === impliesWire) {
       return;
     }
-    this.setMode(wireframeEnabled ? "WIRE" : DEFAULT_MODE);
+    this.setMode(wireframeEnabled ? "WIRE" : DEFAULT_SHADING_MODE);
   }
 
   public syncFromStore() {
-    this.setMode(this.store.getState().shadingMode ?? DEFAULT_MODE);
+    this.setMode(this.store.getState().shadingMode ?? DEFAULT_SHADING_MODE);
   }
 
   private pick = (id: string) => {
-    const mode = id as ShadingModeKey;
+    const mode = id as ShadingMode;
     this.setMode(mode);
     this.onSelect(mode);
   };
 
-  private setMode(mode: ShadingModeKey) {
+  private setMode(mode: ShadingMode) {
     this.currentMode = mode;
     this.chips.setActive(mode);
     this.store.setState({ shadingMode: mode });
-  }
-
-  private buildHint(): HTMLElement {
-    const hint = document.createElement("span");
-    hint.className = "placeholder-hint";
-    hint.id = HINT_ID;
-    hint.textContent = "This shading mode is not implemented yet (de-mock E3).";
-    return hint;
   }
 }
 

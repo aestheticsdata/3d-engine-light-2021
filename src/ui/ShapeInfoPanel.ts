@@ -17,8 +17,8 @@ import DOMScope from "@ui/DOMScope";
 import { primitiveLabel } from "@ui/primitiveLabel";
 
 import type { Object3D } from "@data/types";
+import type { ShadingMode } from "@rendering/shadingMode";
 import type MaterialSummary from "@ui/MaterialSummary";
-import type { ShadingMode } from "@ui/modeLabel";
 
 // Twinned with `animation: panelFadeOut 180ms` in
 // src/styles/components/shape-info.css:56. Change one and the repaint either

@@ -22,7 +22,7 @@
 
 import type { ProjectionMode } from "@primitives/Camera";
 import type { TextureMode } from "@rendering/material";
-import type { ShadingModeKey } from "@ui/modeLabel";
+import type { ShadingMode } from "@rendering/shadingMode";
 
 // The RENDER LOOP chips. MAX is uncapped rather than a number, because rAF is
 // the only clock the engine has and a cap can only ever remove frames — there
@@ -74,7 +74,7 @@ export interface UIState {
 
   // --- RENDER tab -----------------------------------------------------------
   // dither / edgeAA are the placeholders left in this tab: no rasteriser
-  // stage sits behind either yet (E3c/E3d). zbuffer stopped being one with
+  // stage sits behind either yet (E3d). zbuffer stopped being one with
   // E3b (COS-242) — it now selects Surface3D's rasteriser backend for real,
   // and is stored here for the same reason every live control is: RESET has
   // to be able to undo it.
@@ -84,18 +84,19 @@ export interface UIState {
   // graph's KEY_LIGHT row switches that same light off — five controls, one
   // light, which is why not one of them is held anywhere but here.
   //
-  // shadingMode is different again — it is chip-selection
-  // state that deliberately does NOT feed modeLabel(). The status bar, the HUD
-  // and SHAPE INFO describe what the rasteriser actually does, and printing
-  // GOURAUD there would be the same lie a CSS filter would have been. Do not
-  // wire this field into modeLabel() to make the chip "real" — that is not a
-  // fix, it is de-mock E3's job.
+  // shadingMode stopped being chip-selection state with E3c (COS-243). It used
+  // to be held here and read by nothing, with a warning against printing it in
+  // the status bar, the HUD or SHAPE INFO — those three describe what the
+  // rasteriser actually does, and a GOURAUD there would have been the same lie
+  // a cosmetic CSS filter would have been. All six modes reach a real branch
+  // now, so this is the field Main reads to build the frame's render options
+  // and the three readouts print it.
   //
   // frameRateCap is the third live value in this tab, alongside wireframe and
   // culling: it really does gate RenderLoop's onFrame. It is stored rather than
   // held on the loop so RESET restores it through the same registry as
   // everything else.
-  shadingMode?: ShadingModeKey;
+  shadingMode?: ShadingMode;
   frameRateCap?: FrameRateCapKey;
   zbuffer?: boolean;
   dither?: boolean;

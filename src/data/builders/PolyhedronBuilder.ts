@@ -11,8 +11,8 @@
 // error-prone part of writing these solids by hand.
 //
 // Winding: the renderer culls a triangle when its projected 2D cross product is
-// <= 0 (see Triangle.render). Because screen Y points down, the triangles that
-// survive are the ones whose world-space (b-a) x (c-a) points *towards* the
+// <= 0 (see Triangle.isFrontFacing). Because screen Y points down, the triangles
+// that survive are the ones whose world-space (b-a) x (c-a) points *towards* the
 // centre of the solid. Both hand-authored primitives (cube, pyramid) follow that
 // convention; it is reproduced here by flipping any face loop whose normal comes
 // out pointing away from the centre.

@@ -12,14 +12,14 @@ import LightingSection from "@ui/inspector/LightingSection";
 import PipelineSection from "@ui/inspector/PipelineSection";
 import ShadingSection from "@ui/inspector/ShadingSection";
 
-import type { ShadingModeKey } from "@ui/modeLabel";
+import type { ShadingMode } from "@rendering/shadingMode";
 import type UIStateStore from "@ui/UIStateStore";
 
 export interface RenderTabOptions {
   store: UIStateStore;
   wireframe: boolean;
   cullBackfaces: boolean;
-  onShadingSelect: (mode: ShadingModeKey) => void;
+  onShadingSelect: (mode: ShadingMode) => void;
   onWireframeToggle: (next: boolean) => void;
   onCullToggle: (next: boolean) => void;
   onFrameRateCap: (fps: number | null) => void;
@@ -35,7 +35,6 @@ class RenderTab {
   constructor(options: RenderTabOptions) {
     this.shading = new ShadingSection({
       chipGridSelector: "#shadingChips",
-      hintRoot: "#shadingSection",
       store: options.store,
       onSelect: options.onShadingSelect,
     });
