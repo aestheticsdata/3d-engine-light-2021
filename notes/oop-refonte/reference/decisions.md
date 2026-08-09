@@ -46,7 +46,7 @@ invariant, no cast to confine → stays a function.**
 | `src/data/shapes/pyramid.ts` | 21 | inert data (D1a) | The one shape file that is hand-typed vertex data: a single literal at `:3-19`, five point triples and six triangle tuples, no loops. It is the only file in `src/data/shapes/` that does not delegate to a generator class — every sibling now imports its own `*Generator` and computes its mesh through `@data/builders/MeshBuilder`, which is why T22–T26 converted them and this one was left. |
 | `src/ui/chartTokens.ts` | 26 | inert data (D1a) | One `Object.freeze({…})` at `:17-26` and nothing else. It is the single site the styles layer sanctions for raw hex, hand-mirrored from `colors.css`; `README.md:323,348` and four unstarted tickets name this exact path, and T33 protected it by name when it swept every other renamed path out of the notes. **It still has no importer in `src/`** — it is a forward-declared token mirror whose consumer is the unstarted framerate widget (COS-223). That is not dead code to be cleaned up. |
 | `src/ui/buildInfo.ts` | 17 | inert data (D1a) | Four `export const` string bindings at `:9-17` over `__APP_VERSION__`, which vite's `define` substitutes at build time. Zero functions, zero state; the desktop/mobile split is two literals, not a branch. Consumed as plain values at `Bootstrapper.ts:15`. |
-| `src/ui/modeLabel.ts` | 16 | pure derivation (D1b) | One two-line pure arrow at `:15-16` over a single boolean, plus the exported union at `:13`. Three call sites consume the return value and nothing else. Its own header at `:5-6` names the expiry: when the RENDER tab owns a `shadingMode` slice the derivation becomes stateful and moves onto that class. |
+| `src/ui/modeLabel.ts` → `src/ui/shadingMode.ts` | 16 → 42 (4 code) | pure derivation (D1b) + inert data (D1a) | **Re-read at the expiry, and it holds.** The original row was "one two-line pure arrow at `:15-16` over a single boolean, plus the exported union at `:13`", and it named the trigger: when the RENDER tab owns a `shadingMode` slice the derivation becomes stateful and moves onto that class. De-mock E3c (COS-243) is that ticket. The slice did become real — but it landed on `UIStateStore`, which already existed and already owns every other live control, so nothing here became stateful. What is left is four code lines: the six-valued union, a `readonly` mode list (D1a) and two total single-expression predicates over one argument (D1b). `modeLabel` itself is gone: with the union carrying the printed word it had collapsed to `(mode) => mode`, and `StatusBar.ts:40-47` records the ruling against exactly that shape one file over — "the mode is already the word to print, so there is no label table between the engine's union and the three surfaces that could disagree with it." R13 forced the rename once the file no longer exported the function it was named for. |
 | `src/ui/sceneObjectId.ts` | 11 | pure derivation (D1b) | One pure arrow at `:10-11` — one regex replace, one uppercase, one suffix. Two call sites, both discarding the result immediately (`scene/SceneGraphPanel.ts:57`, `StatusBar.ts:32`). **The weakest exception in the set**, kept on cost rather than on principle; `new SceneObjectId(key).value` is defensible against the `Point2D` precedent. See D1's discriminator. |
 
 ## D3 — `controls.ts` was not an exception
@@ -206,3 +206,40 @@ resize scale the centre-only class never needed. The ruling above still binds th
 replacement exactly: `new RenderTarget({ width: canvas.width, height: canvas.height })`
 is still constructed in `Main`'s constructor from the same already-destructured canvas,
 and `Bootstrapper.ts` is still unchanged.
+
+## D9 — `Triangle.ts` is measured the way D7 measures the composition root
+
+`src/primitives/Triangle.ts` is **418 code lines** after de-mock E3c (COS-243), against
+R17's ~160. It was already 320 before this ticket and had shipped that way through three
+engine epics, so what follows is a reading recorded late rather than a new exemption
+quietly taken.
+
+R17 is a proxy for "this file is doing too many jobs", and the honest answer here is that
+it is doing one job with a lot of cases. A triangle projects itself, tests its own
+winding, splits itself at the near plane, and paints itself through either of two
+backends in any of five shading modes. Those are not separable concerns that drifted
+together; they are the same three vertices answered five ways, and the file's own header
+records at length why `a`, `b` and `c` stay private — `Lighting` reaches them by being
+*called with* them rather than by holding them, which is the seam that keeps the light
+out of the geometry.
+
+**What a split would actually cost.** The two candidate extractions were measured:
+
+* the painter path (`fill` and its six private helpers, ~90 code lines) needs the six
+  projected scalars, the resolved material, the three UVs and all three `Point3D`s —
+  which is everything the class has, so the boundary would move state rather than remove
+  it;
+* the raster-request builder (`rasterize`, `textureFillRequest` and their two colour
+  helpers, ~75 code lines) is genuinely cohesive, but as a module function it takes six
+  or seven arguments and therefore an options literal per drawn triangle per frame —
+  7920 more allocations a frame on the torus knot, on the one path E3b was written to
+  keep allocation-free.
+
+**The criterion that replaces the line count**, mirroring D7: *does any method here
+belong to something other than these three vertices?* If yes, it moves. Two did in
+E3c — the normal-to-colour and depth-to-grey encodings went to `normalRgba.ts` and
+`depthGrey.ts`, and the vertex-normal accumulator's storage went to `VertexNormals` —
+because none of them needs a triangle to be true.
+
+This is not precedent for a third exemption. D7 covers the composition root and this
+covers the geometry primitive; a file that is neither still splits at ~160.

@@ -21,6 +21,7 @@ import { sphericalUVs } from "@rendering/uvProjection";
 import type { Object3D } from "@data/types";
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
+import type { VertexIndices } from "@primitives/Triangle";
 
 class MeshFactory {
   private readonly renderTarget: RenderTarget;
@@ -51,11 +52,18 @@ class MeshFactory {
     // The 7-tuple branch is also how authored UVs win: they win by never being
     // generated over, so the cube's two subdivided faces keep the mapping the
     // registry gave them in every texture mode.
+    //
+    // The index triple rides along as well as the three points it selects
+    // (E3c/COS-243): GOURAUD accumulates each face's normal into the corners it
+    // shares, and a Triangle holding only references has no way to say which
+    // slots of the shared array those are. This is the one site that knows —
+    // the registry's own tuple is where the sharing is expressed.
     const triangles = object3D.triangles.map((triangle, index) => {
       const [a, b, c, material] = triangle;
+      const indices: VertexIndices = [a, b, c];
 
       if (triangle.length === 7) {
-        return new Triangle(points[a], points[b], points[c], material, triangle[4], triangle[5], triangle[6]);
+        return new Triangle(points[a], points[b], points[c], material, triangle[4], triangle[5], triangle[6], indices);
       }
 
       // Non-null for exactly the faces this branch handles, since sphericalUVs
@@ -64,7 +72,7 @@ class MeshFactory {
       // should come out flat rather than throw.
       const face = generated[index];
 
-      return new Triangle(points[a], points[b], points[c], material, face?.[0], face?.[1], face?.[2]);
+      return new Triangle(points[a], points[b], points[c], material, face?.[0], face?.[1], face?.[2], indices);
     });
 
     return new Mesh({ points, triangles, boundingRadius: this.boundingRadiusOf(object3D) });

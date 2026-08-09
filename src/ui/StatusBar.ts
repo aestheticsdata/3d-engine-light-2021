@@ -9,10 +9,10 @@
 // `uptime`; the render loop cannot drive it anyway, since Main.stop() cancels
 // rAF on pause while the clock has to keep counting.
 
-import { modeLabel } from "@ui/modeLabel";
 import { sceneObjectId } from "@ui/sceneObjectId";
 
 import type { ProjectionMode } from "@primitives/Camera";
+import type { ShadingMode } from "@rendering/shadingMode";
 import type FieldWriter from "@ui/FieldWriter";
 import type MaterialSummary from "@ui/MaterialSummary";
 
@@ -33,8 +33,13 @@ class StatusBar {
     this.fields.write("selectedId", sceneObjectId(primitive));
   }
 
-  public setMode(wireframeEnabled: boolean) {
-    this.fields.write("shadingMode", modeLabel(wireframeEnabled));
+  // Two nodes carry this field — the bar's own segment and the viewport HUD's
+  // chip — and one write reaches both, which is why the HUD has no writer of
+  // its own for the mode. It took a boolean until E3c (COS-243), because the
+  // renderer could only tell wireframe from filled; it takes the mode itself
+  // now, on the same reasoning setProjection below already had.
+  public setMode(mode: ShadingMode) {
+    this.fields.write("shadingMode", mode);
   }
 
   // Three nodes carry this field — the bar's own segment, the viewport HUD's

@@ -117,6 +117,11 @@ class Surface3D {
     const boundingRadius = Math.max(0, ...renderables.map((renderable) => renderable.mesh.boundingRadius));
 
     this.stats.setDepthRange(this.camera.distance - boundingRadius, this.camera.distance + boundingRadius);
+    // Read back off the accumulator rather than recomputed from the same two
+    // expressions (E3c/COS-243): DEPTH mode's grey ramp and the Z-BUFFER card's
+    // axis labels have to describe one window, and one origin is how that stays
+    // true without a second call site to keep in step.
+    this.rasterizer.setDepthRange(this.stats.depthNear, this.stats.depthFar);
     // The same pair the depth bins are centred on, which is why the fog is aimed
     // from here rather than from Main (E5b/COS-247): the scene radius exists only
     // once this call has folded it, and the near edge of the fog is the near edge

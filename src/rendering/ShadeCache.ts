@@ -49,7 +49,7 @@ class ShadeCache {
   }
 
   // Four positional arguments on the per-triangle path, the same trade
-  // Triangle.render and Lighting.fillFor make: an options literal here would be
+  // Triangle.rasterize and Lighting.fillFor make: an options literal here would be
   // one object per drawn triangle per frame, which is the allocation this class
   // exists to remove.
   public fillFor(fill: string, rgba: RGBA, shadeStep: number, specularStep: number): string {

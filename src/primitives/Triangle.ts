@@ -40,10 +40,10 @@
 // (E6/COS-239), pulled apart from what used to be one fused per-triangle call
 // so each can be timed on its own: a transform pass that projects every
 // triangle, a clip-cull pass that sorts and tests every triangle, and a raster
-// pass that fills only the survivors. render() still exists and still
-// composes the three in the same order, so anything outside Mesh that called
-// it — there is nothing today, but the method is public API — sees unchanged
-// behaviour.
+// pass that fills only the survivors. A render() that composed the three in
+// order outlived the split as documented public API with no caller; E3c
+// removed it rather than grow it a fifth positional argument for a depth
+// context it had no way to build.
 //
 // The key light (E3a/COS-241) enters at fill(), which is why the shading cost
 // lands in E6's RASTER bracket rather than TRANSFORM: it is per-drawn-triangle
@@ -51,13 +51,45 @@
 // this triangle's own three vertices — the draft put a normal pass on Mesh, which
 // cannot reach them either — so a and b and c stay private and the only thing
 // that had to open up was Point3D's x and y.
+//
+// -----------------------------------------------------------------------------
+// SHADING MODES (E3c/COS-243)
+// -----------------------------------------------------------------------------
+// Six chips, and this class is where four of them are decided — POINTS is a
+// vertex pass on Mesh and never reaches a triangle at all.
+//
+//   WIRE      the stroke below, unfogged and unlit, unchanged since E5b.
+//   FLAT      one lit colour per face, fog blended into it here.
+//   GOURAUD   the UNLIT colour, plus a diffuse term per vertex for the
+//             rasteriser to interpolate. Unlit is the whole point: fillRgba's
+//             per-face shade would multiply the vertex term a second time and
+//             the mesh would ship at shade squared.
+//   DEPTH     one grey per face on the painter path, a per-pixel ramp on the
+//             buffered one.
+//   NORMALS   one colour per face on both, since a face normal is constant
+//             across it.
+//
+// DEPTH and NORMALS are unfogged and untextured, for the reason the wireframe
+// branch has always been: a grey that has to decode back to a depth and an RGB
+// that has to decode back to a normal are not pictures of the scene, and haze
+// over either destroys the thing being read.
+//
+// GOURAUD renders as FLAT on the painter path. It is the one mode that needs a
+// per-pixel stage — its own ticket lists E3b as the prerequisite — and the
+// alternative, one averaged shade per face, is indistinguishable from FLAT on
+// every finely tessellated shape in the registry while costing a vertex-normal
+// rebuild per frame to produce.
 
-import { blendRgba, parseCssColor } from "@rendering/cssColor";
+import { blendRgba, formatRgba, parseCssColor } from "@rendering/cssColor";
+import { depthGrey } from "@rendering/depthGrey";
 import { classifyMaterial, DEFAULT_MESH_MATERIAL, resolveMaterial } from "@rendering/material";
 import { clipTriangleToNear } from "@rendering/nearPlaneClip";
+import { normalRgba } from "@rendering/normalRgba";
+import { isDiagnostic } from "@rendering/shadingMode";
 
 import type { UV } from "@data/types";
 import type Point3D from "@primitives/Point3D";
+import type VertexNormals from "@primitives/VertexNormals";
 import type AffineTextureMapper from "@rendering/AffineTextureMapper";
 import type { RGBA } from "@rendering/cssColor";
 import type Fog from "@rendering/Fog";
@@ -65,7 +97,8 @@ import type Lighting from "@rendering/Lighting";
 import type { AuthoredMaterial, MeshMaterial, ResolvedMaterial } from "@rendering/material";
 import type { ClipVertex } from "@rendering/nearPlaneClip";
 import type Rasterizer from "@rendering/Rasterizer";
-import type { RasterFillRequest } from "@rendering/Rasterizer";
+import type { RasterFillRequest, RasterShading } from "@rendering/Rasterizer";
+import type { ShadingMode } from "@rendering/shadingMode";
 import type TextureRegistry from "@textures/TextureRegistry";
 import type { TextureSource } from "@textures/TextureRegistry";
 
@@ -87,6 +120,11 @@ export interface TriangleRenderOptions {
   // that could be handed a different one — or none — is a mesh that can stand in
   // clear weather on a fogged floor.
   fog: Fog;
+  // Required for the same reason the four above are (E3c/COS-243): an optional
+  // mode falls back to FLAT, which is exactly what five of the six chips used to
+  // do, and a wiring mistake that reproduces the bug this ticket removed should
+  // not compile.
+  shadingMode: ShadingMode;
   wireframe?: boolean;
   cullBackfaces?: boolean;
   opacity?: number;
@@ -124,7 +162,32 @@ export interface RasterVertex {
   invD: number;
   u: number;
   v: number;
+  // GOURAUD's diffuse term at this vertex (E3c/COS-243), and 1 in every other
+  // mode — nothing reads it there, and a slot that is sometimes absent would
+  // make the three literals rasterVertices builds two different shapes.
+  shade: number;
 }
+
+// This triangle's three vertices as positions in the mesh's own points array.
+// Optional because a near-plane clip fragment has none: it is built from
+// interpolated positions that exist for one frame and have no entry in that
+// array to accumulate a normal into.
+export type VertexIndices = readonly [number, number, number];
+
+// The frame's depth facts, built once per Mesh.renderMesh call rather than once
+// per triangle, for the reason NearClipContext above already is. eyeDistance is
+// Camera.distance; near and far are RenderStats' own histogram edges rather than
+// Camera's view volume — see depthGrey for why the volume is the wrong window.
+export interface DepthContext {
+  eyeDistance: number;
+  near: number;
+  far: number;
+}
+
+// A colour cssColor could not read, which for a texture-keyed material means its
+// fill is the raw key ("dog"). White because it is the identity of the multiply
+// that follows, the same choice and the same reason as Lighting's own fallback.
+const UNREADABLE_FILL: RGBA = [255, 255, 255, 1];
 
 class Triangle {
   private a: Point3D;
@@ -161,13 +224,39 @@ class Triangle {
   private uvb?: UV;
   private uvc?: UV;
 
+  // Where this face's three corners live in the mesh's shared points array, so
+  // GOURAUD can add its normal to each of them (E3c/COS-243). Null on a clip
+  // fragment, which has no entry in that array — the fragment inherits its
+  // parent's shades instead, see emitFragment.
+  private readonly indices: VertexIndices | null;
+
+  // The three vertices' own diffuse terms, refilled in place by
+  // cacheVertexShades once per frame in GOURAUD mode. Held here rather than
+  // looked up through indices at read time because Mesh sorts this array by
+  // depth every frame, so a triangle's position in it says nothing about which
+  // face it is — and because a fragment can then be handed a value at all.
+  private readonly vertexShades: [number, number, number];
+
   // Positional, and one of the constructors R4 exempts by name: MeshFactory
   // spreads a registry tuple straight into it, and the order of a, b, c is the
-  // winding.
-  constructor(a: Point3D, b: Point3D, c: Point3D, material: string, uva?: UV, uvb?: UV, uvc?: UV) {
+  // winding. indices rides last, after the three optional UV slots, because it
+  // is the one argument the other construction site — emitFragment — has
+  // nothing to pass.
+  constructor(
+    a: Point3D,
+    b: Point3D,
+    c: Point3D,
+    material: string,
+    uva?: UV,
+    uvb?: UV,
+    uvc?: UV,
+    indices?: VertexIndices,
+  ) {
     this.a = a;
     this.b = b;
     this.c = c;
+    this.indices = indices ?? null;
+    this.vertexShades = [1, 1, 1];
     this.authored = classifyMaterial(material);
     // Seeded with the default rather than left undefined until someone pushes a
     // material: the default is the identity of the blend, so a mesh that is
@@ -193,49 +282,12 @@ class Triangle {
     return this.resolved;
   }
 
-  // Outside the view volume, which is the camera's question rather than this
-  // triangle's: whole-vertex rejection, so one vertex outside drops all
-  // three and the artefact is a hole rather than the smear a mirrored vertex
-  // used to paint. Only render() still reads this — the real path splits a
-  // straddling triangle instead, through clipToNear (COS-418/E2b).
-  public get isClipped(): boolean {
-    return this.a.isClipped || this.b.isClipped || this.c.isClipped;
-  }
-
   // Re-resolves and re-caches, which is the whole cost of a material change on
   // this side. Called through Mesh.setMaterial, never per frame, and idempotent
   // for the same reason setTransform is: it derives from the authored slot
   // rather than from whatever the last resolution left behind.
   public setMaterial(material: MeshMaterial) {
     this.resolved = resolveMaterial(this.authored, material);
-  }
-
-  // One save, one restore, on every path that reaches them. The cull exit leaves
-  // before the save and so restores nothing; the other three each close the one
-  // pair this method opened. The textured branch opens a second pair inside the
-  // mapper and closes it there.
-  public render(
-    context: CanvasRenderingContext2D,
-    offsetX: number = 0,
-    offsetY: number = 0,
-    options: TriangleRenderOptions,
-  ): boolean {
-    // Before the projection, not after: a vertex behind the eye divides by a
-    // negative depth and lands mirrored across the vanishing point, so by the
-    // time there are three projected points there is nothing left to recognise
-    // the case by. The backface test below is a 2D winding check and would read
-    // that mirrored triangle as a legitimately front-facing one.
-    if (this.isClipped) {
-      return false;
-    }
-
-    this.project(offsetX, offsetY);
-
-    if ((options.cullBackfaces ?? true) && !this.isFrontFacing()) {
-      return false;
-    }
-
-    return this.fill(context, options);
   }
 
   // The transform pass, over one triangle: both vertices' own convert3D2D,
@@ -279,7 +331,7 @@ class Triangle {
   // leaving the face unpainted. The boolean stays because it is what Mesh
   // counts drawn triangles and fill rate off, and E3b's second backend has a
   // real not-drawn state to report through it.
-  public fill(context: CanvasRenderingContext2D, options: TriangleRenderOptions): boolean {
+  public fill(context: CanvasRenderingContext2D, options: TriangleRenderOptions, depth: DepthContext): boolean {
     context.save();
     context.globalAlpha = Math.min(1, Math.max(0, options.opacity ?? 1));
 
@@ -287,6 +339,17 @@ class Triangle {
     // the far edges is exactly what someone who switched to it is trying to see.
     if (options.wireframe) {
       this.strokeWireframe(context, options.lineWidth ?? 1);
+      context.restore();
+
+      return true;
+    }
+
+    // The same exemption, extended to the two modes that encode a quantity
+    // rather than paint a surface (E3c/COS-243): no texture, no light, no fog.
+    if (isDiagnostic(options.shadingMode)) {
+      context.fillStyle = formatRgba(this.diagnosticRgba(options.shadingMode, depth));
+      this.tracePath(context);
+      context.fill();
       context.restore();
 
       return true;
@@ -331,6 +394,7 @@ class Triangle {
         invD: 1 / (this.a.zValue + eyeDistance),
         u: this.uva?.[0] ?? 0,
         v: this.uva?.[1] ?? 0,
+        shade: this.vertexShades[0],
       },
       {
         x: this.bprojX,
@@ -338,6 +402,7 @@ class Triangle {
         invD: 1 / (this.b.zValue + eyeDistance),
         u: this.uvb?.[0] ?? 0,
         v: this.uvb?.[1] ?? 0,
+        shade: this.vertexShades[1],
       },
       {
         x: this.cprojX,
@@ -345,8 +410,55 @@ class Triangle {
         invD: 1 / (this.c.zValue + eyeDistance),
         u: this.uvc?.[0] ?? 0,
         v: this.uvc?.[1] ?? 0,
+        shade: this.vertexShades[2],
       },
     ];
+  }
+
+  // GOURAUD's accumulation half (E3c/COS-243): this face's raw cross product,
+  // added into each of its three corners' slots in the shared sink. Raw and not
+  // normalised on purpose — the magnitude is twice the face's area, so summing
+  // raw products area-weights the average for free, and the sign is dealt with
+  // once per vertex where VertexNormals normalises rather than once per face
+  // here.
+  //
+  // Reads a, b and c, which is why this lives on Triangle rather than on the
+  // class that owns the sink: the header above records that the three vertices
+  // stay private and that Lighting reaches them the same way, by being called
+  // with them rather than by holding them.
+  public accumulateFaceNormal(sink: Float32Array) {
+    if (!this.indices) {
+      return;
+    }
+
+    const ax = this.a.xValue;
+    const ay = this.a.yValue;
+    const az = this.a.zValue;
+    const nx = (this.b.yValue - ay) * (this.c.zValue - az) - (this.b.zValue - az) * (this.c.yValue - ay);
+    const ny = (this.b.zValue - az) * (this.c.xValue - ax) - (this.b.xValue - ax) * (this.c.zValue - az);
+    const nz = (this.b.xValue - ax) * (this.c.yValue - ay) - (this.b.yValue - ay) * (this.c.xValue - ax);
+
+    for (const index of this.indices) {
+      const slot = index * 3;
+
+      sink[slot] += nx;
+      sink[slot + 1] += ny;
+      sink[slot + 2] += nz;
+    }
+  }
+
+  // The read half, called by Mesh once per frame in GOURAUD mode after the sink
+  // above has been folded into shades. Written into the tuple in place rather
+  // than replacing it: 7920 three-element arrays a frame on the torus knot is
+  // the allocation churn the projected-scalar fields above record removing.
+  public cacheVertexShades(normals: VertexNormals) {
+    if (!this.indices) {
+      return;
+    }
+
+    this.vertexShades[0] = normals.shadeAt(this.indices[0]);
+    this.vertexShades[1] = normals.shadeAt(this.indices[1]);
+    this.vertexShades[2] = normals.shadeAt(this.indices[2]);
   }
 
   // The depth-buffered backend's own entry point, alongside fill() above —
@@ -357,8 +469,27 @@ class Triangle {
   // compute, pre-blended per triangle rather than left for Rasterizer to
   // call Lighting or Fog itself — the same separation fill() already keeps
   // by resolving a CSS string before handing it to context.fillStyle.
-  public rasterize(rasterizer: Rasterizer, options: TriangleRenderOptions, eyeDistance: number): boolean {
-    const vertices = this.rasterVertices(eyeDistance);
+  public rasterize(rasterizer: Rasterizer, options: TriangleRenderOptions, depth: DepthContext): boolean {
+    const mode = options.shadingMode;
+    const vertices = this.rasterVertices(depth.eyeDistance);
+    const opacity = options.opacity ?? 1;
+
+    // Unfogged and untextured, the same exemption fill() makes above. DEPTH
+    // carries no colour at all — the rasteriser reads the pixel's own depth —
+    // which is the one request that leaves flatColor null.
+    if (isDiagnostic(mode)) {
+      return rasterizer.fillTriangle({
+        shading: mode === "DEPTH" ? "DEPTH" : "FLAT",
+        vertices,
+        texture: null,
+        flatColor: mode === "DEPTH" ? null : this.faceNormalRgba(),
+        textureWash: null,
+        fogVeil: null,
+        opacity,
+      });
+    }
+
+    const gouraud = mode === "GOURAUD";
     const veilCss = options.fog.meshOverlay(this.depth);
     const fogVeil = veilCss ? parseCssColor(veilCss) : null;
     const hasUVs = this.uva !== undefined && this.uvb !== undefined && this.uvc !== undefined;
@@ -366,21 +497,46 @@ class Triangle {
       this.resolved.textureKey !== null && hasUVs ? options.textures.get(this.resolved.textureKey) : undefined;
 
     if (textureImage) {
-      const washCss = options.lighting.overlayFor(this.a, this.b, this.c);
+      // No wash under GOURAUD: the wash IS the flat path's shade, painted as a
+      // black overlay because a canvas fill cannot modulate a texel, and the
+      // per-pixel multiply the vertex shades drive is the same darkening done
+      // properly. Sending both would shade the face twice.
+      const washCss = gouraud ? null : options.lighting.overlayFor(this.a, this.b, this.c);
 
-      return rasterizer.fillTriangle(this.textureFillRequest(vertices, textureImage, washCss, fogVeil, options));
+      return rasterizer.fillTriangle(
+        this.textureFillRequest(vertices, textureImage, washCss, fogVeil, opacity, gouraud),
+      );
+    }
+
+    if (gouraud) {
+      return rasterizer.fillTriangle({
+        shading: "GOURAUD",
+        vertices,
+        texture: null,
+        // Unlit. The three vertex shades are the entire lighting term on this
+        // path, and fillRgba's own per-face shade would be a second one.
+        flatColor: this.baseRgba(),
+        textureWash: null,
+        // Unblended, unlike FLAT below: the veil has to land after the shade
+        // multiply, or the haze in front of a face gets darkened by the face.
+        fogVeil,
+        opacity,
+      });
     }
 
     const lit = options.lighting.fillRgba(this.resolved, this.a, this.b, this.c);
     const flatColor = fogVeil ? blendRgba(lit, fogVeil) : lit;
 
     return rasterizer.fillTriangle({
+      shading: "FLAT",
       vertices,
       texture: null,
       flatColor,
       textureWash: null,
-      textureFogVeil: null,
-      opacity: options.opacity ?? 1,
+      // Already in flatColor: one blend per triangle rather than one per pixel,
+      // which is what lets Rasterizer hand this colour back by reference.
+      fogVeil: null,
+      opacity,
     });
   }
 
@@ -389,16 +545,53 @@ class Triangle {
     image: TextureSource,
     washCss: string | null,
     fogVeil: RGBA | null,
-    options: TriangleRenderOptions,
+    opacity: number,
+    gouraud: boolean,
   ): RasterFillRequest {
+    const shading: RasterShading = gouraud ? "GOURAUD" : "FLAT";
+
     return {
+      shading,
       vertices,
       texture: { key: this.resolved.textureKey as string, image, uvScale: this.resolved.uvScale },
       flatColor: null,
       textureWash: washCss ? parseCssColor(washCss) : null,
-      textureFogVeil: fogVeil,
-      opacity: options.opacity ?? 1,
+      fogVeil,
+      opacity,
     };
+  }
+
+  // What the two diagnostic modes paint a whole face with. Both are constant
+  // across it — a face has one normal, and the painter path has one depth per
+  // face because it has no per-pixel stage to ramp across.
+  private diagnosticRgba(mode: ShadingMode, depth: DepthContext): RGBA {
+    if (mode === "NORMALS") {
+      return this.faceNormalRgba();
+    }
+
+    return depthGrey(this.depth + depth.eyeDistance, depth.near, depth.far);
+  }
+
+  private faceNormalRgba(): RGBA {
+    return normalRgba(
+      this.a.xValue,
+      this.a.yValue,
+      this.a.zValue,
+      this.b.xValue,
+      this.b.yValue,
+      this.b.zValue,
+      this.c.xValue,
+      this.c.yValue,
+      this.c.zValue,
+    );
+  }
+
+  // The authored colour with no light on it, which is what GOURAUD multiplies
+  // its interpolated shade into. resolved.rgba is null for a texture-keyed
+  // material, whose fill is the raw key — reachable here when the key resolves
+  // but the bitmap has not decoded yet, or when the face has no UVs.
+  private baseRgba(): RGBA {
+    return this.resolved.rgba ?? parseCssColor(this.resolved.fill) ?? UNREADABLE_FILL;
   }
 
   // The near-plane half of the view-volume test (COS-418/E2b), replacing the
@@ -594,6 +787,14 @@ class Triangle {
     );
 
     fragment.resolved = this.resolved;
+    // A fragment has no entry in the points array, so no vertex normal was
+    // accumulated for it and cacheVertexShades would skip it. It inherits the
+    // parent's mean instead of the parent's three: its corners are convex
+    // combinations of them in an order this call site does not track, and one
+    // smooth value is a better wrong answer than three assigned by position.
+    // It costs the smoothing on whichever one or two triangles are straddling
+    // the near plane in a given frame.
+    fragment.vertexShades.fill((this.vertexShades[0] + this.vertexShades[1] + this.vertexShades[2]) / 3);
     fragment.project(context.offsetX, context.offsetY);
 
     if (!context.cullBackfaces || fragment.isFrontFacing()) {

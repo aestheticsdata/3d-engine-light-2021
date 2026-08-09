@@ -210,3 +210,39 @@ describe("Lighting.fillRgba", () => {
     expect(lightingOf().fillRgba(TEXTURED, ...FACING_EYE)).toEqual([255, 255, 255, 1]);
   });
 });
+
+describe("Lighting.shadeForNormal", () => {
+  // The same two normals FACING_EYE and EDGE_ON carry, stated directly: this
+  // method takes a vertex normal, which is an average of faces and belongs to no
+  // triangle in particular.
+  const TOWARD_EYE: [number, number, number] = [0, 0, -1];
+  const PERPENDICULAR: [number, number, number] = [-1, 0, 0];
+
+  it("fully lights a normal pointing into the light and leaves a perpendicular one at ambient", () => {
+    expect(lightingOf({ ambient: 0 }).shadeForNormal(...TOWARD_EYE)).toBeCloseTo(1, 6);
+    expect(lightingOf({ ambient: 0 }).shadeForNormal(...PERPENDICULAR)).toBeCloseTo(0, 6);
+    expect(lightingOf({ ambient: 40 }).shadeForNormal(...PERPENDICULAR)).toBeCloseTo(0.4, 6);
+  });
+
+  it("clamps a normal facing away rather than going negative", () => {
+    expect(lightingOf({ ambient: 0 }).shadeForNormal(0, 0, 1)).toBe(0);
+  });
+
+  it("drops the diffuse term and keeps ambient when the key light is off", () => {
+    // The KEY_LIGHT scene-graph row, which fillFor already honours — GOURAUD
+    // would otherwise stay fully lit while FLAT beside it fell to ambient.
+    const dark = lightingOf({ ambient: 30, enabled: false });
+
+    expect(dark.shadeForNormal(...TOWARD_EYE)).toBeCloseTo(0.3, 6);
+  });
+
+  it("lands on the same term fillFor quantises, for the same normal", () => {
+    // Not an independent derivation: the point is that the two agree, so a face
+    // shaded flat and the same face shaded per-vertex describe one light.
+    const smooth = lightingOf({ ambient: 20 }).shadeForNormal(...TOWARD_EYE);
+    const flat = parseCssColor(lightingOf({ ambient: 20 }).fillFor(ORANGE, ...FACING_EYE));
+
+    expect(flat).not.toBeNull();
+    expect((flat as number[])[0] / (ORANGE.rgba as number[])[0]).toBeCloseTo(smooth, 2);
+  });
+});

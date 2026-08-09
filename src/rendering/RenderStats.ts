@@ -185,8 +185,12 @@ class RenderStats {
     this.submittedCount += count;
   }
 
-  public addDrawn() {
-    this.drawnCount += 1;
+  // Counted rather than incremented, since E3c/COS-243: POINTS draws no
+  // triangle at all, so the pass that replaces the raster loop has a survivor
+  // count rather than a per-triangle call site — and D6 fixes "drawn" as what
+  // passed culling and the near plane, which those survivors did.
+  public addDrawn(count: number = 1) {
+    this.drawnCount += count;
   }
 
   public addInverted() {

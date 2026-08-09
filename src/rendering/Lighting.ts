@@ -4,7 +4,7 @@
 // vector arithmetic all lives here, so it can be asserted against without
 // building a mesh, and Triangle goes on knowing only that a face has a colour.
 // Four positional arguments on fillFor rather than R4's options object, for the
-// reason Triangle.render already carries four: this is the per-triangle path,
+// reason Triangle.fill and clipToNear carry theirs: this is the per-triangle path,
 // and one object literal per triangle per frame is 7920 allocations a frame on
 // the torus knot. R4's line in this codebase falls between per-mesh calls, which
 // get an options object (MeshRenderPass), and per-triangle calls, which do not.
@@ -154,6 +154,30 @@ class Lighting {
     }
 
     return this.cache.overlayFor(this.shadeStep);
+  }
+
+  // GOURAUD's per-vertex term (E3c/COS-243): the same ambient + Lambert scalar
+  // computeTerms quantises into shadeStep, over a normal the caller already
+  // holds rather than one folded from three positions — a vertex normal is the
+  // area-weighted average of the faces meeting at it, which no single face can
+  // compute.
+  //
+  // Diffuse only, and there is no specular twin on purpose. A highlight
+  // interpolated from three vertices is the classic Gouraud failure: one
+  // narrower than a face disappears between them, one that lands on a vertex
+  // spreads into a star. FLAT keeps its Blinn-Phong term; GOURAUD trades it for
+  // a smooth diffuse ramp, which is the trade the mode is for.
+  //
+  // Unquantised, unlike shadeStep: the ShadeCache exists to keep a CSS string
+  // per distinct shade, and there is no string here to cache.
+  //
+  // The normal must already be unit length. VertexNormals normalises once per
+  // vertex, and re-checking here would be a hypot per vertex per drawn triangle
+  // for a condition its only caller guarantees.
+  public shadeForNormal(nx: number, ny: number, nz: number): number {
+    const diffuse = this.enabled ? Math.max(0, nx * this.eye[0] + ny * this.eye[1] + nz * this.eye[2]) : 0;
+
+    return this.ambient + (1 - this.ambient) * diffuse;
   }
 
   // The face normal, the Lambert term and the Blinn-Phong highlight, quantised

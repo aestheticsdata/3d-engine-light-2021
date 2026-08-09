@@ -24,10 +24,7 @@
 
 import DOMScope from "@ui/DOMScope";
 import { OPACITY_SLIDER } from "@ui/inspector/MaterialSection";
-import { modeLabel } from "@ui/modeLabel";
 import FollowCursorTooltip from "@ui/tooltip";
-
-import type { ShadingMode } from "@ui/modeLabel";
 
 const OPACITY_SLIDER_MIN = 0;
 const OPACITY_SLIDER_MAX = 100;
@@ -78,10 +75,6 @@ class RenderPipelinePanel {
 
   public get cullBackfaces(): boolean {
     return this.backfaceCullingEnabled;
-  }
-
-  public get shadingMode(): ShadingMode {
-    return modeLabel(this.wireframeEnabled);
   }
 
   public get opacity(): number {

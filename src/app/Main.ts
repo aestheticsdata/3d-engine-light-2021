@@ -26,6 +26,7 @@ import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
 import { dprEffectiveFor } from "@rendering/pixelBudget";
 import RenderStats from "@rendering/RenderStats";
+import { impliesWireframe } from "@rendering/shadingMode";
 import ShapeRig from "@scene/ShapeRig";
 import ProceduralTextures from "@textures/ProceduralTextures";
 import TextureRegistry from "@textures/TextureRegistry";
@@ -46,11 +47,11 @@ import {
 import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
 import { DEFAULT_ZBUFFER } from "@ui/inspector/PipelineSection";
 import RenderTab from "@ui/inspector/RenderTab";
+import { DEFAULT_SHADING_MODE } from "@ui/inspector/ShadingSection";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import WorldTab from "@ui/inspector/WorldTab";
 import MaterialSummary from "@ui/MaterialSummary";
-import { impliesWireframe } from "@ui/modeLabel";
 import QuickToggles from "@ui/QuickToggles";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
@@ -79,6 +80,7 @@ import type { MeshRenderRequest } from "@primitives/Surface3D";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
 import type { LightingValues } from "@rendering/Lighting";
 import type { MeshMaterial } from "@rendering/material";
+import type { ShadingMode } from "@rendering/shadingMode";
 import type { ShapePose } from "@scene/ShapeRig";
 import type FieldWriter from "@ui/FieldWriter";
 
@@ -445,6 +447,15 @@ class Main {
     });
   }
 
+  // The store is the one holder (E3c/COS-243), the same arrangement the Z-BUFFER
+  // toggle already has: ShadingSection registers the default and writes every
+  // pick, and this reads it back for the frame's render options and for the
+  // three readouts. Private because nothing outside this class needs it — the
+  // readouts are pushed from here rather than pulled.
+  private get shadingMode(): ShadingMode {
+    return this.uiState.getState().shadingMode ?? DEFAULT_SHADING_MODE;
+  }
+
   // The boot primitive is a defaulted parameter rather than a constant: the
   // registry's first key is the shape the console opens on, and the entry module
   // has no business knowing which one that is.
@@ -770,16 +781,14 @@ class Main {
   // the opacity slider each carried. The writes are idempotent — a wireframe
   // toggle rewrites the opacity row with the value it already had.
   private syncPipelineReadouts = () => {
-    // One modeLabel() behind all three readouts: the status bar writes the word,
-    // the HUD writes the data-shading-mode attribute (it drives no styling today
-    // — it is the seam de-mock E3 will key real shading off), and SHAPE INFO's
-    // SHADING row prints it. Passing the boolean to the first two is interim and
-    // is the whole reason the mapping is a shared function — de-mock E3 publishes
-    // a shadingMode slice and the argument goes away, without the label table
-    // ever having existed twice.
-    this.statusBar.setMode(this.pipeline.wireframe);
-    this.viewportHud.setMode(this.pipeline.wireframe);
-    this.shapeInfo.setShading(this.pipeline.shadingMode);
+    // Two writes, three surfaces: FieldWriter's own shadingMode field reaches
+    // the status bar's segment and the viewport HUD's chip together, and SHAPE
+    // INFO's SHADING row is the third. All of them print the store's slice
+    // directly since E3c (COS-243) — the boolean they used to take could only
+    // say WIRE or FLAT, which is why the HUD also carried a data-shading-mode
+    // attribute nobody ever read.
+    this.statusBar.setMode(this.shadingMode);
+    this.shapeInfo.setShading(this.shadingMode);
     this.shapeInfo.setOpacity(this.pipeline.opacity);
     // The pipeline owns the opacity value and its availability — culling being
     // switched on resets it to fully opaque and disables the control — so the
@@ -1073,6 +1082,12 @@ class Main {
       // taller than the 640px reference would otherwise read half as thick on
       // a DPR 2 display or on any resize above the seed size (E9b/COS-250).
       lineWidth: this.renderTarget.scale,
+      // A per-triangle paint option, unlike zBufferEnabled below, which picks a
+      // backend for the whole frame (E3c/COS-243). wireframe rides alongside
+      // rather than being derived from it: the PIPELINE toggle owns that boolean
+      // and RenderTab keeps the two in step, so reading it off the mode here
+      // would put the derivation in two places.
+      shadingMode: this.shadingMode,
     };
 
     const stats = this.surface3D.render({

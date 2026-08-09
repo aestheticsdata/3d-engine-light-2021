@@ -16,10 +16,6 @@ export interface ChipDescriptor {
   label: string;
   // The second line, e.g. a triangle count. Omitted for single-line chips.
   meta?: string;
-  // Per-chip rather than only grid-level: SHADING MODE is the first grid with a
-  // mixed population — five unbacked chips beside one real one (WIRE) — and the
-  // grid-level placeholder option below can only mark every chip or none.
-  placeholder?: { title: string; describedBy: string };
 }
 
 export interface ChipGridOptions {
@@ -112,11 +108,10 @@ class ChipGrid {
       chip.appendChild(meta);
     }
 
-    const placeholder = descriptor.placeholder ?? this.placeholder;
-    if (placeholder) {
+    if (this.placeholder) {
       chip.dataset.placeholder = "true";
-      chip.title = placeholder.title;
-      chip.setAttribute("aria-describedby", placeholder.describedBy);
+      chip.title = this.placeholder.title;
+      chip.setAttribute("aria-describedby", this.placeholder.describedBy);
     }
 
     chip.addEventListener("click", () => this.onPick(descriptor.id));
