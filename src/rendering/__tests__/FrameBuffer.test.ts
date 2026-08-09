@@ -109,4 +109,32 @@ describe("FrameBuffer", () => {
 
     expect(buffer.readPixel(0, 0)).toEqual([1, 1, 1, 1]);
   });
+
+  it("blends the same colour writePixel would, for the same alpha", () => {
+    const blended = new FrameBuffer(1, 1);
+    const written = new FrameBuffer(1, 1);
+    blended.clear(snapshotOf(1, 1, 0, 0, 0));
+    written.clear(snapshotOf(1, 1, 0, 0, 0));
+
+    blended.blendPixel(0, 0, 200, 100, 40, 0.5);
+    written.writePixel(0, 0, 1, 200, 100, 40, 0.5);
+
+    expect(blended.readPixel(0, 0)).toEqual(written.readPixel(0, 0));
+  });
+
+  // E3d/COS-244's edge feather, and the difference the whole pass turns on: a
+  // partially covered pixel tints what is already there without taking ownership
+  // of the depth, so the surface behind it can still be drawn into the part of
+  // the pixel the feather never covered.
+  it("leaves the depth untouched, so a farther fragment can still reach a feathered pixel", () => {
+    const buffer = new FrameBuffer(1, 1);
+    buffer.clear(snapshotOf(1, 1, 0, 0, 0));
+    buffer.writePixel(0, 0, 0.5, 0, 0, 0, 1);
+    buffer.blendPixel(0, 0, 255, 255, 255, 0.5);
+
+    // The blend moved the colour, and moved the depth test not at all.
+    expect(buffer.readPixel(0, 0)).toEqual([128, 128, 128, 1]);
+    expect(buffer.depthTestPasses(0, 0, 0.6)).toBe(true);
+    expect(buffer.depthTestPasses(0, 0, 0.4)).toBe(false);
+  });
 });
