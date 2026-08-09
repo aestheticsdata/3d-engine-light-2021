@@ -114,14 +114,30 @@ class FrameBuffer {
       this.colour[byteIndex + 1] = g;
       this.colour[byteIndex + 2] = b;
       this.colour[byteIndex + 3] = 255;
-    } else {
-      const inverse = 1 - alpha;
 
-      this.colour[byteIndex] = r * alpha + this.colour[byteIndex] * inverse;
-      this.colour[byteIndex + 1] = g * alpha + this.colour[byteIndex + 1] * inverse;
-      this.colour[byteIndex + 2] = b * alpha + this.colour[byteIndex + 2] * inverse;
-      this.colour[byteIndex + 3] = 255;
+      return;
     }
+
+    this.blendInto(byteIndex, r, g, b, alpha);
+  }
+
+  // Colour without depth — E3d/COS-244's edge feather, and the one write in this
+  // class that deliberately leaves the depth map alone. A pixel the triangle only
+  // partly covers has no business claiming it: the rest of that pixel still
+  // belongs to whatever is behind, and a depth written from a fragment that owns
+  // a third of the area would reject the surface that owns the other two thirds.
+  // Rasterizer's fillTriangle carries the rest of the argument.
+  public blendPixel(x: number, y: number, r: number, g: number, b: number, alpha: number) {
+    this.blendInto((y * this.width + x) * 4, r, g, b, alpha);
+  }
+
+  private blendInto(byteIndex: number, r: number, g: number, b: number, alpha: number) {
+    const inverse = 1 - alpha;
+
+    this.colour[byteIndex] = r * alpha + this.colour[byteIndex] * inverse;
+    this.colour[byteIndex + 1] = g * alpha + this.colour[byteIndex + 1] * inverse;
+    this.colour[byteIndex + 2] = b * alpha + this.colour[byteIndex + 2] * inverse;
+    this.colour[byteIndex + 3] = 255;
   }
 
   // The one DOM dependency in this class, and the only method that touches

@@ -1,40 +1,52 @@
 // The depth-buffered backend's own pixel loop (E3b/COS-242): screen bounding
-// box, then per candidate pixel an edge test, a depth test, and a shade —
-// flat colour for an untextured face, an affine-sampled texel for a textured
-// one. Everything it needs is already resolved by Triangle.rasterize() into
-// plain numbers before this ever runs; this class never calls Lighting, Fog,
-// or Point3D, the same separation Triangle.fill() already keeps between
-// "what colour is this face" and "how does a pixel reach the canvas."
+// box, then per candidate pixel an edge test, a depth test, and a colour asked
+// of PixelShader. "Which pixels does this triangle reach, and how do they land
+// in the buffer" is the whole of this class's job; "what colour is each of
+// them" is PixelShader's, and E3d/COS-244 moved that half into its own file
+// when the dither pass carried this one past R17's ~160 lines. Everything
+// either half needs is already resolved by Triangle.rasterize() into plain
+// numbers before this ever runs.
 //
-// E3c/COS-243 added the two per-pixel shading modes and the one per-vertex
-// pass, which is what `shading` on the request selects between:
+// E3d hung two optional passes off the loop, each behind its own PIPELINE
+// toggle and each costing an off frame nothing at all. DITHERING belongs to the
+// colour and lives in PixelShader. EDGE ANTIALIAS belongs to coverage and lives
+// here.
 //
-//   FLAT     the E3b path — one colour per triangle, fog already blended into
-//            it, returned by reference with nothing computed per pixel.
-//   GOURAUD  the same colour or texel, multiplied by the diffuse term
-//            interpolated from the three vertices' own `shade`. Fog arrives
-//            unblended here and is applied AFTER the multiply, or the haze in
-//            front of a face would be darkened by the face behind it.
-//   DEPTH    no colour at all: the pixel's own interpolated 1/d, reciprocated
-//            and ramped between the two edges setDepthRange was given.
+// EDGE ANTIALIAS pays back the aliasing this backend introduced: context.fill()
+// is antialiased by the browser and a hand-written rasteriser is not, so E3b
+// made the frame worse in order to make it correct. The repair feathers OUTWARD
+// only. A pixel whose centre lands inside the triangle is written opaque exactly
+// as before; a pixel up to half a pixel outside is blended in at its own
+// coverage. Feathering inward as well is the better coverage estimate and is
+// deliberately not done: two triangles meeting along an interior edge would then
+// each blend a partial colour into the same pixel, 0.6 over 0.6 leaves a quarter
+// of the background showing, and the mesh would wear a crack along every shared
+// edge — a far worse artefact than the staircase being repaired. Outward-only
+// cannot crack a seam, because every pixel it touches is one the neighbouring
+// triangle has already written opaque.
 //
-// NORMALS is not on that list on purpose. It is one colour per face, so it
-// reaches here as an ordinary FLAT request and costs nothing per pixel — the
-// encoding lives in normalRgba, next to the maths it belongs to.
-//
-// Nothing in shade() allocates. The composed paths write into one scratch tuple
-// held for the life of this class and the FLAT path returns the request's own
-// colour untouched: at a megapixel a frame a returned triple is a million
-// allocations a second, which is the churn T28/T29 spent this codebase's early
-// tickets removing.
+// A feathered pixel writes colour but NOT depth (see FrameBuffer.blendPixel), so
+// the pass is not depth-correct at a silhouette and is not meant to be. Two
+// consequences worth expecting rather than discovering: feathered pixels
+// composite in submission order, which is why Mesh.renderMesh's back-to-front
+// sort outlived the depth buffer; and a triangle drawn later but standing
+// further away still passes the depth test at a feathered pixel and paints over
+// the soft edge, because nothing claimed that pixel's depth. Both are the
+// standard price of coverage blending without a coverage buffer.
 
-import { depthLevel } from "@rendering/depthGrey";
-import { edgeWeights, interpolate, isInside, screenBounds, signedArea2 } from "@rendering/edgeFunction";
-import { sampleTexel } from "@rendering/texelSampling";
+import {
+  edgeCoverage,
+  edgeReciprocals,
+  edgeWeights,
+  interpolate,
+  isInside,
+  screenBounds,
+  signedArea2,
+} from "@rendering/edgeFunction";
+import PixelShader from "@rendering/PixelShader";
 
 import type { RasterVertex } from "@primitives/Triangle";
 import type { RGBA } from "@rendering/cssColor";
-import type { EdgeWeights } from "@rendering/edgeFunction";
 import type FrameBuffer from "@rendering/FrameBuffer";
 import type TexturePixelCache from "@rendering/TexturePixelCache";
 import type { TextureSource } from "@textures/TextureRegistry";
@@ -45,18 +57,18 @@ export interface RasterTexture {
   uvScale: number;
 }
 
-// Which of the three per-pixel branches shade() takes. A named union rather
-// than the pair of booleans this started as: two booleans are four states for
-// three meanings, and the fourth — "gouraud and depth at once" — is exactly the
-// unrepresentable-state problem an enum is for.
+// Which of the three per-pixel branches PixelShader.shade() takes. A named union
+// rather than the pair of booleans this started as: two booleans are four states
+// for three meanings, and the fourth — "gouraud and depth at once" — is exactly
+// the unrepresentable-state problem an enum is for.
 export type RasterShading = "FLAT" | "GOURAUD" | "DEPTH";
 
 // flatColor is non-null on every untextured request except a DEPTH one, which
 // returns before reading it — that is the invariant behind the one cast in
-// shade(), and Triangle.rasterize() is the only builder that has to keep it.
-// Not a discriminated union even so: the shading mode and "textured or not" are
-// independent axes, GOURAUD applies to both, and four interface variants to
-// spell out six combinations would be more shape than the two call sites need.
+// PixelShader.shade(), and Triangle.rasterize() is the only builder that has to
+// keep it. Not a discriminated union even so: the shading mode and "textured or
+// not" are independent axes, GOURAUD applies to both, and four interface variants
+// to spell out six combinations would be more shape than the two call sites need.
 export interface RasterFillRequest {
   shading: RasterShading;
   vertices: [RasterVertex, RasterVertex, RasterVertex];
@@ -70,27 +82,36 @@ export interface RasterFillRequest {
   opacity: number;
 }
 
+// The two E3d/COS-244 passes, named for the PIPELINE toggles that own them
+// rather than for the fields they land in, so the one call site a frame reads as
+// the pair of switches it is rather than as two bare booleans in an order. They
+// arrive together and are then split apart, because only one of them is this
+// class's business.
+export interface RasterPasses {
+  dither: boolean;
+  edgeAA: boolean;
+}
+
 class Rasterizer {
   private readonly buffer: FrameBuffer;
-  private readonly textures: TexturePixelCache;
-  // The two edges DEPTH ramps between, per frame rather than per triangle:
-  // Surface3D sets them on the line after it sets RenderStats' own pair, which
-  // is what makes the mode and the Z-BUFFER card's axis describe one window.
-  private depthNear: number;
-  private depthFar: number;
-  private readonly shaded: RGBA;
+  private readonly shader: PixelShader;
+  private antialiasing: boolean;
 
   constructor(buffer: FrameBuffer, textures: TexturePixelCache) {
     this.buffer = buffer;
-    this.textures = textures;
-    this.depthNear = 0;
-    this.depthFar = 0;
-    this.shaded = [0, 0, 0, 1];
+    this.shader = new PixelShader(textures);
+    this.antialiasing = false;
   }
 
   public setDepthRange(near: number, far: number) {
-    this.depthNear = near;
-    this.depthFar = far;
+    this.shader.setDepthRange(near, far);
+  }
+
+  // Per frame, beside setDepthRange and for the same reason: every triangle in
+  // the frame reads both, and no triangle owns either.
+  public setPasses(passes: RasterPasses) {
+    this.antialiasing = passes.edgeAA;
+    this.shader.setDither(passes.dither);
   }
 
   // True the moment at least one pixel passed both the edge test and the
@@ -116,16 +137,38 @@ class Rasterizer {
       return false;
     }
 
+    // Folded once per triangle, and only when the pass that reads them is on:
+    // three square roots each for a torus knot's 7920 triangles is not a cost to
+    // pay for a switch that is off. The existing bounding box already holds every
+    // pixel a half-pixel feather can reach — screenBounds floors its minimum, and
+    // a pixel centre one whole pixel outside the box is more than half a pixel
+    // from the nearest edge — so the outward feather visits no pixel this loop
+    // was not already walking.
+    const reciprocals = this.antialiasing ? edgeReciprocals(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y) : null;
     let wrote = false;
+
+    this.shader.beginTriangle(request, area);
 
     for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
       for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
         const px = x + 0.5;
         const py = y + 0.5;
         const weights = edgeWeights(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y, px, py);
+        // Whole for every pixel the edge test itself accepted, so an interior
+        // pixel never pays for a coverage estimate it already knows the answer
+        // to: the feather's cost scales with a triangle's perimeter, not its area.
+        let covered = 1;
 
         if (!isInside(weights)) {
-          continue;
+          if (!reciprocals) {
+            continue;
+          }
+
+          covered = edgeCoverage(weights, reciprocals);
+
+          if (covered <= 0) {
+            continue;
+          }
         }
 
         const invD = interpolate(weights, area, v0.invD, v1.invD, v2.invD);
@@ -134,7 +177,17 @@ class Rasterizer {
           continue;
         }
 
-        const colour = this.shade(request, weights, area, invD, v0, v1, v2);
+        const colour = this.shader.shade(x, y, weights, invD);
+
+        if (covered < 1) {
+          // Deliberately not counted as a write. `wrote` carries the drawn-triangle
+          // contract, and a triangle too small to cover a single pixel centre must
+          // not begin counting as drawn the moment EDGE ANTIALIAS goes on: a
+          // rendering toggle that moves a telemetry number is precisely the
+          // disagreement this console is being de-mocked to stop.
+          this.buffer.blendPixel(x, y, colour[0], colour[1], colour[2], request.opacity * covered);
+          continue;
+        }
 
         this.buffer.writePixel(x, y, invD, colour[0], colour[1], colour[2], request.opacity);
         wrote = true;
@@ -145,7 +198,9 @@ class Rasterizer {
   }
 
   // POINTS mode's whole raster pass (E3c/COS-243): a square block around one
-  // projected vertex, depth-tested per pixel like any other.
+  // projected vertex, depth-tested per pixel like any other. It carries its own
+  // colour and never reaches PixelShader — a point has no interior to shade and
+  // no edge to feather, so neither E3d pass applies to it.
   //
   // Five positional arguments, on the reading of R4 Lighting.fillFor already
   // records — the line in this codebase falls between per-mesh calls, which get
@@ -180,97 +235,6 @@ class Rasterizer {
     }
 
     return wrote;
-  }
-
-  private shade(
-    request: RasterFillRequest,
-    weights: EdgeWeights,
-    area: number,
-    invD: number,
-    v0: RasterVertex,
-    v1: RasterVertex,
-    v2: RasterVertex,
-  ): RGBA {
-    if (request.shading === "DEPTH") {
-      // The buffer holds 1/d because that is what interpolates linearly in
-      // screen space; the ramp is linear in d, so the reciprocal is undone here
-      // rather than the buffer storing something the depth test cannot use.
-      const level = depthLevel(1 / invD, this.depthNear, this.depthFar);
-
-      this.shaded[0] = level;
-      this.shaded[1] = level;
-      this.shaded[2] = level;
-
-      return this.shaded;
-    }
-
-    // The E3b path, unchanged and by reference: one colour for the whole
-    // triangle, its fog already blended in, and nothing to compute per pixel.
-    if (request.shading === "FLAT" && !request.texture) {
-      return request.flatColor as RGBA;
-    }
-
-    if (request.texture) {
-      this.sampleInto(request, request.texture, weights, area, v0, v1, v2);
-    } else {
-      // Non-null on every untextured request that reaches here — see the
-      // invariant on RasterFillRequest above.
-      const flat = request.flatColor as RGBA;
-
-      this.shaded[0] = flat[0];
-      this.shaded[1] = flat[1];
-      this.shaded[2] = flat[2];
-    }
-
-    if (request.shading === "GOURAUD") {
-      const shade = interpolate(weights, area, v0.shade, v1.shade, v2.shade);
-
-      this.shaded[0] *= shade;
-      this.shaded[1] *= shade;
-      this.shaded[2] *= shade;
-    }
-
-    if (request.fogVeil) {
-      this.veil(request.fogVeil);
-    }
-
-    return this.shaded;
-  }
-
-  private sampleInto(
-    request: RasterFillRequest,
-    texture: RasterTexture,
-    weights: EdgeWeights,
-    area: number,
-    v0: RasterVertex,
-    v1: RasterVertex,
-    v2: RasterVertex,
-  ) {
-    const decoded = this.textures.get(texture.key, texture.image);
-    const u = interpolate(weights, area, v0.u, v1.u, v2.u) * texture.uvScale;
-    const v = interpolate(weights, area, v0.v, v1.v, v2.v) * texture.uvScale;
-    const texel = sampleTexel(decoded.pixels, decoded.width, decoded.height, u, v);
-
-    this.shaded[0] = texel.r;
-    this.shaded[1] = texel.g;
-    this.shaded[2] = texel.b;
-
-    // The flat path's own shade, as a wash: a texel cannot be modulated by a
-    // canvas fill, so E3a darkens a textured face with a black overlay and this
-    // reproduces it per pixel. GOURAUD sends none — its multiply below is the
-    // better answer to the same question, and applying both would shade twice.
-    if (request.textureWash) {
-      this.veil(request.textureWash);
-    }
-  }
-
-  private veil(over: RGBA) {
-    const alpha = over[3];
-    const inverse = 1 - alpha;
-
-    this.shaded[0] = over[0] * alpha + this.shaded[0] * inverse;
-    this.shaded[1] = over[1] * alpha + this.shaded[1] * inverse;
-    this.shaded[2] = over[2] * alpha + this.shaded[2] * inverse;
   }
 }
 

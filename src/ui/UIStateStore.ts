@@ -73,11 +73,16 @@ export interface UIState {
   uvScale?: number;
 
   // --- RENDER tab -----------------------------------------------------------
-  // dither / edgeAA are the placeholders left in this tab: no rasteriser
-  // stage sits behind either yet (E3d). zbuffer stopped being one with
-  // E3b (COS-242) — it now selects Surface3D's rasteriser backend for real,
-  // and is stored here for the same reason every live control is: RESET has
-  // to be able to undo it.
+  // zbuffer, dither and edgeAA are the three PIPELINE booleans this store owns,
+  // and none of them is a placeholder any more. zbuffer stopped being one with
+  // E3b (COS-242) — it selects Surface3D's rasteriser backend — and dither /
+  // edgeAA with E3d (COS-244), which gave each a per-pixel pass inside that
+  // backend. All three are stored here for the same reason every live control
+  // is: RESET has to be able to undo them.
+  //
+  // They reach the engine on the render request rather than through
+  // TriangleRenderOptions, because all three describe the frame rather than a
+  // triangle — see Surface3D's SurfaceRenderRequest for that distinction.
   //
   // The four light* values stopped being placeholders with E4a's successor
   // (E3a/COS-241). All four reach one directional key light, and the scene

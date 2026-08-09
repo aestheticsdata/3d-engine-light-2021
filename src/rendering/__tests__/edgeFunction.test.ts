@@ -3,7 +3,16 @@
 // (b-a)x(c-a) = 16 > 0, front-facing, the same sign edgeFunction(A,B,C) must
 // produce for signedArea2 to agree with it.
 
-import { edgeFunction, edgeWeights, interpolate, isInside, screenBounds, signedArea2 } from "@rendering/edgeFunction";
+import {
+  edgeCoverage,
+  edgeFunction,
+  edgeReciprocals,
+  edgeWeights,
+  interpolate,
+  isInside,
+  screenBounds,
+  signedArea2,
+} from "@rendering/edgeFunction";
 import { describe, expect, it } from "vitest";
 
 const A = { x: 0, y: 0 };
@@ -131,5 +140,57 @@ describe("screenBounds", () => {
 
   it("returns null for a triangle collapsed to a single point off-grid", () => {
     expect(screenBounds(-1, -1, -1, -1, -1, -1, 100, 100)).toBeNull();
+  });
+});
+
+describe("edgeReciprocals / edgeCoverage", () => {
+  const reciprocals = edgeReciprocals(A.x, A.y, B.x, B.y, C.x, C.y);
+  const coverageAt = (px: number, py: number): number =>
+    edgeCoverage(edgeWeights(A.x, A.y, B.x, B.y, C.x, C.y, px, py), reciprocals);
+
+  it("inverts the length of the edge opposite each vertex", () => {
+    // r0 is BC, the hypotenuse; r1 is CA and r2 is AB, both of length 4.
+    expect(1 / reciprocals.r0).toBeCloseTo(Math.sqrt(32), 10);
+    expect(1 / reciprocals.r1).toBeCloseTo(4, 10);
+    expect(1 / reciprocals.r2).toBeCloseTo(4, 10);
+  });
+
+  it("turns an edge weight back into the perpendicular distance it was scaled from", () => {
+    // (1,1) is exactly one unit from CA (the line x = 0) and sqrt(2) from the
+    // hypotenuse, which is the whole claim edgeCoverage rests on.
+    const weights = edgeWeights(A.x, A.y, B.x, B.y, C.x, C.y, 1, 1);
+
+    expect(weights.w1 * reciprocals.r1).toBeCloseTo(1, 10);
+    expect(weights.w0 * reciprocals.r0).toBeCloseTo(Math.SQRT2, 10);
+  });
+
+  it("covers a pixel whole once its centre is half a pixel inside every edge", () => {
+    expect(coverageAt(2, 1)).toBe(1);
+    expect(coverageAt(0.5, 2)).toBe(1);
+  });
+
+  it("half-covers a centre sitting exactly on an edge", () => {
+    expect(coverageAt(0, 2)).toBeCloseTo(0.5, 10);
+    expect(coverageAt(2, 0)).toBeCloseTo(0.5, 10);
+  });
+
+  it("falls off linearly across the half pixel outside an edge", () => {
+    expect(coverageAt(-0.25, 2)).toBeCloseTo(0.25, 10);
+    expect(coverageAt(-0.4, 2)).toBeCloseTo(0.1, 10);
+  });
+
+  it("gives nothing to a centre half a pixel or more outside, which is what ends the feather", () => {
+    expect(coverageAt(-0.5, 2)).toBe(0);
+    expect(coverageAt(-3, 2)).toBe(0);
+  });
+
+  it("takes the nearest edge at a corner, never the sum of two", () => {
+    // Near A, both CA and AB are close. Coverage follows whichever bites deeper,
+    // and stays a coverage rather than becoming a double count.
+    const corner = coverageAt(-0.2, 0.1);
+
+    expect(corner).toBeCloseTo(0.3, 10);
+    expect(corner).toBeGreaterThanOrEqual(0);
+    expect(corner).toBeLessThanOrEqual(1);
   });
 });

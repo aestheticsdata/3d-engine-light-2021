@@ -31,7 +31,7 @@ export interface Surface3DOptions {
   stats: RenderStats;
 }
 
-// Four values that describe one frame rather than the surface, so they ride on
+// Six values that describe one frame rather than the surface, so they ride on
 // the call rather than becoming fields (R4).
 export interface SurfaceRenderRequest {
   renderables: MeshRenderRequest[];
@@ -44,7 +44,19 @@ export interface SurfaceRenderRequest {
   // paint option, which is the same distinction that already keeps `timed`
   // and `cameraTransform` off that object.
   zBufferEnabled: boolean;
+  // uiState.dither / uiState.edgeAA (E3d/COS-244), here for the same reason and
+  // not on TriangleRenderOptions: they gate per-pixel stages of the rasteriser
+  // that no triangle can turn on or off for itself. They ride the request rather
+  // than becoming fields because they describe one frame, not the surface (R4).
+  dither: boolean;
+  edgeAA: boolean;
 }
+
+// What survives once render() has consumed the three flags that choose a backend
+// and configure its passes. Named rather than repeated inline: the Omit is now
+// long enough that spelling it out at both private call sites would bury which
+// arguments each of them actually walks.
+type FrameRequest = Omit<SurfaceRenderRequest, "zBufferEnabled" | "dither" | "edgeAA">;
 
 // A snapshot is only valid for the exact inputs it was captured under —
 // sixteen camera numbers rather than a reference compare, since
@@ -122,6 +134,7 @@ class Surface3D {
     // axis labels have to describe one window, and one origin is how that stays
     // true without a second call site to keep in step.
     this.rasterizer.setDepthRange(this.stats.depthNear, this.stats.depthFar);
+    this.rasterizer.setPasses({ dither: request.dither, edgeAA: request.edgeAA });
     // The same pair the depth bins are centred on, which is why the fog is aimed
     // from here rather than from Main (E5b/COS-247): the scene radius exists only
     // once this call has folded it, and the near edge of the fog is the near edge
@@ -141,7 +154,7 @@ class Surface3D {
     return this.renderPainted({ renderables, options, timed, cameraTransform });
   }
 
-  private renderPainted(request: Omit<SurfaceRenderRequest, "zBufferEnabled">): RenderStats {
+  private renderPainted(request: FrameRequest): RenderStats {
     const { renderables, options, timed, cameraTransform } = request;
     const presentStartedAt = timed ? performance.now() : 0;
     const blobs = this.shadowBlobs(renderables);
@@ -207,7 +220,7 @@ class Surface3D {
   // (possibly cached) background snapshot, walks the mesh loop through the
   // rasteriser instead of the canvas, presents the buffer's own dirty rect,
   // then draws the two layers the snapshot cannot cover.
-  private renderBuffered(request: Omit<SurfaceRenderRequest, "zBufferEnabled">): RenderStats {
+  private renderBuffered(request: FrameRequest): RenderStats {
     const { renderables, options, timed, cameraTransform } = request;
     const backgroundRenderer = this.backgroundRenderer as BackgroundRenderer;
 

@@ -100,3 +100,52 @@ export const isInside = (weights: EdgeWeights): boolean => weights.w0 >= 0 && we
 // attribute being interpolated, in the same A/B/C order edgeWeights used.
 export const interpolate = (weights: EdgeWeights, area: number, va: number, vb: number, vc: number): number =>
   (weights.w0 * va + weights.w1 * vb + weights.w2 * vc) / area;
+
+// Math.hypot is the same number and roughly an order of magnitude slower — it
+// rescales its arguments to survive an overflow that screen coordinates, bounded
+// by the buffer, cannot reach.
+const length = (dx: number, dy: number): number => Math.sqrt(dx * dx + dy * dy);
+
+// EDGE ANTIALIAS's per-triangle half (E3d/COS-244). An edge weight is twice a
+// sub-triangle's area, which is the perpendicular distance to that edge times
+// the edge's own length, so recovering the distance means dividing the length
+// back out. Reciprocals, folded once per triangle, because the alternative is
+// three divisions on every boundary pixel of every triangle in the frame.
+//
+// r0/r1/r2 pair with w0/w1/w2, and therefore with the edge OPPOSITE each vertex:
+// r0 belongs to BC, r1 to CA, r2 to AB.
+export interface EdgeReciprocals {
+  r0: number;
+  r1: number;
+  r2: number;
+}
+
+// Never a division by zero: a triangle with positive signedArea2 — the only kind
+// Rasterizer gets this far with — cannot have an edge of zero length.
+export const edgeReciprocals = (
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+): EdgeReciprocals => ({
+  r0: 1 / length(cx - bx, cy - by),
+  r1: 1 / length(ax - cx, ay - cy),
+  r2: 1 / length(bx - ax, by - ay),
+});
+
+// How much of the pixel at this point the triangle covers, from the point's
+// perpendicular distance to the nearest of the three edges: a centre exactly on
+// an edge is half covered, half a pixel inside it is whole, half a pixel outside
+// it is not covered at all.
+//
+// Exact for a pixel one straight edge crosses, and an approximation at a corner,
+// where two edges each take a bite out of the pixel and only the deeper one is
+// counted. A corner is one pixel of a silhouette and the error there is far
+// smaller than the staircase it replaces.
+export const edgeCoverage = (weights: EdgeWeights, reciprocals: EdgeReciprocals): number => {
+  const distance = Math.min(weights.w0 * reciprocals.r0, weights.w1 * reciprocals.r1, weights.w2 * reciprocals.r2);
+
+  return Math.min(1, Math.max(0, distance + 0.5));
+};

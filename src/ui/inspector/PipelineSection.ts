@@ -1,12 +1,20 @@
 // PIPELINE: the five ON/OFF rows that gate rasteriser stages.
 //
-// WIREFRAME and BACKFACE CULLING are real — RenderPipelinePanel owns both
-// booleans and the opacity side effect culling carries; this section only
-// renders the rows and forwards a click. Z-BUFFER became real with E3b
-// (COS-242): the toggle now selects Surface3D's own rasteriser backend, so
-// it drops the placeholder affordance the other two still carry. DITHERING
-// and EDGE ANTIALIAS have no rasteriser behind them yet (de-mock E3c/E3d)
-// and stay pure UIStateStore state with the placeholder affordance.
+// All five are real, and this section is the last one in the RENDER tab to have
+// carried a placeholder. WIREFRAME and BACKFACE CULLING were always live —
+// RenderPipelinePanel owns both booleans and the opacity side effect culling
+// carries; this section only renders the rows and forwards a click. Z-BUFFER
+// became live with E3b (COS-242), when the toggle started selecting Surface3D's
+// rasteriser backend. DITHERING and EDGE ANTIALIAS followed with E3d (COS-244) —
+// both now gate a per-pixel pass inside that backend — which is what took the
+// last placeholder affordance, and the hint span that explained it, out of this
+// file entirely.
+//
+// The three defaults below are read by Main every frame as well as by the rows,
+// so they are the single answer to "what does this console do before anyone
+// touches it". EDGE ANTIALIAS defaults ON deliberately: E3b's own ticket makes
+// it the condition for Z-BUFFER defaulting on, because a hand-written rasteriser
+// without it draws harder edges than the painter path it replaced.
 
 import DOMScope from "@ui/DOMScope";
 import ToggleRow from "@ui/inspector/controls/ToggleRow";
@@ -16,9 +24,6 @@ import type UIStateStore from "@ui/UIStateStore";
 export const DEFAULT_ZBUFFER = true;
 export const DEFAULT_DITHER = false;
 export const DEFAULT_EDGE_AA = true;
-
-const HINT_ID = "ph-pipeline-stage";
-const HINT_TEXT = "This pipeline stage is not implemented yet (de-mock E3d).";
 
 export interface PipelineSectionOptions {
   root: string;
@@ -39,7 +44,6 @@ class PipelineSection {
 
   constructor(options: PipelineSectionOptions) {
     const root = new DOMScope(document).require<HTMLElement>(options.root, "PIPELINE section is missing.");
-    const placeholder = { title: HINT_TEXT, describedBy: HINT_ID };
 
     this.store = options.store;
     this.store.registerSlice({ zbuffer: DEFAULT_ZBUFFER, dither: DEFAULT_DITHER, edgeAA: DEFAULT_EDGE_AA });
@@ -62,13 +66,11 @@ class PipelineSection {
     this.ditherRow = new ToggleRow({
       label: "DITHERING",
       on: DEFAULT_DITHER,
-      placeholder,
       onToggle: (next) => this.store.setState({ dither: next }),
     });
     this.edgeAARow = new ToggleRow({
       label: "EDGE ANTIALIAS",
       on: DEFAULT_EDGE_AA,
-      placeholder,
       onToggle: (next) => this.store.setState({ edgeAA: next }),
     });
 
@@ -78,7 +80,6 @@ class PipelineSection {
       this.zbufferRow.element,
       this.ditherRow.element,
       this.edgeAARow.element,
-      this.buildHint(),
     );
   }
 
@@ -95,14 +96,6 @@ class PipelineSection {
     this.zbufferRow.setOn(state.zbuffer ?? DEFAULT_ZBUFFER);
     this.ditherRow.setOn(state.dither ?? DEFAULT_DITHER);
     this.edgeAARow.setOn(state.edgeAA ?? DEFAULT_EDGE_AA);
-  }
-
-  private buildHint(): HTMLElement {
-    const hint = document.createElement("span");
-    hint.className = "placeholder-hint";
-    hint.id = HINT_ID;
-    hint.textContent = HINT_TEXT;
-    return hint;
   }
 }
 

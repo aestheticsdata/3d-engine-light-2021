@@ -45,7 +45,7 @@ import {
   DEFAULT_SKY,
 } from "@ui/inspector/EnvironmentSection";
 import { DEFAULT_AMBIENT, DEFAULT_AZIMUTH, DEFAULT_ELEVATION, DEFAULT_SPECULAR } from "@ui/inspector/LightingSection";
-import { DEFAULT_ZBUFFER } from "@ui/inspector/PipelineSection";
+import { DEFAULT_DITHER, DEFAULT_EDGE_AA, DEFAULT_ZBUFFER } from "@ui/inspector/PipelineSection";
 import RenderTab from "@ui/inspector/RenderTab";
 import { DEFAULT_SHADING_MODE } from "@ui/inspector/ShadingSection";
 import ShapeTab from "@ui/inspector/ShapeTab";
@@ -1090,12 +1090,19 @@ class Main {
       shadingMode: this.shadingMode,
     };
 
+    // One read for all three: they are three fields of one store, and reading it
+    // once is what guarantees the backend and the two passes it configures come
+    // from the same frame's state.
+    const pipeline = this.uiState.getState();
+
     const stats = this.surface3D.render({
       renderables: submitted,
       options,
       timed,
       cameraTransform,
-      zBufferEnabled: this.uiState.getState().zbuffer ?? DEFAULT_ZBUFFER,
+      zBufferEnabled: pipeline.zbuffer ?? DEFAULT_ZBUFFER,
+      dither: pipeline.dither ?? DEFAULT_DITHER,
+      edgeAA: pipeline.edgeAA ?? DEFAULT_EDGE_AA,
     });
 
     this.renderedTriangles = stats.drawn;
