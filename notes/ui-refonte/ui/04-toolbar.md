@@ -12,7 +12,7 @@ Brand block (L37–L42): `flex: 0 0 var(--size-sidebar-w)` (264px), `align-items
 - Mark (L38): `var(--size-brand-mark)` 16x16, `background: var(--color-accent)`, `border-radius: var(--radius-xs)` (1px).
 - Text column: `gap: var(--space-0-5)` (2px).
 - Wordmark (L40): `1991COMPUTER`, `font: var(--font-weight-bold) var(--text-md)/var(--leading-none) var(--font-sans)`, `letter-spacing: var(--tracking-2xl)` (.14em), inherits `var(--color-text-primary)`.
-- Build string (L41): `3DENGINE&nbsp;&nbsp;BUILD 0.9.4`, `font: var(--font-weight-regular) var(--text-xs)/var(--leading-none) var(--font-mono)`, `letter-spacing: var(--tracking-md)` (.1em), `color: var(--color-text-dim)`. The double space between the product id and the build is literal in the design; keep it as two `&nbsp;`.
+- Build string (L41): `HALCYON&nbsp;&nbsp;BUILD 0.9.4`, `font: var(--font-weight-regular) var(--text-xs)/var(--leading-none) var(--font-mono)`, `letter-spacing: var(--tracking-md)` (.1em), `color: var(--color-text-dim)`. The double space between the product id and the build is literal in the design; keep it as two `&nbsp;`.
 
 Strip (L45): `flex:1`, `min-width:0`, `align-items:center`, `gap: var(--space-2-5)` (6px), `padding: 0 var(--space-4)` (0 8px). Children in source order:
 
@@ -37,7 +37,7 @@ Paused state (new, not in the mockup): the design has no paused variant of the R
 
 Sticky header (L676): `position:sticky`, `top:0`, `z-index: var(--layer-sticky)` (6), `height: var(--size-appbar-h)` (52px), `align-items:center`, `gap: var(--space-4-5)` (9px), `padding: 0 var(--space-5)` (0 10px), panel background/border/radius as desktop. No widget may introduce a competing z-index against this.
 - Mark (L677): `var(--size-brand-mark)` resolves to 18px below 900px; otherwise identical.
-- Text column (L678): `gap: var(--space-1)` (3px). Wordmark `700 var(--text-xl)/1 var(--font-sans)` `letter-spacing: var(--tracking-xl)` (.12em). Build string is shortened to `3DENGINE 0.9.4` (one space, no `BUILD` word) at `400 var(--text-xs)/1 var(--font-mono)` `letter-spacing: var(--tracking-xs)` (.08em) `color: var(--color-text-dim)`.
+- Text column (L678): `gap: var(--space-1)` (3px). Wordmark `700 var(--text-xl)/1 var(--font-sans)` `letter-spacing: var(--tracking-xl)` (.12em). Build string is shortened to `HALCYON 0.9.4` (one space, no `BUILD` word) at `400 var(--text-xs)/1 var(--font-mono)` `letter-spacing: var(--tracking-xs)` (.08em) `color: var(--color-text-dim)`.
 - Spacer `flex:1` (L682).
 - fps pill (L683–L687): `height: var(--size-appbar-fps-chip)` (30px), `padding: 0 var(--space-4-5)` (0 9px), `gap: var(--space-2)` (5px), sunken background, `border: var(--size-hairline) solid var(--color-border-muted)`, `border-radius: var(--radius-md)`. Blinking `var(--size-rec-dot)` dot, value `700 var(--text-xl)/1 var(--font-mono)` (12px) `color: var(--color-text-primary)`, unit `fps` `400 var(--text-sm)/1 var(--font-mono)` `color: var(--color-text-dim)`. No `RENDER LOOP` label on mobile.
 - PAUSE (L688): `.btn--primary`, which resolves to `min-width: var(--size-pause-minw)` (84px) and `height: var(--size-button-primary)` (36px) below 900px. 36px is below the 44px touch minimum — apply primitives' `.tap-pad` helper with `--tap-pad: 4px`; the painted size stays 36px. This ticket writes no pseudo-element of its own.
@@ -65,7 +65,7 @@ RESET does not touch the transport. The design's `reset()` also sets `paused: fa
 | Field | Value shown | Source today |
 | --- | --- | --- |
 | Wordmark | `1991COMPUTER` | static |
-| Build string | `3DENGINE  BUILD 0.9.4` desktop, `3DENGINE 0.9.4` mobile | new `src/ui/buildInfo.ts` exporting `APP_ID` and `BUILD`; `BUILD` comes from a Vite `define` fed by `package.json` `version`. Note `package.json` currently reads `"name": "parceltest"`, `"version": "1.0.0"` — bump/rename it in this ticket or the string will not say 0.9.4. The literal must not appear twice in markup. |
+| Build string | `HALCYON  BUILD 0.9.4` desktop, `HALCYON 0.9.4` mobile | new `src/ui/buildInfo.ts` exporting `APP_ID` and `BUILD`; `BUILD` comes from a Vite `define` fed by `package.json` `version`. Note `package.json` currently reads `"name": "parceltest"`, `"version": "1.0.0"` — bump/rename it in this ticket or the string will not say 0.9.4. The literal must not appear twice in markup. |
 | Transport label | `PAUSE` / `RESUME` | real — `Main.togglePause` and `Main.isPlaying` (`src/index.ts` L520–L524). Existing labels are lowercase `pause`/`play`; change to `PAUSE`/`RESUME`. |
 | REC dot | blinking green, dim and frozen while paused | static, `@keyframes recblink` from `motion.css` |
 | fps | integer | real — `Math.round(this.smoothedFps)`, written on the existing `FPS_DISPLAY_UPDATE_INTERVAL_MS` (90ms) throttle in `Main.fpsCounter()`. The `#fpsCounterNb` id is migrated to a `FieldWriter.write`-driven `data-field` by the app-shell ticket, so this ticket only supplies the node, in both branches. |

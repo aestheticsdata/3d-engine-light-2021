@@ -1,4 +1,4 @@
-# 3d-engine-light-2021 — working agreements
+# Halcyon — working agreements
 
 A from-scratch software 3D rasteriser. No WebGL, no 3D library, no framework: the
 triangles are filled by hand into a 2D canvas. Vite + TypeScript, plain CSS.

@@ -1,4 +1,4 @@
-# The OOP house style — `3d-engine-light-2021`
+# The OOP house style — `halcyon`
 
 Twenty rules. R1–R18 were **recovered from the owner-written class files, not
 invented**; R19 and R20 came later, from the owner's own corrections during COS-395 and

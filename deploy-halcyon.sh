@@ -2,28 +2,35 @@
 
 #
 # ------------------------------------------------------------
-# DEPLOY SCRIPT — 3dengine
+# DEPLOY SCRIPT — halcyon
 # ------------------------------------------------------------
 #
 # ONE-TIME SERVER SETUP (ks-b):
 #
 # 1) Create releases directory:
-#    sudo mkdir -p /var/www/1991computer/3dengine/releases
+#    sudo mkdir -p /var/www/1991computer/halcyon/releases
 #
 # 2) Create initial symlink (required for first deploy):
-#    sudo ln -s /var/www/1991computer/3dengine/releases \
-#              /var/www/1991computer/3dengine/current
+#    sudo ln -s /var/www/1991computer/halcyon/releases \
+#              /var/www/1991computer/halcyon/current
 #
-# 3) Ensure nginx serves the "current" symlink:
-#    root /var/www/1991computer/3dengine/current;
+# 3) Ensure nginx serves the "current" symlink. The app has its own
+#    subdomain, so this is a server block of its own rather than a
+#    location under the studio site:
+#    server {
+#        server_name halcyon.1991computer.com;
+#        root /var/www/1991computer/halcyon/current;
+#        index index.html;
+#        try_files $uri $uri/ /index.html;
+#    }
 #
 # After any nginx configuration change:
 #    sudo nginx -t && sudo systemctl reload nginx
 #
 # ------------------------------------------------------------
 # USAGE:
-#   ./deploy-3dengine.sh
-#   ./deploy-3dengine.sh rollback
+#   ./deploy-halcyon.sh
+#   ./deploy-halcyon.sh rollback
 #
 # NOTES:
 # - This script performs a local Vite build, uploads the dist/
@@ -36,7 +43,7 @@ set -euo pipefail
 SERVER_USER="debian"
 SERVER_HOST="ks-b"
 REMOTE_ROOT="/var/www/1991computer"
-APP_NAME="3dengine"
+APP_NAME="halcyon"
 REMOTE_FRONT="$REMOTE_ROOT/$APP_NAME"
 
 GREEN="\033[0;32m"

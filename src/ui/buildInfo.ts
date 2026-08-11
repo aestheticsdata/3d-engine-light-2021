@@ -6,7 +6,7 @@
 // __APP_VERSION__ is replaced at build time by the `define` in vite.config.js,
 // which reads package.json. Declared for TypeScript in vite-env.d.ts.
 
-export const APP_ID = "3DENGINE";
+export const APP_ID = "HALCYON";
 
 export const BUILD = __APP_VERSION__;
 

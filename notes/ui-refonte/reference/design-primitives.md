@@ -581,7 +581,7 @@ Every component whose measurements differ between branches. These become either 
 | Motion (§7) | `src/styles/tokens/motion.css` | `@keyframes recblink`, `--duration-blink`, `--opacity-blink-min`, plus any new `--duration-fast` / `--ease-standard` (flag as new) |
 | Breakpoint (§8) | `src/styles/tokens/breakpoints.css` | `--breakpoint-md: 900px` (documentation-only, literal repeated in `@media`) |
 
-All eight imported at the top of `/Users/cosmokaat/dev/3d-engine-light-2021/src/styles/main.css`, before the existing `reset.css` import is re-ordered to sit first.
+All eight imported at the top of `/Users/cosmokaat/dev/halcyon/src/styles/main.css`, before the existing `reset.css` import is re-ordered to sit first.
 
 ## 11. Notes the tokens ticket must carry
 

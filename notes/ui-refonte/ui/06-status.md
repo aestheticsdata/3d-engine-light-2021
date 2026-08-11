@@ -16,7 +16,7 @@ Segments, left to right:
 | 2 | `<selected> selected` | `font:var(--font-weight-regular) var(--text-sm)/var(--leading-none) var(--font-mono)`, `color:var(--color-text-tertiary)` |
 | 3 | `<MODE> · <TEXTURE> · <PROJECTION>` | same as 2 |
 | 4 | `units: metres` | same as 2 |
-| 5 | `1991computer.com/3dengine` | same font, `color:var(--color-text-dim)` |
+| 5 | `halcyon.1991computer.com` | same font, `color:var(--color-text-dim)` |
 | 6 | `<uptime> uptime` | same as 5 |
 
 Dividers (L659/L661/L663/L667) reuse the `.divider-v--status` geometry from primitives — `var(--size-hairline)` × `var(--size-divider-status)` (11px) in `var(--color-border-muted)` — but drawn as a `::before` on `.statusItem + .statusItem` rather than as the design's standalone spans, so wrapping cannot strand one. No new divider recipe is declared here.
@@ -52,7 +52,7 @@ Wrapping and truncation, narrowest supported width 320px:
 | Texture | `TEXTURED` / `SOLID` | import the derivation the shape-info ticket owns and exports — unique non-`rgba` material strings off `object3D.triangles` (`src/index.ts` L286–L294), reduced to the two-value label. Do not print the raw material list here; the viewport HUD, shape info and this bar must all show the same string |
 | Projection | `PERSPECTIVE` / `ORTHOGRAPHIC` | ~~`placeholder`~~ real since COS-236 (de-mock E2). It is a `projection` field the status bar publishes, and the same write reaches the viewport HUD's chip and the CAMERA card's header note |
 | Units | `units: metres` | `placeholder`: static design copy, the engine has no world-unit concept; owned by de-mock E5 |
-| URL | `1991computer.com/3dengine` | real: static string, matches vite `base: "/3dengine"` |
+| URL | `halcyon.1991computer.com` | real: static string, matches vite `base: "/"` |
 | Uptime | `m:ss uptime` | real, read-only here. The **system ticket** owns the clock and the formatter: one `setInterval(…, 1000)` started in `Main.init`, published as `fields.write('uptime', …)`. This bar adds no timer. The rAF display throttle cannot drive it — `Main.stop()` cancels the loop on pause (`src/index.ts` L577–L584), while the design deliberately keeps counting while paused (L1223) |
 
 Both placeholder segments carry the shared placeholder affordance from the primitives ticket — `data-placeholder="true"` plus `title` and `aria-describedby` naming the owning de-mock ticket. That convention adds no visual treatment to a read-only text segment, so the bar reads as one uniform line.
