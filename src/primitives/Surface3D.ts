@@ -8,8 +8,8 @@ import type Mesh from "@primitives/Mesh";
 import type RenderTarget from "@primitives/RenderTarget";
 import type { TriangleRenderOptions } from "@primitives/Triangle";
 import type BackgroundRenderer from "@rendering/BackgroundRenderer";
-import type { ShadowBlob } from "@rendering/GroundShadow";
 import type RenderStats from "@rendering/RenderStats";
+import type { ShadowBlob } from "@rendering/shadowEllipse";
 
 export interface MeshRenderRequest {
   mesh: Mesh;
@@ -217,19 +217,47 @@ class Surface3D {
   }
 
   // The depth-buffered path (E3b/COS-242). Seeds the colour buffer from the
-  // (possibly cached) background snapshot, walks the mesh loop through the
-  // rasteriser instead of the canvas, presents the buffer's own dirty rect,
-  // then draws the two layers the snapshot cannot cover.
+  // (possibly cached) background snapshot, blends the ground shadow in UNDER
+  // the mesh, walks the mesh loop through the rasteriser instead of the canvas,
+  // uploads the buffer, and lays the vignette over the result.
+  //
+  // The shadow moved to the front of that sequence with E3e/3DE-115. It used to
+  // be drawn with the vignette in one canvas pass after present(), which put it
+  // on top of the mesh — a shape standing on the plane was darkened by its own
+  // shadow, which the painter path has never done. The vignette stayed where it
+  // was, and BackgroundRenderer.renderVignetteOverlay records why.
   private renderBuffered(request: FrameRequest): RenderStats {
     const { renderables, options, timed, cameraTransform } = request;
     const backgroundRenderer = this.backgroundRenderer as BackgroundRenderer;
 
     this.frameBuffer.setSize(this.renderTarget.width, this.renderTarget.height);
 
-    const presentStartedAt = timed ? performance.now() : 0;
+    // Two timed segments rather than one window around the whole method, and
+    // the correction is E3e's real result. The mesh loop sits between them and
+    // reports its own transform/clipCull/raster stages; a single window counted
+    // all three inside `present` as well, and RenderStats.totalMs sums the four
+    // — so the FRAME TIME card was reading a whole raster pass too high on this
+    // backend, and `present` looked like the largest stage of a heavy frame
+    // when it is in fact around a twentieth of it. The painter path above never
+    // had the overlap, which is why only this one moved.
+    const backgroundStartedAt = timed ? performance.now() : 0;
     const snapshot = this.snapshotFor(backgroundRenderer, cameraTransform, options);
 
     this.frameBuffer.clear(snapshot);
+
+    backgroundRenderer.compositeShadow({
+      buffer: this.frameBuffer,
+      camera: this.camera,
+      renderTarget: this.renderTarget,
+      cameraTransform,
+      fog: options.fog,
+      blobs: this.shadowBlobs(renderables),
+      stats: this.stats,
+    });
+
+    if (timed) {
+      this.stats.addPresentMs(performance.now() - backgroundStartedAt);
+    }
 
     for (const renderable of renderables) {
       renderable.mesh.renderMesh({
@@ -246,17 +274,10 @@ class Surface3D {
       });
     }
 
-    this.frameBuffer.present(this.surface3DContainer);
+    const presentStartedAt = timed ? performance.now() : 0;
 
-    backgroundRenderer.renderPostMeshLayers({
-      context: this.surface3DContainer,
-      camera: this.camera,
-      renderTarget: this.renderTarget,
-      cameraTransform,
-      fog: options.fog,
-      blobs: this.shadowBlobs(renderables),
-      stats: this.stats,
-    });
+    this.frameBuffer.present(this.surface3DContainer);
+    backgroundRenderer.renderVignetteOverlay(this.surface3DContainer, this.stats);
 
     if (timed) {
       this.stats.addPresentMs(performance.now() - presentStartedAt);
