@@ -18,15 +18,28 @@
 // earlier version of this class tracked a dirty rect — the union of this
 // frame's and the previous frame's own paint region — and uploaded only
 // that. It was wrong for a reason that had nothing to do with the rasteriser
-// itself: BackgroundRenderer.renderPostMeshLayers draws the shadow and the
-// vignette directly onto the CANVAS every frame, as a partial-alpha overlay
-// on top of whatever is already there. With only a small region re-uploaded
-// each frame, everywhere OUTSIDE it never got a fresh background under that
-// overlay — so the vignette composited onto itself, frame after frame,
-// converging toward fully opaque in well under a second at 60fps. A full
-// upload is what guarantees renderPostMeshLayers always draws its one-shot
-// overlay onto the canvas THIS frame's buffer produced, never onto an
-// accumulation of frames past.
+// itself: BackgroundRenderer.renderVignetteOverlay draws the vignette
+// directly onto the CANVAS every frame, as a partial-alpha overlay on top of
+// whatever is already there. With only a small region re-uploaded each frame,
+// everywhere OUTSIDE it never got a fresh background under that overlay — so
+// the vignette composited onto itself, frame after frame, converging toward
+// fully opaque in well under a second at 60fps. A full upload is what
+// guarantees renderVignetteOverlay always draws its one-shot overlay onto the
+// canvas THIS frame's buffer produced, never onto an accumulation of frames
+// past.
+//
+// E3e/3DE-115 tried to remove that constraint by blending the vignette into
+// this buffer instead, which would have made a dirty rect valid again. It was
+// measured and reverted, and the numbers are worth keeping because they close
+// the question rather than leaving it open. A whole-buffer putImageData costs
+// 0.24ms at 1024x640 and 0.78ms at 1615x991 — it is not where a heavy frame
+// goes. Evaluating the vignette per pixel in JS over the same 1615x991 frame
+// costs 5.7ms, because a CanvasGradient fill is not something a hand-written
+// loop can match. The dirty rect only ever clawed back a cost the compositing
+// had just introduced, and netted out at break-even. What DID come out of that
+// ticket is next door in Surface3D: the stage timings on this backend were
+// double-counting the mesh loop into `present`, which is why present looked
+// like the largest stage in the first place.
 
 import type { RGBA } from "@rendering/cssColor";
 

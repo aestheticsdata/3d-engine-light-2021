@@ -39,6 +39,7 @@ import GroundFloor from "@rendering/GroundFloor";
 import GroundGrid from "@rendering/GroundGrid";
 import GroundProjection from "@rendering/GroundProjection";
 import GroundShadow from "@rendering/GroundShadow";
+import ShadowCompositor from "@rendering/ShadowCompositor";
 import { chartTokens } from "@ui/chartTokens";
 
 // A @ui import from inside @rendering, which is the wrong direction and is the
@@ -49,9 +50,10 @@ import { chartTokens } from "@ui/chartTokens";
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
 import type Fog from "@rendering/Fog";
+import type FrameBuffer from "@rendering/FrameBuffer";
 import type { GroundHorizon } from "@rendering/GroundProjection";
-import type { ShadowBlob } from "@rendering/GroundShadow";
 import type RenderStats from "@rendering/RenderStats";
+import type { ShadowBlob } from "@rendering/shadowEllipse";
 
 // How much of the frame the sky photograph covers, and how far above the top
 // edge it starts.
@@ -99,6 +101,12 @@ export interface BackgroundRenderRequest {
   blobs: readonly ShadowBlob[];
   stats: RenderStats;
 }
+
+// The depth-buffered backend's own request (E3e): the same scene inputs as
+// above with the frame buffer in place of the canvas context, derived from it
+// rather than restated so a field added to one cannot go missing from the
+// other.
+export type BufferCompositeRequest = Omit<BackgroundRenderRequest, "context"> & { buffer: FrameBuffer };
 
 // Values a layer needs beyond an on/off switch. It sizes both the grid's own
 // spacing and, so the two agree, the floor's checker cell. FOG left this record
@@ -323,25 +331,43 @@ class BackgroundRenderer {
     context.restore();
   }
 
-  // The two layers renderSnapshotLayers cannot cover, drawn every frame
-  // after FrameBuffer.present() has already uploaded the mesh — the ground
-  // shadow, which reads the posed mesh's own bounds, and the vignette, which
-  // has always sat on top of everything render() drew. Both composite by
-  // ordinary alpha blending over whatever pixels the canvas already holds,
-  // mesh included — the same trade render()'s own vignette already made for
-  // the painter path; a depth buffer does not change it, because neither
-  // pass tests against one, they paint straight onto the canvas the way they
-  // always have. Runs regardless of eye-above/below-ground, unlike
-  // render()/renderGroundOverlay()'s own split of that case across two
-  // methods — the buffer's mesh pixels are already final by the time this
-  // runs, so there is nothing left for "the floor is in front of the mesh"
-  // to mean here.
-  public renderPostMeshLayers(request: BackgroundRenderRequest) {
-    const { context, camera, renderTarget, cameraTransform, stats } = request;
+  // The ground shadow, blended into the frame buffer BEFORE the mesh loop
+  // rather than painted onto the canvas after it (E3e/3DE-115).
+  //
+  // The move is a correctness fix, not a speed one. This pass and the vignette
+  // used to be a single post-mesh canvas call, which put the shadow on top of
+  // the mesh — so a shape standing on the plane was darkened by its own
+  // shadow. The painter path never had that: there the whole background,
+  // shadow included, goes down before a single triangle is filled. The two
+  // backends now agree, and the buffer is what makes it expressible, because
+  // the shadow can be written under mesh pixels that do not exist yet.
+  //
+  // Runs regardless of eye-above/below-ground, unlike render() and
+  // renderGroundOverlay()'s own split of that case across two methods — a shadow
+  // on a plane the eye has dropped under is a painter-path problem, and this
+  // backend's depth buffer answers it without help.
+  public compositeShadow(request: BufferCompositeRequest) {
+    if (!this.shadowEnabled) {
+      return;
+    }
+
+    const { buffer, camera, renderTarget, cameraTransform, fog, blobs, stats } = request;
     const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
 
+    new ShadowCompositor(ground, fog).composite(buffer, blobs, stats);
+  }
+
+  // The one layer that still paints onto the canvas after FrameBuffer.present()
+  // — and the reason present() uploads the whole buffer, which its header
+  // spells out.
+  //
+  // It stays on the canvas deliberately. E3e measured the alternative: a
+  // full-frame radial gradient evaluated per pixel in JS costs 5.7ms at
+  // 1615x991, against a fraction of that for the CanvasGradient fill below.
+  // Moving it into the buffer to unlock a partial upload spends far more than
+  // the upload was ever worth.
+  public renderVignetteOverlay(context: CanvasRenderingContext2D, stats: RenderStats) {
     context.save();
-    this.paintShadowLayer(request, ground);
     this.renderVignette(context);
     stats.addDrawCall();
     context.restore();
