@@ -24,12 +24,13 @@ import type { ProjectionMode } from "@primitives/Camera";
 import type { TextureMode } from "@rendering/material";
 import type { ShadingMode } from "@rendering/shadingMode";
 
-// The RENDER LOOP chips. MAX is uncapped rather than a number, because rAF is
-// the only clock the engine has and a cap can only ever remove frames — there
-// is no value that means "faster than the display". Declared here rather than
-// beside the section that renders it because the store is what both it and
-// RenderLoop's target read.
-export type FrameRateCapKey = "30" | "60" | "MAX";
+// The RENDER LOOP chips, plus CUSTOM for the fourth slot's number input. MAX
+// is uncapped rather than a number, because rAF is the only clock the engine
+// has and a cap can only ever remove frames — there is no value that means
+// "faster than the display". Declared here rather than beside the section
+// that renders it because the store is what both it and RenderLoop's target
+// read.
+export type FrameRateCapKey = "30" | "60" | "MAX" | "CUSTOM";
 
 export interface UIState {
   // Slices are added here by the ticket that owns each value.
@@ -103,6 +104,10 @@ export interface UIState {
   // everything else.
   shadingMode?: ShadingMode;
   frameRateCap?: FrameRateCapKey;
+  // The last committed value from the RENDER LOOP panel's custom fps input,
+  // read only when frameRateCap is "CUSTOM" — the other two cap keys resolve
+  // through FrameRateSection's own fixed table instead.
+  customFrameRateFps?: number;
   zbuffer?: boolean;
   dither?: boolean;
   edgeAA?: boolean;

@@ -47,6 +47,28 @@
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
 }
 
+/* The RENDER LOOP panel's fourth chip: a real <input type="number"> wearing
+   .chip and .chip--mode for the shared box, so only the input-specific
+   resets live here — the browser's spinner arrows and its own text/border
+   defaults, neither of which any other chip has to fight. */
+.chip--input {
+  padding: 0;
+  text-align: center;
+  cursor: text;
+  outline: none;
+  appearance: textfield;
+}
+
+.chip--input::-webkit-outer-spin-button,
+.chip--input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.chip--input::placeholder {
+  color: var(--color-text-dim);
+}
+
 .chip--tex {
   height: var(--size-chip-tex);
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-mono);
@@ -108,7 +130,8 @@
   .chip--mode,
   .chip--tex,
   .chip--view,
-  .chip--proj {
+  .chip--proj,
+  .chip--input {
     font: var(--font-weight-medium) var(--text-base) / var(--leading-none) var(--font-mono);
   }
 }
