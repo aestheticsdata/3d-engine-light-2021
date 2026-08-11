@@ -70,14 +70,8 @@
 
         <div class="panel toolbar__actions">
           <button id="playPause" class="btn btn--primary" type="button" data-transport="toggle">PAUSE</button>
-          <button
-            class="btn btn--secondary"
-            type="button"
-            data-placeholder="true"
-            title="Not wired to the engine yet."
-            aria-describedby="ph-step"
-          >STEP</button>
-          <button id="resetControls" class="btn btn--secondary" type="button" data-action="reset">RESET</button>
+          <button class="btn btn--secondary" type="button" data-action="stepFrame">STEP</button>
+          <button id="resetControls" class="btn btn--secondary" type="button" data-action="resetControls">RESET</button>
 
           <span class="divider-v divider-v--toolbar toolbar__desktop-only"></span>
 
@@ -132,7 +126,6 @@
             >&lt;/&gt; COPY CODE</button>
           </span>
 
-          <span class="placeholder-hint" id="ph-step">Not wired to the engine yet.</span>
           <span class="placeholder-hint" id="ph-capture">Not wired to the engine yet.</span>
           <span class="placeholder-hint" id="ph-save">Not wired to the engine yet.</span>
           <span class="placeholder-hint" id="ph-load">Not wired to the engine yet.</span>
@@ -1080,7 +1073,7 @@
            bound through data-action; there is no second code path and no
            mobile-only subset of what RESET restores. -->
       <div class="mobile-reset-slot">
-        <button class="btn btn--secondary btn--block" type="button" data-action="reset">RESET SCENE</button>
+        <button class="btn btn--secondary btn--block" type="button" data-action="resetControls">RESET SCENE</button>
       </div>
 
     </div>

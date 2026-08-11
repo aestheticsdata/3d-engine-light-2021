@@ -20,6 +20,13 @@ export interface ShapeSwitcherOptions {
   // shape's state — which is what lets the fade decide whether there is
   // anything to fade out of.
   onTransitionStart: (primitive: string) => void;
+  // The owner's clock, not performance.now() (E8a). While the loop runs the two
+  // are the same, and while it is stopped they are not: STEP advances a
+  // synthetic clock a frame at a time, and a transition stamped with real time
+  // would sit at a start moment the stepper cannot reach for as many frames as
+  // the pause has lasted. Requesting a shape while paused and then stepping is
+  // exactly that case, and it left the switch frozen.
+  now: () => number;
 }
 
 class ShapeSwitcher {
@@ -28,6 +35,7 @@ class ShapeSwitcher {
   private readonly transitionMachine: ShapeTransitionMachine;
   private readonly buildMesh: (primitive: string) => Mesh;
   private readonly onTransitionStart: (primitive: string) => void;
+  private readonly now: () => number;
   private currentPrimitiveName: string | null;
   private targetPrimitiveName: string | null;
   private queuedPrimitiveName: string | null;
@@ -38,6 +46,7 @@ class ShapeSwitcher {
     this.transitionMachine = options.transitionMachine;
     this.buildMesh = options.buildMesh;
     this.onTransitionStart = options.onTransitionStart;
+    this.now = options.now;
     this.currentPrimitiveName = null;
     this.targetPrimitiveName = null;
     this.queuedPrimitiveName = null;
@@ -63,7 +72,7 @@ class ShapeSwitcher {
       return;
     }
 
-    this.startTransition(primitive, performance.now());
+    this.startTransition(primitive, this.now());
   };
 
   public update(timestamp: number) {
