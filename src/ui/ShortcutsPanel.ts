@@ -1,6 +1,6 @@
-// Documentation for controls that are not reachable yet, in the form each
-// branch can act on: a strip of keyboard chips pinned to the bottom of the right
-// panel on desktop, and a GESTURES card in the SCENE tab on mobile.
+// What the console can be driven by, in the form each branch can act on: a strip
+// of keyboard chips pinned to the bottom of the right panel on desktop, and a
+// GESTURES card in the SCENE tab on mobile.
 //
 // The two are not the same content translated. A phone has no keyboard, so
 // eight key hints there would be pure noise; what a touch user can act on is
@@ -9,15 +9,18 @@
 // this ticket's own answer to that gap.
 //
 // Neither branch hardcodes a key or a gesture: both render from shortcuts.ts,
-// which the de-mock keyboard ticket will read as well.
+// which KeyboardShortcuts dispatches from as well (E8a). Every chip printed here
+// now acts on its key, so the dimmed affordance below has nothing to apply to —
+// it is kept, and the hint with it, because the rule outlives the current table:
+// a binding added for a feature that does not exist yet still has to say so.
 
 import DOMScope from "@ui/DOMScope";
 import { GESTURES, PRIMITIVE_COUNT, SHORTCUTS } from "@ui/shortcuts";
 
 import type { ShortcutBinding } from "@ui/shortcuts";
 
-const HINT_ID = "ph-shortcut-grid";
-const HINT_TEXT = "Grid is not drawn yet — ships with the ground-grid work.";
+const HINT_ID = "ph-shortcut-pending";
+const HINT_TEXT = "Not built yet.";
 
 // The four bindings with no gesture equivalent, rewritten as a place to go
 // rather than a key to press. The count is the registry's, not the digit row's:
@@ -52,7 +55,14 @@ class ShortcutsPanel {
     row.className = "shortcuts__row";
     row.append(...SHORTCUTS.map((binding) => this.buildChip(binding)));
 
-    this.chipRoot.append(title, row, this.buildHint());
+    this.chipRoot.append(title, row);
+
+    // Only when something points at it. The hint is the target of a chip's
+    // aria-describedby, and appending it unconditionally left an orphan line of
+    // help text under a strip where every chip works.
+    if (SHORTCUTS.some((binding) => binding.status === "pendingFeature")) {
+      this.chipRoot.append(this.buildHint());
+    }
   }
 
   // The design writes each chip as a single text node, so the 5px inner gap it
@@ -73,10 +83,9 @@ class ShortcutsPanel {
 
     chip.append(key, action);
 
-    // Only the pending-feature binding. The other seven have a working action
-    // behind them and are waiting on a listener, which is not something to dim:
-    // the affordance says "unbuilt", and saying it about a feature that works
-    // would be the same lie in the other direction.
+    // The affordance says "unbuilt", so it may only ever appear on a binding
+    // with nothing behind it. Saying it about a key that works would be the
+    // same lie in the other direction.
     if (binding.status === "pendingFeature") {
       chip.dataset.placeholder = "true";
       chip.title = HINT_TEXT;

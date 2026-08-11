@@ -31,6 +31,7 @@ import ShapeRig from "@scene/ShapeRig";
 import ProceduralTextures from "@textures/ProceduralTextures";
 import TextureRegistry from "@textures/TextureRegistry";
 import imageTextures from "@textures/textureKeys";
+import ActionRegistry from "@ui/ActionRegistry";
 import {
   DEFAULT_CAM_AZIM_DEGREES,
   DEFAULT_CAM_ELEV_DEGREES,
@@ -51,6 +52,7 @@ import { DEFAULT_SHADING_MODE } from "@ui/inspector/ShadingSection";
 import ShapeTab from "@ui/inspector/ShapeTab";
 import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import WorldTab from "@ui/inspector/WorldTab";
+import KeyboardShortcuts from "@ui/KeyboardShortcuts";
 import MaterialSummary from "@ui/MaterialSummary";
 import QuickToggles from "@ui/QuickToggles";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
@@ -90,6 +92,12 @@ const TRANSITION_DURATION_MS = 1250;
 // rather than the continuation it looks like from the user's side.
 const MAX_FRAME_DELTA_MS = 100;
 const MILLISECONDS_PER_SECOND = 1000;
+
+// What one press of STEP advances the synthetic clock by (E8a). A nominal 60Hz
+// frame rather than the display's real interval: the loop is stopped, so there
+// is no real interval to read, and the point of stepping is a reproducible unit
+// of travel rather than a faithful imitation of this monitor.
+const FRAME_STEP_MS = MILLISECONDS_PER_SECOND / 60;
 
 class Main {
   // The console's only store, constructed here rather than exported beside its
@@ -131,6 +139,8 @@ class Main {
   private readonly worldTab: WorldTab;
   private readonly quickToggles: QuickToggles;
   private readonly transport: TransportBar;
+  private readonly actions: ActionRegistry;
+  private readonly keyboard: KeyboardShortcuts;
   private readonly shapeTab: ShapeTab;
   // Held as well as handed to Surface3D: the WORLD tab's SKY and FLOOR rows and
   // the viewport's quick toggles both switch layers on it at runtime, and this
@@ -198,6 +208,9 @@ class Main {
   // take the same wall-clock time uncapped as it does under the RENDER tab's
   // 30fps cap.
   private lastFrameTimestamp: number;
+  // STEP's own clock, advanced a frame at a time while the loop is stopped. Only
+  // meaningful between a pause and the resume that rebases off it.
+  private pausedClock: number;
 
   // The canvas arrives resolved. Main used to repeat the Bootstrapper's own
   // querySelector and instanceof guard, so a missing canvas threw from whichever
@@ -274,6 +287,7 @@ class Main {
     // value the console opens on.
     this.fog = new Fog({ amount: DEFAULT_FOG, skyEnabled: DEFAULT_SKY });
     this.lastFrameTimestamp = performance.now();
+    this.pausedClock = this.lastFrameTimestamp;
     this.meshFactory = new MeshFactory(this.renderTarget, this.camera.projection);
     this.textures = new TextureRegistry();
     // Adopted here rather than in init(), where the bitmaps are loaded: there is
@@ -347,6 +361,8 @@ class Main {
       onCullToggle: (next) => this.pipeline.setCullBackfaces(next),
     });
     this.transport = new TransportBar();
+    this.actions = new ActionRegistry();
+    this.keyboard = new KeyboardShortcuts(this.actions);
     this.pointerOrbit = new PointerOrbit({
       canvas,
       getAngles: () => this.rig.angles(),
@@ -363,6 +379,7 @@ class Main {
         duration: TRANSITION_DURATION_MS,
       }),
       buildMesh: (primitive) => this.buildMesh(primitive),
+      now: () => this.now(),
       onTransitionStart: (primitive) => {
         // Selection returns to the mesh row on every shape change (D11):
         // otherwise picking a new primitive leaves KEY_LIGHT highlighted while
@@ -422,7 +439,7 @@ class Main {
 
     this.pipeline.bind(this.syncPipelineReadouts);
     this.transport.bindToggle(this.togglePause);
-    this.transport.bindReset(this.resetControls);
+    this.registerActions();
     this.syncPipelineReadouts();
 
     // Hiding the mesh or the key light has to repaint immediately when the loop
@@ -445,6 +462,63 @@ class Main {
       // it was the mesh row that moved.
       this.applyLighting();
     });
+  }
+
+  // Every action the console can perform, wired once. Both dispatch paths run
+  // through here — the toolbar's [data-action] buttons and every key in
+  // SHORTCUTS — which is what makes a chip and a button incapable of disagreeing
+  // about what a name means.
+  //
+  // The two toggles read their own current value back before flipping it rather
+  // than tracking one here: RenderPipelinePanel owns those booleans and pushes
+  // them out to every surface through syncPipelineReadouts, so a second copy in
+  // this class would be a second truth to keep in step.
+  private registerActions() {
+    this.actions.register("togglePause", this.togglePause);
+    this.actions.register("resetControls", this.resetControls);
+    this.actions.register("stepFrame", () => this.stepFrame());
+    this.actions.register("toggleWireframe", () => this.pipeline.setWireframe(!this.pipeline.wireframe));
+    this.actions.register("toggleBackfaceCulling", () => this.pipeline.setCullBackfaces(!this.pipeline.cullBackfaces));
+    this.actions.register("toggleSky", () => this.toggleWorldLayer("sky", DEFAULT_SKY));
+    this.actions.register("toggleFloor", () => this.toggleWorldLayer("floor", DEFAULT_FLOOR));
+    this.actions.register("toggleGrid", () => this.toggleWorldLayer("grid", DEFAULT_GRID));
+    this.actions.register("selectPrimitive", (index) => this.selectPrimitiveByIndex(index));
+
+    this.actions.bindDomActions();
+    this.keyboard.listen();
+  }
+
+  // The three switchable scenery layers, which unlike the pipeline's two really
+  // do live in the store — so the flip is a write plus the one sync that pushes
+  // it to the renderer, the WORLD tab's own row and the viewport's quick toggle
+  // together. Reading the default here rather than assuming false: a slice the
+  // user has never touched is absent, not off.
+  private toggleWorldLayer(layer: "sky" | "floor" | "grid", fallback: boolean) {
+    const current = this.uiState.getState()[layer] ?? fallback;
+
+    this.uiState.setState({ [layer]: !current });
+    this.syncWorldLayers();
+  }
+
+  // The digit keys, resolved against the registry's own order — the same order
+  // the SHAPE tab's picker lists. Out of range is ignored rather than clamped: 9
+  // on a registry of six primitives means nothing, and landing on the last one
+  // would be an answer the user did not ask for.
+  private selectPrimitiveByIndex(index?: number) {
+    if (index === undefined) {
+      return;
+    }
+
+    const primitive = this.shapes.names[index];
+
+    if (!primitive) {
+      return;
+    }
+
+    // Through the same pair the picker's own click runs, so a key and a chip
+    // leave the tab's lit state identical.
+    this.shapeTab.setActivePrimitive(primitive);
+    this.shapes.request(primitive);
   }
 
   // The store is the one holder (E3c/COS-243), the same arrangement the Z-BUFFER
@@ -510,6 +584,8 @@ class Main {
   // for the teardown to be possible at all.
   public dispose() {
     this.unsubscribe();
+    this.keyboard.dispose();
+    this.actions.dispose();
     // The one collaborator holding a timer and a media-query listener: every
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
@@ -949,6 +1025,14 @@ class Main {
       return;
     }
 
+    this.advanceAndRender(timestamp);
+  }
+
+  // One frame's worth of work, with no opinion about where the clock came from
+  // (E8a). Split out of renderFrame so STEP can run exactly this while the loop
+  // is stopped — the alternative was a paused repaint that re-poses without
+  // advancing, which is renderPausedFrame below and is a different thing.
+  private advanceAndRender(timestamp: number) {
     // Once per rendered frame, before anything this frame times — the rig's
     // own matrix pass below included (E6/COS-239).
     const timed = this.renderStats.beginFrame();
@@ -1002,6 +1086,49 @@ class Main {
     // The gizmo has no clock of its own while the loop is stopped, so a preset
     // or a slider would leave it pointing at the attitude the shape had before.
     this.viewportHud.setGizmo(this.rig.axisScreenDirections());
+    this.publishDrawnTriangles(this.renderedTriangles);
+  }
+
+  // The console's clock: real time while the loop runs, STEP's synthetic clock
+  // while it does not.
+  //
+  // One reading for the whole app rather than performance.now() at each call
+  // site, because the two disagree the moment the loop stops. A shape change
+  // requested while paused used to be stamped with real time while the stepper
+  // advanced a clock frozen at the pause, so the transition sat at a start
+  // moment stepping could not reach until it had burned as many frames as the
+  // pause had lasted — a switch that looked simply broken.
+  private now(): number {
+    return this.loop.isPlaying ? performance.now() : this.pausedClock;
+  }
+
+  // One frame, on demand, while the loop is stopped.
+  //
+  // The synthetic clock is load-bearing rather than tidiness. StateMachine
+  // computes a transition's progress as (now - currentStateStartedAt) / duration,
+  // so stepping with performance.now() after a thirty-second pause would finish a
+  // queued 1250ms shape change in a single step. Advancing a clock of our own by
+  // exactly one frame's worth instead makes a step mean a step: ten presses
+  // mid-switch are ten frames of travel. On resume, RenderLoop's onStart rebases
+  // both clocks off one reading of the real one, and the transition machine picks
+  // up from the synthetic value the last step wrote.
+  private stepFrame() {
+    if (this.loop.isPlaying) {
+      return;
+    }
+
+    this.pausedClock += FRAME_STEP_MS;
+    this.advanceAndRender(this.pausedClock);
+
+    // Everything renderPausedFrame publishes, and deliberately NOT
+    // publishFrameStats(): that samples FPSMeter and pushes the FRAMERATE
+    // sparkline, and a paused console reads 0 fps on purpose. The sparkline
+    // flatlining as you step looks like a bug and is the honest answer — frames
+    // arriving from a button have no rate.
+    this.frameTime.render();
+    this.geometry.render();
+    this.zBuffer.render();
+    this.publishCameraReadouts();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 
@@ -1129,6 +1256,14 @@ class Main {
 
   private togglePause = () => {
     this.loop.toggle();
+
+    // Seeded from the last rendered frame rather than from performance.now(), so
+    // the first STEP advances exactly one frame's worth instead of one frame plus
+    // however long the pause took to arrive.
+    if (!this.loop.isPlaying) {
+      this.pausedClock = this.lastFrameTimestamp;
+    }
+
     this.syncRunState();
   };
 

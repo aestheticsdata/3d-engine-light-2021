@@ -1,18 +1,17 @@
 // The keyboard bindings, as data.
 //
-// Nothing dispatches them yet. There is no global key handler at all — the only
-// keydown listeners in the tree are ShapePicker's list navigation and TabGroup's
-// roving focus, both scoped to one widget — so today this table has exactly one
-// consumer, the panel that documents it. It
-// is a table rather than eight strings in that panel's markup because it will
-// have a second consumer: the de-mock ticket "Keyboard shortcut handler"
-// imports the same array and dispatches on `keys`. Neither side may hardcode a
-// key, which is the only way the printed hint and the live binding cannot drift.
+// Two consumers read this array and neither may hardcode a key: ShortcutsPanel
+// prints the chips from it, and KeyboardShortcuts dispatches from it (E8a). That
+// is the only arrangement in which the printed hint and the live binding cannot
+// drift apart — a chip cannot promise a key nothing binds, and nothing can bind
+// a key no chip prints.
 //
 // Inert data with no behaviour, so it stays a table rather than becoming a class
 // (decisions.md D1a).
 
 import data from "@data/data";
+
+import type { ActionId } from "@ui/ActionRegistry";
 
 export interface ShortcutBinding {
   // What the chip prints. Not always a key name — the shape binding prints a
@@ -21,14 +20,19 @@ export interface ShortcutBinding {
   // What the future handler matches against, one entry per physical key.
   keys: string[];
   action: string;
-  // Why it is not live. `pendingHandler` means the action exists and only the
-  // keydown listener is missing; `pendingFeature` means there is nothing to
-  // call yet. Only the second earns the dimmed placeholder affordance — dimming
-  // a binding whose feature works would say the feature is missing.
-  status: "pendingHandler" | "pendingFeature";
-  // The method or store slice the key will drive, named so the handler ticket
-  // does not have to rediscover it.
-  handler?: string;
+  // `live` means the key acts. `pendingFeature` means there is nothing to call
+  // yet, and it is the only value that earns the dimmed placeholder affordance
+  // — dimming a binding that works would say the feature is missing.
+  //
+  // E8a removed a third value, `pendingHandler`, which meant "the action exists
+  // and only the listener is missing". That state cannot recur: there is a
+  // listener now, and it reads this table, so any binding added here is either
+  // dispatchable or has no feature behind it at all.
+  status: "live" | "pendingFeature";
+  // The action the key runs, typed rather than a documentation string: the
+  // registry's own union is what stops this table naming something nothing
+  // registered. Absent only while a binding is pendingFeature.
+  handler?: ActionId;
 }
 
 // Every primitive in the registry, which is what the mobile card's pointer line
@@ -45,31 +49,19 @@ export const SHAPE_KEY_COUNT = Math.min(9, PRIMITIVE_COUNT);
 const shapeKeys = Array.from({ length: SHAPE_KEY_COUNT }, (_, index) => String(index + 1));
 
 export const SHORTCUTS: readonly ShortcutBinding[] = [
-  { keyLabel: "SPACE", keys: [" "], action: "pause", status: "pendingHandler", handler: "Main.togglePause" },
-  {
-    keyLabel: "W",
-    keys: ["w"],
-    action: "wireframe",
-    status: "pendingHandler",
-    handler: "RenderPipelinePanel.setWireframe",
-  },
-  { keyLabel: "G", keys: ["g"], action: "grid", status: "pendingHandler", handler: "UIStateStore.grid" },
-  {
-    keyLabel: "C",
-    keys: ["c"],
-    action: "culling",
-    status: "pendingHandler",
-    handler: "RenderPipelinePanel.setCullBackfaces",
-  },
-  { keyLabel: "R", keys: ["r"], action: "reset", status: "pendingHandler", handler: "Main.resetControls" },
-  { keyLabel: "S", keys: ["s"], action: "sky", status: "pendingHandler", handler: "UIStateStore.sky" },
-  { keyLabel: "F", keys: ["f"], action: "floor", status: "pendingHandler", handler: "UIStateStore.floor" },
+  { keyLabel: "SPACE", keys: [" "], action: "pause", status: "live", handler: "togglePause" },
+  { keyLabel: "W", keys: ["w"], action: "wireframe", status: "live", handler: "toggleWireframe" },
+  { keyLabel: "G", keys: ["g"], action: "grid", status: "live", handler: "toggleGrid" },
+  { keyLabel: "C", keys: ["c"], action: "culling", status: "live", handler: "toggleBackfaceCulling" },
+  { keyLabel: "R", keys: ["r"], action: "reset", status: "live", handler: "resetControls" },
+  { keyLabel: "S", keys: ["s"], action: "sky", status: "live", handler: "toggleSky" },
+  { keyLabel: "F", keys: ["f"], action: "floor", status: "live", handler: "toggleFloor" },
   {
     keyLabel: `1-${SHAPE_KEY_COUNT}`,
     keys: shapeKeys,
     action: "shape",
-    status: "pendingHandler",
-    handler: "ShapeTab.onPick",
+    status: "live",
+    handler: "selectPrimitive",
   },
 ];
 
