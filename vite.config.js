@@ -10,7 +10,9 @@ const pkg = JSON.parse(
 
 export default defineConfig({
   root: "src",
-  base: "/3dengine",
+  // The app owns its whole origin now — halcyon.1991computer.com — rather than
+  // living under a path on the studio site, so assets resolve from the root.
+  base: "/",
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

@@ -174,7 +174,7 @@ Both families come from Google Fonts in the design (L11–L13). Load them with a
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 ```
 
-Decision: `<link>` in the HTML head, not `@import` in `main.css` — a CSS `@import` serialises the font request behind the stylesheet download, and the mono face is load-bearing (every number in the UI is mono; a fallback swap visibly reflows the HUD chips and the fixed-width value columns). Rejected alternative, recorded for later: self-host the six woff2 files under `src/styles/fonts/` with local `@font-face` rules. Revisit if offline dev or a zero-third-party-request deploy becomes a requirement; note that Vite has `root: "src"` and `base: "/3dengine"`, so self-hosted files must sit under `src/` to be emitted.
+Decision: `<link>` in the HTML head, not `@import` in `main.css` — a CSS `@import` serialises the font request behind the stylesheet download, and the mono face is load-bearing (every number in the UI is mono; a fallback swap visibly reflows the HUD chips and the fixed-width value columns). Rejected alternative, recorded for later: self-host the six woff2 files under `src/styles/fonts/` with local `@font-face` rules. Revisit if offline dev or a zero-third-party-request deploy becomes a requirement; note that Vite has `root: "src"` and `base: "/"`, so self-hosted files must sit under `src/` to be emitted.
 
 ### spacing.css
 
