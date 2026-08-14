@@ -17,6 +17,7 @@
 
 import ChipGrid from "@ui/inspector/controls/ChipGrid";
 import CustomFrameRateChip from "@ui/inspector/controls/CustomFrameRateChip";
+import { MAX_CUSTOM_FRAME_RATE_FPS, MIN_CUSTOM_FRAME_RATE_FPS } from "@ui/inspector/controls/customFrameRate";
 
 import type { ChipDescriptor } from "@ui/inspector/controls/ChipGrid";
 import type UIStateStore from "@ui/UIStateStore";
@@ -45,6 +46,17 @@ const CHIPS: ChipDescriptor[] = [
   { id: "60", label: "60" },
   { id: "MAX", label: "MAX" },
 ];
+
+// The same default, narrowed: DEFAULT_FRAME_RATE_CAP is typed as the store's
+// four-valued key because that is what it is stored as, and the fallback below
+// has to be one of the three the table actually resolves.
+const FALLBACK_CAP: FixedCapKey = "MAX";
+
+// The custom input's own clamp, reused rather than restated — the field and a
+// preset file are two ways of writing the same value, and only one of them went
+// through CustomFrameRateChip.
+const clampCustomFrameRate = (fps: number): number =>
+  Math.min(MAX_CUSTOM_FRAME_RATE_FPS, Math.max(MIN_CUSTOM_FRAME_RATE_FPS, Math.round(fps)));
 
 export interface FrameRateSectionOptions {
   chipGridSelector: string;
@@ -88,15 +100,25 @@ class FrameRateSection {
   // rate, the same way TransformSection's does: this is the RESET path, and a
   // reset that moved the chip back to MAX without uncapping the loop would
   // leave the two disagreeing until the next click.
+  //
+  // Both branches guard the stored value rather than trusting it. Until E8b the
+  // only writers were this section's own two handlers, so the store could only
+  // hold a key from CHIPS and a rate the input had already clamped; a preset
+  // file can now write either directly, and both have a way of breaking the loop
+  // for the rest of the session rather than for one frame — an unknown key makes
+  // CAP_FPS[cap] undefined, and RenderLoop turns that into a NaN frame interval
+  // no later valid pick recovers from. Correcting through applyChip / applyCustom
+  // also writes the corrected value back, so the store stops holding it.
   public syncFromStore() {
-    const cap = this.store.getState().frameRateCap ?? DEFAULT_FRAME_RATE_CAP;
+    const state = this.store.getState();
+    const cap = state.frameRateCap ?? DEFAULT_FRAME_RATE_CAP;
 
     if (cap === "CUSTOM") {
-      this.applyCustom(this.store.getState().customFrameRateFps ?? DEFAULT_CUSTOM_FRAME_RATE_FPS);
+      this.applyCustom(clampCustomFrameRate(state.customFrameRateFps ?? DEFAULT_CUSTOM_FRAME_RATE_FPS));
       return;
     }
 
-    this.applyChip(cap);
+    this.applyChip(cap in CAP_FPS ? (cap as FixedCapKey) : FALLBACK_CAP);
   }
 
   private pick = (id: string) => {

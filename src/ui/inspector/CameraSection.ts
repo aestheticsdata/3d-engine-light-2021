@@ -189,19 +189,38 @@ class CameraSection {
   // the chip.
   public syncFromStore() {
     const state = this.store.getState();
-    const fov = state.fov ?? DEFAULT_FOV;
-    const zoom = state.zoom ?? DEFAULT_ZOOM_SLIDER_VALUE;
-    const projection = state.projection ?? DEFAULT_PROJECTION;
-    const elev = state.camElev ?? DEFAULT_CAM_ELEV_DEGREES;
-    const azim = state.camAzim ?? DEFAULT_CAM_AZIM_DEGREES;
-    const roll = state.camRoll ?? DEFAULT_CAM_ROLL_DEGREES;
+    // Checked against the grid's own vocabulary rather than trusted: the store
+    // types this as ProjectionMode, but TypeScript stops at the edge of the
+    // process and a preset file (E8b) is outside it. An unrecognised mode would
+    // light no chip while the camera quietly fell through to perspective.
+    const stored = state.projection ?? DEFAULT_PROJECTION;
+    const projection = PROJECTIONS.includes(stored) ? stored : DEFAULT_PROJECTION;
 
-    this.fov.setValue(fov);
-    this.zoom.setValue(zoom);
+    // The rows' answers rather than the store's, for the reason
+    // TransformSection's own sync gives. FOV is the one with teeth: the focal
+    // length is halfHeight / tan(fov/2), so a stored 0 is an infinite focal and
+    // every vertex in the frame projects to NaN.
+    const fov = this.fov.setValue(state.fov ?? DEFAULT_FOV);
+    const zoom = this.zoom.setValue(state.zoom ?? DEFAULT_ZOOM_SLIDER_VALUE);
+    const elev = this.elev.setValue(state.camElev ?? DEFAULT_CAM_ELEV_DEGREES);
+    const azim = this.azim.setValue(state.camAzim ?? DEFAULT_CAM_AZIM_DEGREES);
+    const roll = this.camRoll.setValue(state.camRoll ?? DEFAULT_CAM_ROLL_DEGREES);
+
     this.projectionGrid.setActive(projection);
-    this.elev.setValue(elev);
-    this.azim.setValue(azim);
-    this.camRoll.setValue(roll);
+
+    // Corrections go back into the store, for the reason TransformSection's own
+    // sync gives: a value the rows refused has to stop existing, or SAVE PRESET
+    // writes it back out and the console vouches for a number it never used.
+    if (
+      fov !== state.fov ||
+      zoom !== state.zoom ||
+      elev !== state.camElev ||
+      azim !== state.camAzim ||
+      roll !== state.camRoll ||
+      projection !== state.projection
+    ) {
+      this.store.setState({ fov, zoom, camElev: elev, camAzim: azim, camRoll: roll, projection });
+    }
 
     this.apply.onFov(fov);
     this.apply.onZoom(zoom);

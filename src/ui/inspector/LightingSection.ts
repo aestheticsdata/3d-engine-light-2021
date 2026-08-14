@@ -98,10 +98,24 @@ class LightingSection {
   public syncFromStore() {
     const state = this.store.getState();
 
-    this.azimuth.setValue(state.lightAzimuth ?? DEFAULT_AZIMUTH);
-    this.elevation.setValue(state.lightElevation ?? DEFAULT_ELEVATION);
-    this.ambient.setValue(state.lightAmbient ?? DEFAULT_AMBIENT);
-    this.specular.setValue(state.lightSpecular ?? DEFAULT_SPECULAR);
+    const lightAzimuth = this.azimuth.setValue(state.lightAzimuth ?? DEFAULT_AZIMUTH);
+    const lightElevation = this.elevation.setValue(state.lightElevation ?? DEFAULT_ELEVATION);
+    const lightAmbient = this.ambient.setValue(state.lightAmbient ?? DEFAULT_AMBIENT);
+    const lightSpecular = this.specular.setValue(state.lightSpecular ?? DEFAULT_SPECULAR);
+
+    // The store is what Main assembles LightingValues from, not these rows, so
+    // the clamped numbers have to go back into it or a preset file (E8b) could
+    // light the scene with values no slider can reach — an ambient of 1000 is a
+    // white frame with a control that says 100. Written only when the clamp
+    // moved something, so the drag path is untouched.
+    if (
+      lightAzimuth !== state.lightAzimuth ||
+      lightElevation !== state.lightElevation ||
+      lightAmbient !== state.lightAmbient ||
+      lightSpecular !== state.lightSpecular
+    ) {
+      this.store.setState({ lightAzimuth, lightElevation, lightAmbient, lightSpecular });
+    }
 
     this.apply();
   }

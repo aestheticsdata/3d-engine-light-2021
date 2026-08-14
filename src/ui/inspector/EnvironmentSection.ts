@@ -151,8 +151,23 @@ class EnvironmentSection {
     this.floorRow.setOn(state.floor ?? DEFAULT_FLOOR);
     this.gridRow.setOn(state.grid ?? DEFAULT_GRID);
     this.shadowRow.setOn(state.shadow ?? DEFAULT_SHADOW);
-    this.fog.setValue(state.fog ?? DEFAULT_FOG);
-    this.gridStep.setValue(state.gridStep ?? DEFAULT_GRID_STEP);
+
+    const fog = this.fog.setValue(state.fog ?? DEFAULT_FOG);
+    const gridStep = this.gridStep.setValue(state.gridStep ?? DEFAULT_GRID_STEP);
+
+    // Unlike every other slider in the inspector, these two reach the engine
+    // from the STORE rather than through the apply callback beside the row —
+    // Main reads both in syncWorldLayers — so clamping the track is not enough
+    // and the corrected value has to go back. Only a preset file (E8b) can put
+    // an out-of-range number there, and GRID STEP is the one that has to be
+    // caught: GroundGrid derives its line count as reach / step, so a step of 0
+    // makes that Infinity and the frame loop never returns.
+    //
+    // Written only when the clamp actually moved something, so a drag and a
+    // RESET still cost no extra notification.
+    if (fog !== state.fog || gridStep !== state.gridStep) {
+      this.store.setState({ fog, gridStep });
+    }
   }
 }
 

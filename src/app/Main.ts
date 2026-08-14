@@ -56,6 +56,7 @@ import KeyboardShortcuts from "@ui/KeyboardShortcuts";
 import MaterialSummary from "@ui/MaterialSummary";
 import QuickToggles from "@ui/QuickToggles";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
+import SessionActions from "@ui/SessionActions";
 import ShapeInfoPanel from "@ui/ShapeInfoPanel";
 import ShapeStoryPanel from "@ui/ShapeStoryPanel";
 import StatusBar from "@ui/StatusBar";
@@ -85,6 +86,7 @@ import type { MeshMaterial } from "@rendering/material";
 import type { ShadingMode } from "@rendering/shadingMode";
 import type { ShapePose } from "@scene/ShapeRig";
 import type FieldWriter from "@ui/FieldWriter";
+import type { SceneSnapshot } from "@ui/scenePreset";
 
 const TRANSITION_DURATION_MS = 1250;
 // The longest gap the rig is told about. A backgrounded tab can hand back a
@@ -140,6 +142,12 @@ class Main {
   private readonly quickToggles: QuickToggles;
   private readonly transport: TransportBar;
   private readonly actions: ActionRegistry;
+  // The four file-and-clipboard actions (E8b). It registers its own handlers
+  // rather than being called from registerActions below, because unlike every
+  // other action in the console none of them touches the engine — what they
+  // need is the scene as data, which is the one thing this class can hand over
+  // without handing over itself.
+  private readonly session: SessionActions;
   private readonly keyboard: KeyboardShortcuts;
   private readonly shapeTab: ShapeTab;
   // Held as well as handed to Surface3D: the WORLD tab's SKY and FLOOR rows and
@@ -389,6 +397,18 @@ class Main {
         this.animateShapeInfoPanel(primitive);
       },
     });
+    // After the switcher, whose primitive list it validates a loaded file
+    // against, and before registerActions() below — an action named in the
+    // markup that nothing has registered by the time bindDomActions runs is a
+    // boot failure, which is the guarantee that makes the four buttons safe to
+    // un-placeholder in the same change.
+    this.session = new SessionActions({
+      canvas,
+      actions: this.actions,
+      scene: () => this.sceneSnapshot(),
+      primitives: this.shapes.names,
+      onApply: (scene) => this.applyScene(scene),
+    });
     this.framerate = new FramerateWidget();
     // Probed once, at boot: whether this page's performance.now() can
     // actually resolve the four-stage split FRAME TIME draws (E6/COS-239).
@@ -586,6 +606,7 @@ class Main {
     this.unsubscribe();
     this.keyboard.dispose();
     this.actions.dispose();
+    this.session.dispose();
     // The one collaborator holding a timer and a media-query listener: every
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
@@ -1270,6 +1291,66 @@ class Main {
   private syncRunState() {
     this.statusBar.setRunState(this.loop.isPlaying);
     this.transport.setRunState(this.loop.isPlaying);
+  }
+
+  // The whole scene as data, for SAVE PRESET and COPY CODE (E8b).
+  //
+  // Three owners, which is why this is assembled here and not in SessionActions:
+  // the slices belong to the store, the two pipeline booleans and the opacity to
+  // RenderPipelinePanel, and the primitive to the switcher. This class is the
+  // one place all three are in scope, exactly as lightingValues() is for the
+  // five values behind the key light.
+  //
+  // `target` rather than `current`, and the boot primitive rather than null: the
+  // switcher reports no current shape until the opening entrance has finished,
+  // and a preset saved in that first second must still name the shape on screen.
+  private sceneSnapshot(): SceneSnapshot {
+    const pipeline = this.pipeline.getRenderOptions();
+
+    return {
+      primitive: this.shapes.target ?? this.shapes.names[0],
+      wireframe: pipeline.wireframe,
+      backfaceCulling: pipeline.cullBackfaces,
+      // Slider space, which is what the row shows and the snippet prints; the
+      // panel holds the 0-1 fraction the renderer wants. Rounded through the
+      // same expression syncPipelineReadouts writes the row with, so a saved
+      // preset and the control it came from cannot read differently.
+      opacity: Math.round(pipeline.opacity * 100),
+      store: this.uiState.snapshot(),
+    };
+  }
+
+  // resetControls' body with a file's values in place of the defaults, in the
+  // same order and for the same reasons — the ticket asks for exactly that, and
+  // any divergence would be a second definition of what "the whole scene" means.
+  //
+  // Two departures, both forced. pipeline.apply() rather than pipeline.reset(),
+  // because the three values it owns are the ones with no slice to hydrate; and
+  // a shape request at the end, which RESET has no equivalent for because RESET
+  // does not change the primitive. The request is last so the 1250ms transition
+  // starts against a console already holding the rest of the scene.
+  private applyScene(scene: SceneSnapshot) {
+    this.pipeline.apply({
+      wireframe: scene.wireframe,
+      cullBackfaces: scene.backfaceCulling,
+      opacity: scene.opacity / 100,
+    });
+    // Both rigs, for the reason RESET resets them: the seven angles and the spin
+    // RATE come back through the store, but the turntable's accumulated heading
+    // and any preset ease still in flight do not — so without this a loaded
+    // preset would land at its stored angles plus however far the shape had
+    // wound since boot.
+    this.rig.reset();
+    this.shapeRig.reset();
+    this.uiState.hydrate(scene.store);
+    this.shapeTab.syncFromStore();
+    this.renderTab.syncFromStore();
+    this.worldTab.syncFromStore();
+    this.syncWorldLayers();
+    this.pipeline.syncOpacityAvailability();
+    this.syncPipelineReadouts();
+    this.framerate.reset();
+    this.shapes.request(scene.primitive);
   }
 
   // One handler behind both RESET mounts.

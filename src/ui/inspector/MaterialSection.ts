@@ -147,14 +147,32 @@ class MaterialSection {
   // moving the mesh would leave the two disagreeing until the next click.
   public syncFromStore() {
     const state = this.store.getState();
-    const texture = state.texture ?? DEFAULT_TEXTURE;
-    const baseColor = state.baseColor ?? DEFAULT_BASE_COLOR;
+    // Both strings are checked against this section's own vocabularies rather
+    // than trusted. The store types them, but a preset file (E8b) arrives from
+    // outside the process where that type means nothing.
+    //
+    // baseColor is the one with a consequence: the store holds the palette NAME,
+    // and cssFor would hand an unrecognised one straight to fillStyle, where an
+    // unparseable value is silently ignored — leaving the mesh whatever colour it
+    // already had while every swatch shows unselected.
+    const storedTexture = state.texture ?? DEFAULT_TEXTURE;
+    const texture = TEXTURES.some((entry) => entry.id === storedTexture) ? storedTexture : DEFAULT_TEXTURE;
+    const storedColor = state.baseColor ?? DEFAULT_BASE_COLOR;
+    const baseColor = this.swatches.has(storedColor) ? storedColor : DEFAULT_BASE_COLOR;
 
-    const uvScale = state.uvScale ?? DEFAULT_UV_SCALE;
+    // The row's answer, not the store's: setValue clamps to the range the row
+    // owns. UV SCALE tiles a generated texture, so a stored 0 divides the
+    // sampler by zero.
+    const uvScale = this.uvScale.setValue(state.uvScale ?? DEFAULT_UV_SCALE);
+
+    // Corrections go back into the store, for the reason TransformSection's own
+    // sync gives: a value the section refused must not survive to be saved.
+    if (texture !== state.texture || baseColor !== state.baseColor || uvScale !== state.uvScale) {
+      this.store.setState({ texture, baseColor, uvScale });
+    }
 
     this.textures.setActive(texture);
     this.setActiveSwatch(baseColor);
-    this.uvScale.setValue(uvScale);
 
     this.apply.onTexture(texture);
     this.apply.onBaseColor(this.cssFor(baseColor));

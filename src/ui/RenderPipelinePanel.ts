@@ -133,6 +133,21 @@ class RenderPipelinePanel {
     this.opacityFraction = 1;
   }
 
+  // reset()'s counterpart for a preset (E8b): the same three values, taken from
+  // a file rather than from the defaults, and silent for the same reason. Main
+  // pushes the whole scene out with one syncPipelineReadouts() once every part
+  // of it has landed, where the three public setters above would each repaint on
+  // the way there.
+  //
+  // Culling still wins over opacity, exactly as it does on a click: it gates the
+  // control, so a file asking for a culled half-transparent frame is asking for
+  // a state with no way back out of it.
+  public apply(options: RenderPipelineOptions) {
+    this.wireframeEnabled = options.wireframe;
+    this.backfaceCullingEnabled = options.cullBackfaces;
+    this.opacityFraction = options.cullBackfaces ? 1 : options.opacity;
+  }
+
   public syncOpacityAvailability() {
     this.opacitySlider.disabled = this.backfaceCullingEnabled;
     this.opacityDisabledTooltip.hide();

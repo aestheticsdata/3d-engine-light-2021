@@ -65,8 +65,16 @@ class ShadingSection {
     this.setMode(wireframeEnabled ? "WIRE" : DEFAULT_SHADING_MODE);
   }
 
+  // Checked against the engine's own vocabulary rather than trusted. The store
+  // types this as ShadingMode, but a preset file (E8b) comes from outside the
+  // process where that type holds — and setMode writes whatever it is given
+  // straight back into the store, so an unrecognised mode would light no chip,
+  // reach the render options, and then be saved by the next preset as though the
+  // console had chosen it.
   public syncFromStore() {
-    this.setMode(this.store.getState().shadingMode ?? DEFAULT_SHADING_MODE);
+    const stored = this.store.getState().shadingMode ?? DEFAULT_SHADING_MODE;
+
+    this.setMode(SHADING_MODES.includes(stored) ? stored : DEFAULT_SHADING_MODE);
   }
 
   private pick = (id: string) => {

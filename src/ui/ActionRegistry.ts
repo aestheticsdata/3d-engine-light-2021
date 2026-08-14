@@ -13,10 +13,10 @@
 // is a registry that lets a typo reach production looking exactly like a
 // disabled control.
 
-// Every action the console can perform. The file half of the toolbar — capture,
-// preset save and load, copy code — joins this union with E8b; it is deliberately
-// absent rather than registered to a stub, so those buttons keep their honest
-// placeholder affordance until they do something.
+// Every action the console can perform. The last four joined with E8b and are
+// SessionActions' rather than Main's — the only four registered by something
+// other than the composition root, because they are the only four whose whole
+// implementation is file and clipboard plumbing with no engine in it.
 export type ActionId =
   | "togglePause"
   | "stepFrame"
@@ -26,7 +26,11 @@ export type ActionId =
   | "toggleSky"
   | "toggleFloor"
   | "toggleGrid"
-  | "selectPrimitive";
+  | "selectPrimitive"
+  | "capturePng"
+  | "savePreset"
+  | "loadPreset"
+  | "copyCode";
 
 // Only the primitive picker's digit keys carry an argument, so it is optional
 // rather than a parameter the other eight handlers would each have to ignore.
