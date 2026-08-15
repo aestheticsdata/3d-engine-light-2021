@@ -3,10 +3,10 @@ import Point2D from "@primitives/Point2D";
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
 
-// A projected vertex, written into rather than returned (E7c/HAL-123). The
-// selection bracket folds a whole mesh — 143 vertices on the sphere, 3960 on the
-// torus knot — to read two numbers off each of them, and an object per vertex to
-// carry that pair is the allocation this record exists to avoid.
+// A projected vertex, written into rather than returned (E7c/HAL-123), so a
+// caller that wants the two numbers and not an object can have them without one
+// being built for it. Mesh.projectedBounds reads a pair of these per frame off
+// points it constructs for the purpose, and never keeps them.
 export interface ScreenPoint {
   x: number;
   y: number;

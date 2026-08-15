@@ -200,10 +200,14 @@ describe("Point3D.project", () => {
   });
 });
 
-// The screen-space AABB behind the viewport's selection bracket (HAL-123). Taken
-// from the points rather than the triangles: the raster path projects each
-// vertex once per incident face, which on the sphere is 720 projections for the
-// 143 the box actually needs.
+// The box behind the viewport's selection bracket (HAL-123, resized by HAL-124).
+//
+// It is deliberately NOT the tight per-frame AABB of the projected vertices. A
+// rotating solid's screen box genuinely changes size every frame, so a bracket
+// that tracked it exactly breathed and dragged its label along with it — which
+// is the bug this shape exists to prevent. Both inputs here are invariant under
+// rotation by construction, so the first test in this block is the contract and
+// the rest are consequences of it.
 describe("Mesh.projectedBounds", () => {
   const pass = (overrides: Partial<ProjectedBoundsPass> = {}): ProjectedBoundsPass => ({
     offsetX: 0,
@@ -213,53 +217,85 @@ describe("Mesh.projectedBounds", () => {
     ...overrides,
   });
 
-  // Only the points are read, so the triangle list stays empty — the same
-  // fixture shape the transition machine's own suite uses.
-  const meshOf = (coordinates: number[][], target = renderTarget(), camera = cameraOf()) =>
+  // One point is enough: it is the projection basis the sibling anchor is built
+  // from, and nothing here reads a coordinate off it. The triangle list stays
+  // empty for the same reason — the same fixture shape the transition machine's
+  // own suite uses.
+  const meshOf = (boundingRadius: number, target = renderTarget(), camera = cameraOf()) =>
     new Mesh({
-      points: coordinates.map(([x, y, z]) => new Point3D(x, y, z, target, camera)),
+      points: [new Point3D(0, 0, 0, target, camera)],
       triangles: [],
-      boundingRadius: 0,
+      boundingRadius,
     });
 
-  it("brackets the projected extent of the points, at the render target centre", () => {
-    const mesh = meshOf([
-      [-100, -80, 0],
-      [100, -80, 0],
-      [100, 80, 0],
-      [-100, 80, 0],
-    ]);
+  const posed = (mesh: Mesh, transform: number[][]) => {
+    mesh.setTransform(transform);
 
-    // Scale 1 at the centre plane, so the box is the raw coordinates about
-    // 512, 320: x 412..612 and y 240..400.
-    expect(mesh.projectedBounds(pass())).toEqual({ x: 412, y: 240, width: 200, height: 160 });
+    return mesh.projectedBounds(pass());
+  };
+
+  // The regression, pinned. Reported against a spinning kis-rhombic
+  // dodecahedron: the corners and the badge shifted on every frame.
+  it("holds its size and place through any rotation of the shape", () => {
+    const matrix3D = new Matrix3D();
+    const mesh = meshOf(100);
+    const atRest = posed(mesh, matrix3D.identity());
+
+    expect(atRest).toEqual({ x: 412, y: 220, width: 200, height: 200 });
+    expect(posed(mesh, matrix3D.yawMatrix(37))).toEqual(atRest);
+    expect(posed(mesh, matrix3D.pitchMatrix(80))).toEqual(atRest);
+    expect(posed(mesh, matrix3D.multiply(matrix3D.rollMatrix(140), matrix3D.yawMatrix(200)))).toEqual(atRest);
+  });
+
+  // Rotation cannot move the box, but everything else still must.
+  it("follows the shape's posed origin, so an orbit or a pan carries the box with it", () => {
+    const mesh = meshOf(100);
+
+    expect(posed(mesh, new Matrix3D().translation(50, 20, 0))).toEqual({
+      x: 462,
+      y: 240,
+      width: 200,
+      height: 200,
+    });
+  });
+
+  it("grows with SCALE, which rides the transform rather than the radius the registry authored", () => {
+    const mesh = meshOf(100);
+
+    // uniformScaleOf reads the length of the matrix's first column, so a 2x
+    // scale doubles the half-extent and leaves the centre alone.
+    expect(posed(mesh, new Matrix3D().scaleMatrix(2))).toEqual({ x: 312, y: 120, width: 400, height: 400 });
+  });
+
+  it("shrinks with distance under perspective, and holds under orthographic", () => {
+    const matrix3D = new Matrix3D();
+    const perspective = meshOf(100);
+    const orthographic = meshOf(100, renderTarget(), cameraOf({ mode: "ORTHOGRAPHIC", magnification: 1 }));
+    const pushedBack = matrix3D.translation(0, 0, 300);
+
+    // The eye sits at fl/k = 300, so 300 further out halves the scale.
+    expect(posed(perspective, pushedBack)?.width).toBeCloseTo(100, 10);
+    expect(posed(orthographic, pushedBack)?.width).toBeCloseTo(200, 10);
   });
 
   it("carries the renderable's screen offsets", () => {
-    const mesh = meshOf([
-      [-100, -80, 0],
-      [100, -80, 0],
-      [100, 80, 0],
-    ]);
+    const mesh = meshOf(100);
+
+    mesh.setTransform(new Matrix3D().identity());
 
     expect(mesh.projectedBounds(pass({ offsetX: 30, offsetY: -20 }))).toEqual({
       x: 442,
-      y: 220,
+      y: 200,
       width: 200,
-      height: 160,
+      height: 200,
     });
   });
 
   it("clamps to the render target so a mesh running off the stage cannot push the box outside it", () => {
     const target = new RenderTarget({ width: 500, height: 300 });
-    const mesh = meshOf(
-      [
-        [-4000, -4000, 0],
-        [4000, -4000, 0],
-        [4000, 4000, 0],
-      ],
-      target,
-    );
+    const mesh = meshOf(4000, target);
+
+    mesh.setTransform(new Matrix3D().identity());
 
     expect(mesh.projectedBounds(pass({ targetWidth: 500, targetHeight: 300 }))).toEqual({
       x: 0,
@@ -269,61 +305,28 @@ describe("Mesh.projectedBounds", () => {
     });
   });
 
-  // Two vertices are a line and one is a dot; neither is a box worth drawing,
-  // and the case arrives for real when the camera pushes into the mesh and E2's
-  // near plane takes most of it.
-  it("comes back null when fewer than three vertices survive the near plane", () => {
-    const behind = meshOf([
-      [-100, -80, -350],
-      [100, -80, -350],
-      [100, 80, 0],
-      [-100, 80, 0],
-    ]);
-    const empty = meshOf([]);
+  // The near plane's own answer, asked once of the centre rather than counted
+  // over the vertices: a shape the camera has moved inside of has no box worth
+  // drawing, and the projection is singular behind the eye either way.
+  it("comes back null when the shape's own origin leaves the view volume", () => {
+    const mesh = meshOf(100);
 
-    expect(behind.projectedBounds(pass())).toBeNull();
-    expect(empty.projectedBounds(pass())).toBeNull();
+    expect(posed(mesh, new Matrix3D().translation(0, 0, -350))).toBeNull();
   });
 
-  // The first frames of an entrance, where the incoming mesh is still a whole
-  // stage above the top edge. Clamping alone would leave a zero-height mark
-  // pinned to y = 0 rather than nothing at all.
-  it("comes back null when the whole mesh is past one edge of the target", () => {
-    const mesh = meshOf([
-      [-100, -80, 0],
-      [100, -80, 0],
-      [100, 80, 0],
-      [-100, 80, 0],
-    ]);
+  it("comes back null when the whole box is past one edge of the target", () => {
+    const mesh = meshOf(100);
+
+    mesh.setTransform(new Matrix3D().identity());
 
     expect(mesh.projectedBounds(pass({ offsetY: -800 }))).toBeNull();
     expect(mesh.projectedBounds(pass({ offsetX: 2000 }))).toBeNull();
   });
 
-  it("folds only the survivors, leaving a clipped vertex out of the box", () => {
-    const mesh = meshOf([
-      [-100, -80, 0],
-      [100, -80, 0],
-      [100, 80, 0],
-      // Behind the eye. Projected it lands mirrored across the vanishing point,
-      // which would drag the box somewhere the shape is not.
-      [-4000, 4000, -350],
-    ]);
+  it("comes back null for a mesh with no geometry to anchor the projection to", () => {
+    const empty = new Mesh({ points: [], triangles: [], boundingRadius: 100 });
 
-    expect(mesh.projectedBounds(pass())).toEqual({ x: 412, y: 240, width: 200, height: 160 });
-  });
-
-  it("describes the pose the frame is about to draw, not the one the registry authored", () => {
-    const mesh = meshOf([
-      [-100, -80, 0],
-      [100, -80, 0],
-      [100, 80, 0],
-      [-100, 80, 0],
-    ]);
-
-    mesh.setTransform(new Matrix3D().translation(50, 20, 0));
-
-    expect(mesh.projectedBounds(pass())).toEqual({ x: 462, y: 260, width: 200, height: 160 });
+    expect(empty.projectedBounds(pass())).toBeNull();
   });
 });
 

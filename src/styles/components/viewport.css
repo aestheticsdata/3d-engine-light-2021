@@ -209,7 +209,13 @@
    widget divides by the backing store, so the box is a fraction of the picture
    and neither the pixel budget nor the device ratio can reach this file. The
    element is `hidden` until the first frame writes them, and again whenever the
-   mesh has fewer than three vertices left on the stage. */
+   shape's origin leaves the view volume or the box falls off the stage.
+
+   The box is square and holds its size through a rotation (HAL-124) — it is
+   sized by the orientation-invariant bounding radius, not by the projected
+   vertices, because a bracket that tracked those exactly breathed on every
+   frame of a spin. Nothing here depends on that, but a future rule that assumes
+   the box hugs the silhouette would be wrong. */
 
 .viewport-hud__selection {
   position: absolute;
