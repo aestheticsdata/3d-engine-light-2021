@@ -95,7 +95,6 @@
   --size-gizmo: 66px;
   --size-gizmo-axis: 24px; /* every axis at full length, from the box centre; the rig foreshortens it */
   --size-crosshair: 24px;
-  --size-selection-box: 190px;
   --size-selection-corner: 14px;
   --size-selection-label-h: 16px;
   --size-camera-readout-minw: 148px;

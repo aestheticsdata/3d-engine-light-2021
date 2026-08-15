@@ -198,23 +198,25 @@
 
 /* ---- selection bracket ----------------------------------------------------
 
-   A fixed rectangle in a fixed place. No screen-space AABB exists — nothing
-   projects the mesh bounds into canvas space — so the percentages and the box
-   size are the design's, not a measurement. De-mock E7 (COS-248) computes the
-   real rect and this geometry goes away with it.
+   The selected mesh's projected bounds, four custom properties ViewportHUD
+   writes every frame (E7c/HAL-123). It replaces the design's fixed rectangle —
+   a --size-selection-box square at left: 39.2%, top: 31.9%, whose centre lands
+   on the stage centre at exactly one size (880 x 525, near enough the mockup's
+   own 848 x 530) and drifts linearly from there: about a sphere's radius off in
+   theatre mode, which is what made it read as a bug.
 
-   The desktop box is a --size-selection-box square rather than a percentage
-   pair: it is centred on the shape at the design's 848 x 530 stage and drifts a
-   little at other stage sizes, which is the honest behaviour for a placeholder
-   whose real version will also be a pixel rect. Mobile keeps the design's
-   percentages. */
+   Percentages rather than pixels, and the same four in both branches. The
+   widget divides by the backing store, so the box is a fraction of the picture
+   and neither the pixel budget nor the device ratio can reach this file. The
+   element is `hidden` until the first frame writes them, and again whenever the
+   mesh has fewer than three vertices left on the stage. */
 
 .viewport-hud__selection {
   position: absolute;
-  top: 31.9%;
-  left: 39.2%;
-  width: var(--size-selection-box);
-  height: var(--size-selection-box);
+  top: var(--sel-top);
+  left: var(--sel-left);
+  width: var(--sel-w);
+  height: var(--sel-h);
 }
 
 .viewport-hud__corner {
@@ -571,20 +573,26 @@
     background: var(--color-crosshair-dim);
   }
 
-  /* The design's percentages rather than the desktop square: on a card this
-     small a fixed 190px box would be wider than the picture. */
-  .viewport-hud__selection {
-    width: 22.4%;
-    height: 35.8%;
-  }
+  /* No box of its own any more. The desktop rule is already a fraction of the
+     picture, so a phone gets the same rect the projection produced without this
+     branch restating anything — the design's 22.4% x 35.8% existed only because
+     a fixed 190px square would have been wider than the card. */
 
   /* The corner marks shrink with the box; --size-selection-corner carries the
      mobile value, so the base rule above needs no restatement here. */
 
-  /* not in mockup — the label badge is restored. No flip guard is needed: the
-     box top is 31.9% of the card, about 60px at a 320px device, so the badge
-     always clears the card edge. 9px rather than the desktop 8px so it stays
-     legible at arm's length; the gap above the box tightens to match. */
+  /* not in mockup — the label badge is restored. 9px rather than the desktop
+     8px so it stays legible at arm's length; the gap above the box tightens to
+     match.
+
+     It still carries no flip guard, but the reason has changed with E7c: the
+     old one was that a box pinned at top: 31.9% could never reach the card
+     edge, and a projected box reaches it the moment the mesh does. What
+     replaces it is that .viewport is `overflow: hidden`, so a badge with no
+     room above is clipped by the card rather than painted over the chrome. The
+     alternative — measuring the badge against the stage to flip it inside —
+     costs a forced layout read on every frame, which is far more than a
+     clipped label at maximum zoom is worth. */
   .viewport-hud__selection-label {
     top: calc(-1 * (var(--size-selection-label-h) + var(--space-0-5)));
     font: var(--font-weight-bold) var(--text-sm) / var(--leading-none) var(--font-mono);

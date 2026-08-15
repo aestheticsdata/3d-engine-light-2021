@@ -84,6 +84,20 @@ class ShapeTransitionMachine {
     return this.context.renderables;
   }
 
+  // What the viewport's selection bracket follows (E7c/HAL-123): the mesh that
+  // will still be on screen once this settles, with the screen offset it is
+  // being drawn at.
+  //
+  // The tail of the list is that mesh in every state — showOnly() lists the
+  // current one alone, and showPair() pushes the incoming one after the
+  // outgoing. Bracketing the pair instead would stretch the box across the
+  // whole stage for the length of every shape change, since the outgoing mesh
+  // leaves sideways past the margin; following the arrival is what makes the
+  // bracket read as the selection moving to the new shape.
+  public getSelectedRenderable(): MeshRenderRequest | null {
+    return this.context.renderables.at(-1) ?? null;
+  }
+
   // Deduped by identity rather than by value: the camera writes focal length and
   // z offset straight onto these objects, so they have to be the very meshes
   // being drawn.

@@ -15,6 +15,7 @@ import cube from "@data/shapes/cube";
 import sphere from "@data/shapes/sphere";
 import Camera from "@primitives/Camera";
 import Matrix3D from "@primitives/Matrix3D";
+import Mesh from "@primitives/Mesh";
 import Point3D from "@primitives/Point3D";
 import RenderTarget from "@primitives/RenderTarget";
 import Triangle from "@primitives/Triangle";
@@ -22,6 +23,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Object3D } from "@data/types";
 import type { CameraOptions } from "@primitives/Camera";
+import type { ProjectedBoundsPass } from "@primitives/Mesh";
 import type { NearClipContext } from "@primitives/Triangle";
 
 const renderTarget = () => new RenderTarget({ width: 1024, height: 640 });
@@ -142,6 +144,186 @@ describe("convert3D2D", () => {
       target.centerX + 100 * orthographic.scaleAt(50) * target.scale,
       10,
     );
+  });
+});
+
+// The projection, written into a caller's record instead of a fresh Point2D
+// (HAL-123). It exists so the selection bracket can fold 143 vertices without
+// allocating 143 objects to read two numbers off; convert3D2D delegates to it,
+// so these cases are also what pins that the two cannot drift apart.
+describe("Point3D.project", () => {
+  it("writes the same coordinates convert3D2D returns", () => {
+    const point = new Point3D(100, 50, 0, renderTarget(), cameraOf());
+    const out = { x: 0, y: 0 };
+
+    point.project(out);
+
+    expect(out.x).toBe(point.convert3D2D().x);
+    expect(out.y).toBe(point.convert3D2D().y);
+    expect(out.x).toBe(612);
+    expect(out.y).toBe(370);
+  });
+
+  it("reports whether the vertex survives the view volume, near and far", () => {
+    // The eye sits at fl/k = 300, so z = -350 is 50 units behind it and z =
+    // 4800 is past far — the two ends Camera.clips already draws.
+    const camera = cameraOf();
+    const inside = new Point3D(0, 0, 0, renderTarget(), camera);
+    const behind = new Point3D(0, 0, -350, renderTarget(), camera);
+    const beyond = new Point3D(0, 0, 4800, renderTarget(), camera);
+    const out = { x: 0, y: 0 };
+
+    expect(inside.project(out)).toBe(true);
+    expect(behind.project(out)).toBe(false);
+    expect(beyond.project(out)).toBe(false);
+  });
+
+  // convert3D2D has always projected a clipped vertex rather than refusing to,
+  // and Triangle.project relies on it: clipToNear splits at the plane using
+  // coordinates that must already exist. Delegation must not quietly add a
+  // guard the old path did not have.
+  it("still writes coordinates for a vertex it reports as clipped", () => {
+    const point = new Point3D(100, 0, -350, renderTarget(), cameraOf());
+    const out = { x: 0, y: 0 };
+
+    expect(point.project(out)).toBe(false);
+    expect(out.x).toBe(point.convert3D2D().x);
+    expect(Number.isFinite(out.x)).toBe(true);
+  });
+
+  it("reuses the record it is given rather than returning a new one", () => {
+    const point = new Point3D(100, 50, 0, renderTarget(), cameraOf());
+    const out = { x: -1, y: -1 };
+
+    expect(point.project(out)).toBe(true);
+    expect(out).toEqual({ x: 612, y: 370 });
+  });
+});
+
+// The screen-space AABB behind the viewport's selection bracket (HAL-123). Taken
+// from the points rather than the triangles: the raster path projects each
+// vertex once per incident face, which on the sphere is 720 projections for the
+// 143 the box actually needs.
+describe("Mesh.projectedBounds", () => {
+  const pass = (overrides: Partial<ProjectedBoundsPass> = {}): ProjectedBoundsPass => ({
+    offsetX: 0,
+    offsetY: 0,
+    targetWidth: 1024,
+    targetHeight: 640,
+    ...overrides,
+  });
+
+  // Only the points are read, so the triangle list stays empty — the same
+  // fixture shape the transition machine's own suite uses.
+  const meshOf = (coordinates: number[][], target = renderTarget(), camera = cameraOf()) =>
+    new Mesh({
+      points: coordinates.map(([x, y, z]) => new Point3D(x, y, z, target, camera)),
+      triangles: [],
+      boundingRadius: 0,
+    });
+
+  it("brackets the projected extent of the points, at the render target centre", () => {
+    const mesh = meshOf([
+      [-100, -80, 0],
+      [100, -80, 0],
+      [100, 80, 0],
+      [-100, 80, 0],
+    ]);
+
+    // Scale 1 at the centre plane, so the box is the raw coordinates about
+    // 512, 320: x 412..612 and y 240..400.
+    expect(mesh.projectedBounds(pass())).toEqual({ x: 412, y: 240, width: 200, height: 160 });
+  });
+
+  it("carries the renderable's screen offsets", () => {
+    const mesh = meshOf([
+      [-100, -80, 0],
+      [100, -80, 0],
+      [100, 80, 0],
+    ]);
+
+    expect(mesh.projectedBounds(pass({ offsetX: 30, offsetY: -20 }))).toEqual({
+      x: 442,
+      y: 220,
+      width: 200,
+      height: 160,
+    });
+  });
+
+  it("clamps to the render target so a mesh running off the stage cannot push the box outside it", () => {
+    const target = new RenderTarget({ width: 500, height: 300 });
+    const mesh = meshOf(
+      [
+        [-4000, -4000, 0],
+        [4000, -4000, 0],
+        [4000, 4000, 0],
+      ],
+      target,
+    );
+
+    expect(mesh.projectedBounds(pass({ targetWidth: 500, targetHeight: 300 }))).toEqual({
+      x: 0,
+      y: 0,
+      width: 500,
+      height: 300,
+    });
+  });
+
+  // Two vertices are a line and one is a dot; neither is a box worth drawing,
+  // and the case arrives for real when the camera pushes into the mesh and E2's
+  // near plane takes most of it.
+  it("comes back null when fewer than three vertices survive the near plane", () => {
+    const behind = meshOf([
+      [-100, -80, -350],
+      [100, -80, -350],
+      [100, 80, 0],
+      [-100, 80, 0],
+    ]);
+    const empty = meshOf([]);
+
+    expect(behind.projectedBounds(pass())).toBeNull();
+    expect(empty.projectedBounds(pass())).toBeNull();
+  });
+
+  // The first frames of an entrance, where the incoming mesh is still a whole
+  // stage above the top edge. Clamping alone would leave a zero-height mark
+  // pinned to y = 0 rather than nothing at all.
+  it("comes back null when the whole mesh is past one edge of the target", () => {
+    const mesh = meshOf([
+      [-100, -80, 0],
+      [100, -80, 0],
+      [100, 80, 0],
+      [-100, 80, 0],
+    ]);
+
+    expect(mesh.projectedBounds(pass({ offsetY: -800 }))).toBeNull();
+    expect(mesh.projectedBounds(pass({ offsetX: 2000 }))).toBeNull();
+  });
+
+  it("folds only the survivors, leaving a clipped vertex out of the box", () => {
+    const mesh = meshOf([
+      [-100, -80, 0],
+      [100, -80, 0],
+      [100, 80, 0],
+      // Behind the eye. Projected it lands mirrored across the vanishing point,
+      // which would drag the box somewhere the shape is not.
+      [-4000, 4000, -350],
+    ]);
+
+    expect(mesh.projectedBounds(pass())).toEqual({ x: 412, y: 240, width: 200, height: 160 });
+  });
+
+  it("describes the pose the frame is about to draw, not the one the registry authored", () => {
+    const mesh = meshOf([
+      [-100, -80, 0],
+      [100, -80, 0],
+      [100, 80, 0],
+      [-100, 80, 0],
+    ]);
+
+    mesh.setTransform(new Matrix3D().translation(50, 20, 0));
+
+    expect(mesh.projectedBounds(pass())).toEqual({ x: 462, y: 260, width: 200, height: 160 });
   });
 });
 
