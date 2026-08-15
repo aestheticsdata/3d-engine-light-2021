@@ -115,6 +115,12 @@ class ShapeSwitcher {
     return this.transitionMachine.getActiveMeshes();
   }
 
+  // The one the selection bracket brackets — see the machine's own method for
+  // why it is the arriving mesh rather than the pair.
+  public getSelectedRenderable(): MeshRenderRequest | null {
+    return this.transitionMachine.getSelectedRenderable();
+  }
+
   public isAnimating(): boolean {
     return this.transitionMachine.isAnimating();
   }

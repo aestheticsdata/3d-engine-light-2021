@@ -2,6 +2,7 @@ import VertexNormals from "@primitives/VertexNormals";
 import { formatRgba } from "@rendering/cssColor";
 
 import type Point3D from "@primitives/Point3D";
+import type { ScreenPoint } from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
 import type { DepthContext, NearClipContext, TriangleRenderOptions } from "@primitives/Triangle";
 import type { RGBA } from "@rendering/cssColor";
@@ -70,6 +71,36 @@ export interface MeshBounds {
   minZ: number;
   maxZ: number;
 }
+
+// The screen-space box the viewport's selection bracket is drawn from
+// (E7c/HAL-123) — the third of the three quantities the comment above lists, and
+// the only one taken after the projection's divide. In render-target pixels, so
+// the HUD converts to its own percentages and nothing here learns what a stage
+// is.
+export interface ScreenRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// The renderable's screen offsets plus the extent to clamp against. Threaded
+// rather than held, exactly as eyeDistance, near and far already are on
+// MeshRenderPass above: this class has never carried a camera or a render target
+// reference and two numbers is cheaper than giving it one.
+export interface ProjectedBoundsPass {
+  offsetX: number;
+  offsetY: number;
+  targetWidth: number;
+  targetHeight: number;
+}
+
+// Two vertices are a line and one is a dot. Neither is a box, and the case is
+// real rather than defensive: push the camera into a shape and E2's near plane
+// takes all but a corner of it.
+const MIN_BOUNDS_VERTICES = 3;
+
+const clampTo = (value: number, extent: number): number => Math.min(extent, Math.max(0, value));
 
 // The uniform factor a transform carries, read as the length of its first
 // column. Exact only for a linear part that is scale x rotation, which is the
@@ -171,6 +202,61 @@ class Mesh {
     }
 
     return bounds;
+  }
+
+  // The projected box, folded on demand the way getBounds above is and for the
+  // same reason: the points hold whatever this frame's setTransform wrote, so
+  // the box describes the pose about to be drawn.
+  //
+  // Over the points rather than the triangles, which is the whole cost argument.
+  // The raster path projects each vertex once per incident face — 720
+  // projections on the sphere for its 143 points, 23760 on the torus knot for
+  // its 3960 — so reading the box off the triangles would be five folds of the
+  // work this one is. One scratch record for the whole loop, and the mesh's own
+  // points are the only thing walked.
+  //
+  // Null rather than an empty box when nothing is left to bracket: a caller that
+  // got zeros would draw a degenerate mark in the corner instead of hiding the
+  // bracket, which is the honest answer while a mesh is still off the stage on
+  // its way in.
+  public projectedBounds(pass: ProjectedBoundsPass): ScreenRect | null {
+    const projected: ScreenPoint = { x: 0, y: 0 };
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let survivors = 0;
+
+    for (const point of this.points) {
+      // A vertex behind the eye projects mirrored across the vanishing point, so
+      // folding it in would drag the box somewhere the shape is not.
+      if (!point.project(projected)) {
+        continue;
+      }
+
+      survivors += 1;
+      minX = Math.min(minX, projected.x);
+      maxX = Math.max(maxX, projected.x);
+      minY = Math.min(minY, projected.y);
+      maxY = Math.max(maxY, projected.y);
+    }
+
+    if (survivors < MIN_BOUNDS_VERTICES) {
+      return null;
+    }
+
+    const left = clampTo(minX + pass.offsetX, pass.targetWidth);
+    const right = clampTo(maxX + pass.offsetX, pass.targetWidth);
+    const top = clampTo(minY + pass.offsetY, pass.targetHeight);
+    const bottom = clampTo(maxY + pass.offsetY, pass.targetHeight);
+
+    // Both edges clamped to the same side: the mesh is wholly past that edge of
+    // the target and none of it is on screen to bracket.
+    if (right - left <= 0 || bottom - top <= 0) {
+      return null;
+    }
+
+    return { x: left, y: top, width: right - left, height: bottom - top };
   }
 
   // Three named passes over the same triangle array, replacing the one fused

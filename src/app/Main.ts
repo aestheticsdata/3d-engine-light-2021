@@ -1022,6 +1022,33 @@ class Main {
     this.uiState.setState({ drawnTriangles: count });
   }
 
+  // Called after the frame is painted rather than before it, and that ordering
+  // is the whole correctness argument: projectedBounds reads whatever the
+  // points currently hold, so it has to run downstream of the pose
+  // applyRigToActiveMeshes wrote for this frame (E7c/HAL-123).
+  //
+  // The extent comes off the shared render target, never a literal — it is the
+  // same pair the backing store was resized to, so the fractions the HUD
+  // derives hold at any window size and under any pixel budget.
+  private publishSelectionBounds() {
+    const selected = this.shapes.getSelectedRenderable();
+
+    if (!selected) {
+      this.viewportHud.setSelection(null);
+
+      return;
+    }
+
+    this.viewportHud.setSelection(
+      selected.mesh.projectedBounds({
+        offsetX: selected.offsetX ?? 0,
+        offsetY: selected.offsetY ?? 0,
+        targetWidth: this.renderTarget.width,
+        targetHeight: this.renderTarget.height,
+      }),
+    );
+  }
+
   private buildMesh(primitive: string): Mesh {
     const object3D = this.objects3D[primitive];
     if (!object3D) {
@@ -1086,6 +1113,7 @@ class Main {
     // Every frame, not on the 90ms gate the numeric readouts ride: the gizmo is
     // a picture rather than a number, and E1b makes the viewport draggable.
     this.viewportHud.setGizmo(this.rig.axisScreenDirections());
+    this.publishSelectionBounds();
   }
 
   private renderPausedFrame() {
@@ -1107,6 +1135,7 @@ class Main {
     // The gizmo has no clock of its own while the loop is stopped, so a preset
     // or a slider would leave it pointing at the attitude the shape had before.
     this.viewportHud.setGizmo(this.rig.axisScreenDirections());
+    this.publishSelectionBounds();
     this.publishDrawnTriangles(this.renderedTriangles);
   }
 

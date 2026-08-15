@@ -38,6 +38,7 @@ import { eulerDegreesLabel, vector3Label } from "@ui/cameraLabels";
 import DOMScope from "@ui/DOMScope";
 
 import type { AxisScreenDirection, EulerDegrees, Vector3 } from "@camera/CameraRig";
+import type { ScreenRect } from "@primitives/Mesh";
 import type FieldWriter from "@ui/FieldWriter";
 
 // Unit is `u`, not the design's `m`: the engine has no metric scale, and
@@ -49,10 +50,16 @@ const DISTANCE_UNIT = "u";
 // list is the contract between the two files.
 const AXIS_KEYS = ["x", "y", "z"];
 
+// Three decimals is a fiftieth of a pixel on a 2000px stage, and the string is
+// rebuilt four times a frame — there is no visible precision past it, only
+// seventeen digits for the parser to walk.
+const percentOf = (value: number, extent: number): string => `${((value / extent) * 100).toFixed(3)}%`;
+
 class ViewportHUD {
   private readonly canvas: HTMLCanvasElement;
   private readonly fields: FieldWriter;
   private readonly gizmo: HTMLElement;
+  private readonly selection: HTMLElement;
 
   constructor(canvas: HTMLCanvasElement, fields: FieldWriter) {
     const card = canvas.closest<HTMLElement>(".viewport");
@@ -61,9 +68,12 @@ class ViewportHUD {
       throw new Error("Viewport card not found.");
     }
 
+    const scope = new DOMScope(card);
+
     this.canvas = canvas;
     this.fields = fields;
-    this.gizmo = new DOMScope(card).require<HTMLElement>(".viewport-hud__gizmo", "Viewport gizmo is missing.");
+    this.gizmo = scope.require<HTMLElement>(".viewport-hud__gizmo", "Viewport gizmo is missing.");
+    this.selection = scope.require<HTMLElement>(".viewport-hud__selection", "Viewport selection bracket is missing.");
   }
 
   // The backing store, not the CSS box. The design's 848 x 530 is the size of
@@ -121,6 +131,33 @@ class ViewportHUD {
       this.gizmo.style.setProperty(`--axis-${key}-angle`, `${axis.angleRadians}rad`);
       this.gizmo.style.setProperty(`--axis-${key}-foreshorten`, String(axis.foreshortening));
     });
+  }
+
+  // The selection bracket's rect (E7c/HAL-123), replacing the fixed percentage
+  // square the design shipped — which was centred at exactly one stage size, the
+  // mockup's own, and drifted by about a sphere's radius in theatre mode.
+  //
+  // On setGizmo's cadence rather than the 90ms gate the numeric readouts ride,
+  // for the same reason: this is a picture, and at a tenth of a second the box
+  // visibly trails a spinning mesh. It is four custom-property writes on one
+  // element, well under the cost of a single triangle fill.
+  //
+  // Fractions of the backing store rather than pixels, so the geometry stays in
+  // the styles layer and the pixel budget cannot reach it: the canvas element is
+  // stretched to the stage, so a percentage of the buffer is that same
+  // percentage of the picture at whatever resolution the budget settled on. The
+  // extent comes off the canvas, the one the resolution chip already reads.
+  public setSelection(bounds: ScreenRect | null) {
+    this.selection.hidden = bounds === null;
+
+    if (!bounds) {
+      return;
+    }
+
+    this.selection.style.setProperty("--sel-left", percentOf(bounds.x, this.canvas.width));
+    this.selection.style.setProperty("--sel-top", percentOf(bounds.y, this.canvas.height));
+    this.selection.style.setProperty("--sel-w", percentOf(bounds.width, this.canvas.width));
+    this.selection.style.setProperty("--sel-h", percentOf(bounds.height, this.canvas.height));
   }
 }
 

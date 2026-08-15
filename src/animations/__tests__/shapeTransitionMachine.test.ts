@@ -103,6 +103,54 @@ describe("getRenderables", () => {
   });
 });
 
+// What the viewport's selection bracket follows (HAL-123). The rule is "the mesh
+// that will still be there once this settles", which is why the mid-switch case
+// is the one worth pinning: bracketing the pair instead would stretch the box
+// across the whole stage for the length of every shape change, since the
+// outgoing mesh leaves sideways past the margin.
+describe("getSelectedRenderable", () => {
+  it("comes back null while nothing is on screen", () => {
+    expect(machine().getSelectedRenderable()).toBeNull();
+  });
+
+  it("hands back the resting mesh, offsets and all, once the entrance settles", () => {
+    const transitions = machine();
+    const mesh = emptyMesh();
+
+    transitions.playInitialEntrance(mesh, 0);
+    transitions.update(DURATION);
+
+    expect(transitions.getSelectedRenderable()).toBe(transitions.getRenderables()[0]);
+    expect(transitions.getSelectedRenderable()?.mesh).toBe(mesh);
+  });
+
+  it("follows the mesh dropping in rather than the one sliding out", () => {
+    const transitions = machine();
+    const first = emptyMesh();
+    const second = emptyMesh();
+
+    transitions.playInitialEntrance(first, 0);
+    transitions.update(DURATION);
+    transitions.switchTo(second, DURATION);
+    transitions.update(DURATION * 1.5);
+
+    expect(transitions.getRenderables()).toHaveLength(2);
+    expect(transitions.getSelectedRenderable()?.mesh).toBe(second);
+  });
+
+  it("follows the entering mesh from its first frame, before it has arrived", () => {
+    const transitions = machine();
+    const mesh = emptyMesh();
+
+    transitions.playInitialEntrance(mesh, 0);
+
+    const selected = transitions.getSelectedRenderable();
+
+    expect(selected?.mesh).toBe(mesh);
+    expect(selected?.offsetY).toBeLessThan(0);
+  });
+});
+
 describe("resize", () => {
   // travelX/travelY have no getter of their own, so their effect is read the
   // same way every other test in this file already reads it: through the
