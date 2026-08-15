@@ -47,7 +47,6 @@ import { sampleTexel } from "@rendering/texelSampling";
 
 import type { RasterVertex } from "@primitives/Triangle";
 import type { RGBA } from "@rendering/cssColor";
-import type { EdgeWeights } from "@rendering/edgeFunction";
 import type { RasterFillRequest, RasterTexture } from "@rendering/Rasterizer";
 import type TexturePixelCache from "@rendering/TexturePixelCache";
 
@@ -105,7 +104,7 @@ class PixelShader {
   //
   // The casts stand on beginTriangle having run — Rasterizer calls it once per
   // triangle, before the loop, and there is no other caller.
-  public shade(x: number, y: number, weights: EdgeWeights, invD: number): RGBA {
+  public shade(x: number, y: number, w0: number, w1: number, w2: number, invD: number): RGBA {
     const request = this.request as RasterFillRequest;
 
     if (request.shading === "DEPTH") {
@@ -129,7 +128,7 @@ class PixelShader {
     }
 
     if (request.texture) {
-      this.sampleInto(request, request.texture, weights);
+      this.sampleInto(request, request.texture, w0, w1, w2);
     } else {
       // Non-null on every untextured request that reaches here — see the
       // invariant on RasterFillRequest.
@@ -144,7 +143,7 @@ class PixelShader {
       const v0 = this.v0 as RasterVertex;
       const v1 = this.v1 as RasterVertex;
       const v2 = this.v2 as RasterVertex;
-      const shade = interpolate(weights, this.area, v0.shade, v1.shade, v2.shade);
+      const shade = interpolate(w0, w1, w2, this.area, v0.shade, v1.shade, v2.shade);
 
       this.shaded[0] *= shade;
       this.shaded[1] *= shade;
@@ -158,13 +157,13 @@ class PixelShader {
     return this.quantised(x, y);
   }
 
-  private sampleInto(request: RasterFillRequest, texture: RasterTexture, weights: EdgeWeights) {
+  private sampleInto(request: RasterFillRequest, texture: RasterTexture, w0: number, w1: number, w2: number) {
     const v0 = this.v0 as RasterVertex;
     const v1 = this.v1 as RasterVertex;
     const v2 = this.v2 as RasterVertex;
     const decoded = this.textures.get(texture.key, texture.image);
-    const u = interpolate(weights, this.area, v0.u, v1.u, v2.u) * texture.uvScale;
-    const v = interpolate(weights, this.area, v0.v, v1.v, v2.v) * texture.uvScale;
+    const u = interpolate(w0, w1, w2, this.area, v0.u, v1.u, v2.u) * texture.uvScale;
+    const v = interpolate(w0, w1, w2, this.area, v0.v, v1.v, v2.v) * texture.uvScale;
     const texel = sampleTexel(decoded.pixels, decoded.width, decoded.height, u, v);
 
     this.shaded[0] = texel.r;

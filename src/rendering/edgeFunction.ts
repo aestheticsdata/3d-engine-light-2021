@@ -59,47 +59,100 @@ export const edgeFunction = (ax: number, ay: number, bx: number, by: number, px:
 export const signedArea2 = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number =>
   edgeFunction(ax, ay, bx, by, cx, cy);
 
-// The three barycentric weights at one point, unnormalised — in the same
-// units as signedArea2, so a caller divides once per interpolated attribute
-// rather than normalising all three weights up front for values it may not
-// need (a flat-shaded triangle interpolates nothing but 1/d).
-export interface EdgeWeights {
-  w0: number;
-  w1: number;
-  w2: number;
-}
+// THE THREE WEIGHTS. Everything from here to interpolate() below is one idea:
+// the barycentric weights at a pixel, unnormalised — in the same units as
+// signedArea2, so a caller divides once per interpolated attribute rather than
+// normalising all three up front for values it may not need (a flat-shaded
+// triangle interpolates nothing but 1/d). w0 pairs with vertex A: it is the
+// sub-triangle (B, C, P) opposite A, whose area is proportional to A's own
+// barycentric coordinate, and w1/w2 follow the same rotation for B and C.
+//
+// They are computed and passed as three separate scalars rather than built into
+// a record, and that is a measurement rather than a preference (E3f/3DE-116).
+// The record form allocated one object per candidate pixel, and the loop that
+// reads it visits on the order of a million pixels a frame at a full-window
+// render target — an allocation rate no escape analysis was reliably removing.
 
-// w0 pairs with vertex A: it is the sub-triangle (B, C, P) opposite A, whose
-// area is proportional to A's own barycentric coordinate. w1/w2 follow the
-// same rotation for B and C.
-export const edgeWeights = (
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  cx: number,
-  cy: number,
-  px: number,
-  py: number,
-): EdgeWeights => ({
-  w0: edgeFunction(bx, by, cx, cy, px, py),
-  w1: edgeFunction(cx, cy, ax, ay, px, py),
-  w2: edgeFunction(ax, ay, bx, by, px, py),
-});
+// The half of an edge weight that does not depend on x, evaluated once per
+// scanline instead of once per pixel (E3f/3DE-116).
+//
+// edgeFunction's expression is `(bx-ax)*(py-ay) - (by-ay)*(px-ax)`. Its first
+// product is constant along a row, so edgeRowTerm IS that product and
+// edgeWeightAt is the rest. Split, not rewritten: the same operands meet in the
+// same operations in the same order, so the result is bit-identical to calling
+// edgeFunction per pixel rather than merely close to it — which is what lets a
+// pass over the pixel loop claim no visual change at all. edgeFunction stays the
+// definition these two answer to, and the equivalence is pinned by a test rather
+// than by this comment.
+//
+// `edgeDx`/`edgeDy` are the edge's own runs, `originX`/`originY` its first
+// vertex — for w0 the edge is B→C and the origin is B, and w1/w2 rotate.
+export const edgeRowTerm = (edgeDx: number, py: number, originY: number): number => edgeDx * (py - originY);
+
+export const edgeWeightAt = (rowTerm: number, edgeDy: number, px: number, originX: number): number =>
+  rowTerm - edgeDy * (px - originX);
 
 // Inside-or-on-edge. Every triangle here is front-facing (positive area), so
 // "inside" is simply all three weights non-negative — there is no second
 // sign convention to also test.
-export const isInside = (weights: EdgeWeights): boolean => weights.w0 >= 0 && weights.w1 >= 0 && weights.w2 >= 0;
+export const isInside = (w0: number, w1: number, w2: number): boolean => w0 >= 0 && w1 >= 0 && w2 >= 0;
+
+// Where one edge stops admitting pixels along the current scanline (E3f).
+//
+// An edge weight is affine in x, so `w >= 0` is a half-line whose endpoint is
+// the x at which the weight reaches zero. That endpoint is itself affine in y —
+// it is just the edge's own line — so the slope below is folded once per
+// triangle and the endpoint costs a multiply and an add per row rather than the
+// division it started as. Which side of the endpoint is admitted depends on the
+// sign of the edge's dy, and the caller reads that off the same number it uses
+// for the weights.
+//
+// Unlike edgeWeightAt this is NOT required to be exact, and it is the one place
+// in the loop where that is true: the span only narrows the walk, and the caller
+// rounds it outward by a whole pixel before using it, so an error in the last
+// bits cannot reach a pixel. What decides whether a pixel is drawn is still the
+// edge test, on the exact weights.
+export const edgeSlope = (edgeDx: number, edgeDy: number): number => (edgeDy === 0 ? 0 : edgeDx / edgeDy);
+
+export const edgeSpanBound = (originX: number, slope: number, py: number, originY: number): number =>
+  originX + slope * (py - originY);
+
+// How far ALONG A SCANLINE the feather reaches past the edge itself (E3f).
+//
+// EDGE ANTIALIAS keeps a pixel whose centre is up to half a pixel PERPENDICULARLY
+// outside an edge. Perpendicular is the trap: the shallower the edge lies to the
+// row, the further along that row the same half pixel stretches, without limit
+// as the edge approaches horizontal. A flat one-pixel margin on the span is
+// therefore correct only for a steep edge and loses the soft edge everywhere
+// else — which is exactly what a pixel diff against the pre-E3f frames caught,
+// on every shape, with EDGE ANTIALIAS on and only then.
+//
+// Built from the edge's dy and the reciprocal of its length, which is the one
+// edgeReciprocals has already computed for this same triangle — the closed form
+// in the slope is 0.5 * sqrt(1 + slope^2), and spending a second square root per
+// edge to reach the same number was measurable on a mesh of many small triangles
+// (the torus knot submits 8008 of them a frame).
+//
+// Infinity for a horizontal edge, and that is the safe direction rather than an
+// oversight: such an edge constrains no x at all, and a caller that used this
+// anyway would widen its span to the whole bounding box it started from.
+export const edgeFeatherReach = (edgeDy: number, reciprocal: number): number => 0.5 / (Math.abs(edgeDy) * reciprocal);
 
 // Affine barycentric interpolation of one scalar attribute across the
 // triangle — screen-space linear, which is exactly what both an exact 1/d
 // and an affine-mapped UV (the same approximation AffineTextureMapper's own
-// matrix solve already makes) ask for. weights/area come from edgeWeights and
-// signedArea2 above; the caller supplies each vertex's own value of the
-// attribute being interpolated, in the same A/B/C order edgeWeights used.
-export const interpolate = (weights: EdgeWeights, area: number, va: number, vb: number, vc: number): number =>
-  (weights.w0 * va + weights.w1 * vb + weights.w2 * vc) / area;
+// matrix solve already makes) ask for. The weights and the area come from the
+// two functions above and signedArea2; the caller supplies each vertex's own
+// value of the attribute being interpolated, in the same A/B/C order.
+export const interpolate = (
+  w0: number,
+  w1: number,
+  w2: number,
+  area: number,
+  va: number,
+  vb: number,
+  vc: number,
+): number => (w0 * va + w1 * vb + w2 * vc) / area;
 
 // Math.hypot is the same number and roughly an order of magnitude slower — it
 // rescales its arguments to survive an overflow that screen coordinates, bounded
@@ -144,8 +197,8 @@ export const edgeReciprocals = (
 // where two edges each take a bite out of the pixel and only the deeper one is
 // counted. A corner is one pixel of a silhouette and the error there is far
 // smaller than the staircase it replaces.
-export const edgeCoverage = (weights: EdgeWeights, reciprocals: EdgeReciprocals): number => {
-  const distance = Math.min(weights.w0 * reciprocals.r0, weights.w1 * reciprocals.r1, weights.w2 * reciprocals.r2);
+export const edgeCoverage = (w0: number, w1: number, w2: number, reciprocals: EdgeReciprocals): number => {
+  const distance = Math.min(w0 * reciprocals.r0, w1 * reciprocals.r1, w2 * reciprocals.r2);
 
   return Math.min(1, Math.max(0, distance + 0.5));
 };
