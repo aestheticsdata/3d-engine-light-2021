@@ -98,7 +98,20 @@ class FrameBuffer {
   // has any self-occlusion at all — without touching the colour buffer for
   // a pixel nothing will show.
   public depthTestPasses(x: number, y: number, invD: number): boolean {
-    return invD > this.depth[y * this.width + x];
+    return this.depthTestPassesAt(y * this.width + x, invD);
+  }
+
+  // The same three tests and writes, addressed by a pixel index the caller
+  // already has (E3f/3DE-116). Rasterizer's inner loop holds the row's base
+  // index and adds x to it, so the multiply that y * width + x costs happens
+  // once per scanline rather than twice per surviving pixel — once for the
+  // depth test and again for the write.
+  //
+  // The coordinate forms above and below are not duplicates of these: they are
+  // these, called with the index computed. fillPoint keeps them because a point
+  // walks a block rather than a row and has no base index to carry.
+  public depthTestPassesAt(index: number, invD: number): boolean {
+    return invD > this.depth[index];
   }
 
   public readPixel(x: number, y: number): RGBA {
@@ -117,10 +130,13 @@ class FrameBuffer {
   // after it would blend straight through as if the translucent one had
   // never been there.
   public writePixel(x: number, y: number, invD: number, r: number, g: number, b: number, alpha: number) {
-    const pixelIndex = y * this.width + x;
-    const byteIndex = pixelIndex * 4;
+    this.writePixelAt(y * this.width + x, invD, r, g, b, alpha);
+  }
 
-    this.depth[pixelIndex] = invD;
+  public writePixelAt(index: number, invD: number, r: number, g: number, b: number, alpha: number) {
+    const byteIndex = index * 4;
+
+    this.depth[index] = invD;
 
     if (alpha >= 1) {
       this.colour[byteIndex] = r;
@@ -142,6 +158,10 @@ class FrameBuffer {
   // Rasterizer's fillTriangle carries the rest of the argument.
   public blendPixel(x: number, y: number, r: number, g: number, b: number, alpha: number) {
     this.blendInto((y * this.width + x) * 4, r, g, b, alpha);
+  }
+
+  public blendPixelAt(index: number, r: number, g: number, b: number, alpha: number) {
+    this.blendInto(index * 4, r, g, b, alpha);
   }
 
   private blendInto(byteIndex: number, r: number, g: number, b: number, alpha: number) {

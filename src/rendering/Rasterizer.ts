@@ -36,8 +36,12 @@
 
 import {
   edgeCoverage,
+  edgeFeatherReach,
   edgeReciprocals,
-  edgeWeights,
+  edgeRowTerm,
+  edgeSlope,
+  edgeSpanBound,
+  edgeWeightAt,
   interpolate,
   isInside,
   screenBounds,
@@ -147,37 +151,131 @@ class Rasterizer {
     const reciprocals = this.antialiasing ? edgeReciprocals(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y) : null;
     let wrote = false;
 
+    // The three edge functions, split into the part that is constant for the
+    // whole triangle and the part that moves (E3f/3DE-116). w0 belongs to edge
+    // B→C, w1 to C→A, w2 to A→B — the same rotation the weights themselves
+    // follow, and each edge's own first vertex is the origin its row term and
+    // its per-pixel term are both measured from.
+    //
+    // This is the ticket's largest single win and the reason `raster` was 92% of
+    // a heavy frame: the old loop rebuilt all three weights from the six vertex
+    // coordinates at every pixel, which is five subtractions and two
+    // multiplications per edge, and boxed the result in a fresh object. What is
+    // left below is one subtraction and one multiplication per edge, against
+    // numbers held in registers.
+    const e0x = v2.x - v1.x;
+    const e0y = v2.y - v1.y;
+    const e1x = v0.x - v2.x;
+    const e1y = v0.y - v2.y;
+    const e2x = v1.x - v0.x;
+    const e2y = v1.y - v0.y;
+    // The three edges' slopes, folded here so the span below costs a multiply
+    // and an add per row rather than a division. Three divisions a scanline was
+    // measurably worse than the bounding box it replaced on a mesh of small
+    // triangles — the sphere's raster went UP by a third — because a short
+    // triangle pays that setup on every one of its few rows and saves almost
+    // nothing per row in return.
+    const s0 = edgeSlope(e0x, e0y);
+    const s1 = edgeSlope(e1x, e1y);
+    const s2 = edgeSlope(e2x, e2y);
+    // Zero with the feather off, which is what makes the span below the plain
+    // edge bound in that case rather than a special-cased one.
+    const f0 = reciprocals ? edgeFeatherReach(e0y, reciprocals.r0) : 0;
+    const f1 = reciprocals ? edgeFeatherReach(e1y, reciprocals.r1) : 0;
+    const f2 = reciprocals ? edgeFeatherReach(e2y, reciprocals.r2) : 0;
+    const width = this.buffer.bufferWidth;
+
     this.shader.beginTriangle(request, area);
 
     for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
-      for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      const py = y + 0.5;
+      const t0 = edgeRowTerm(e0x, py, v1.y);
+      const t1 = edgeRowTerm(e1x, py, v2.y);
+      const t2 = edgeRowTerm(e2x, py, v0.y);
+      // The row's own base index, so the depth test and the write below step
+      // along it instead of each recomputing y * width + x per pixel.
+      const rowIndex = y * width;
+
+      // The stretch of this row the triangle can actually reach (E3f/3DE-116).
+      // A triangle covers about half its own bounding box whatever its shape, so
+      // walking the box means roughly one wasted iteration per useful one — and
+      // on a thin diagonal it is far worse than that.
+      //
+      // This only ever NARROWS the walk. Every pixel it still visits gets the
+      // same isInside / coverage / depth test it always did, and the bounds are
+      // rounded outward by a whole pixel so a rounding error cannot drop one the
+      // old loop would have kept. That is what makes it a skip rather than a
+      // second, subtly different definition of "inside" — the edge test remains
+      // the only thing that decides.
+      if (
+        this.rowIsOutside(t0, e0y, reciprocals?.r0) ||
+        this.rowIsOutside(t1, e1y, reciprocals?.r1) ||
+        this.rowIsOutside(t2, e2y, reciprocals?.r2)
+      ) {
+        continue;
+      }
+
+      let from = bounds.minX;
+      let to = bounds.maxX;
+
+      // Each edge widened by its OWN feather reach rather than by a shared
+      // margin — see edgeFeatherReach. f0/f1/f2 are zero with the pass off, so
+      // this is the bare edge bound then.
+      if (e0y > 0) {
+        to = Math.min(to, Math.ceil(edgeSpanBound(v1.x, s0, py, v1.y) + f0));
+      } else if (e0y < 0) {
+        from = Math.max(from, Math.floor(edgeSpanBound(v1.x, s0, py, v1.y) - f0) - 1);
+      }
+
+      if (e1y > 0) {
+        to = Math.min(to, Math.ceil(edgeSpanBound(v2.x, s1, py, v2.y) + f1));
+      } else if (e1y < 0) {
+        from = Math.max(from, Math.floor(edgeSpanBound(v2.x, s1, py, v2.y) - f1) - 1);
+      }
+
+      if (e2y > 0) {
+        to = Math.min(to, Math.ceil(edgeSpanBound(v0.x, s2, py, v0.y) + f2));
+      } else if (e2y < 0) {
+        from = Math.max(from, Math.floor(edgeSpanBound(v0.x, s2, py, v0.y) - f2) - 1);
+      }
+
+      // Clamped back to the box AFTER the feather's widening, and not before it:
+      // bounds.maxX can be the last column of the buffer, and a `to` one past it
+      // would index the first pixel of the NEXT row — the buffer is a flat array
+      // with no per-row guard, so that is a write into the wrong scanline rather
+      // than an out-of-range no-op.
+      const last = Math.min(to, bounds.maxX);
+
+      for (let x = Math.max(from, bounds.minX); x <= last; x += 1) {
         const px = x + 0.5;
-        const py = y + 0.5;
-        const weights = edgeWeights(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y, px, py);
+        const w0 = edgeWeightAt(t0, e0y, px, v1.x);
+        const w1 = edgeWeightAt(t1, e1y, px, v2.x);
+        const w2 = edgeWeightAt(t2, e2y, px, v0.x);
         // Whole for every pixel the edge test itself accepted, so an interior
         // pixel never pays for a coverage estimate it already knows the answer
         // to: the feather's cost scales with a triangle's perimeter, not its area.
         let covered = 1;
 
-        if (!isInside(weights)) {
+        if (!isInside(w0, w1, w2)) {
           if (!reciprocals) {
             continue;
           }
 
-          covered = edgeCoverage(weights, reciprocals);
+          covered = edgeCoverage(w0, w1, w2, reciprocals);
 
           if (covered <= 0) {
             continue;
           }
         }
 
-        const invD = interpolate(weights, area, v0.invD, v1.invD, v2.invD);
+        const index = rowIndex + x;
+        const invD = interpolate(w0, w1, w2, area, v0.invD, v1.invD, v2.invD);
 
-        if (!this.buffer.depthTestPasses(x, y, invD)) {
+        if (!this.buffer.depthTestPassesAt(index, invD)) {
           continue;
         }
 
-        const colour = this.shader.shade(x, y, weights, invD);
+        const colour = this.shader.shade(x, y, w0, w1, w2, invD);
 
         if (covered < 1) {
           // Deliberately not counted as a write. `wrote` carries the drawn-triangle
@@ -185,16 +283,35 @@ class Rasterizer {
           // not begin counting as drawn the moment EDGE ANTIALIAS goes on: a
           // rendering toggle that moves a telemetry number is precisely the
           // disagreement this console is being de-mocked to stop.
-          this.buffer.blendPixel(x, y, colour[0], colour[1], colour[2], request.opacity * covered);
+          this.buffer.blendPixelAt(index, colour[0], colour[1], colour[2], request.opacity * covered);
           continue;
         }
 
-        this.buffer.writePixel(x, y, invD, colour[0], colour[1], colour[2], request.opacity);
+        this.buffer.writePixelAt(index, invD, colour[0], colour[1], colour[2], request.opacity);
         wrote = true;
       }
     }
 
     return wrote;
+  }
+
+  // Whether one edge puts the whole of the current scanline outside the
+  // triangle. Only a horizontal edge can: any other varies along the row, and
+  // the span bounds handle it.
+  //
+  // "Outside" means outside the EDGE with the feather off, and outside the
+  // feather's own half-pixel reach with it on. An edge weight divided by its
+  // edge length is the perpendicular distance — the same quantity edgeCoverage
+  // reads — so the test is the distance test edgeCoverage would have applied to
+  // every pixel of the row. Skipping on the bare sign instead loses the soft
+  // edge along every horizontal silhouette, which is what the pixel diff against
+  // master caught.
+  private rowIsOutside(rowTerm: number, edgeDy: number, reciprocal: number | undefined): boolean {
+    if (edgeDy !== 0) {
+      return false;
+    }
+
+    return reciprocal === undefined ? rowTerm < 0 : rowTerm * reciprocal <= -0.5;
   }
 
   // POINTS mode's whole raster pass (E3c/COS-243): a square block around one
