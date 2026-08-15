@@ -95,11 +95,6 @@ export interface ProjectedBoundsPass {
   targetHeight: number;
 }
 
-// Two vertices are a line and one is a dot. Neither is a box, and the case is
-// real rather than defensive: push the camera into a shape and E2's near plane
-// takes all but a corner of it.
-const MIN_BOUNDS_VERTICES = 3;
-
 const clampTo = (value: number, extent: number): number => Math.min(extent, Math.max(0, value));
 
 // The uniform factor a transform carries, read as the length of its first
@@ -129,6 +124,14 @@ class Mesh {
   private readonly triangles: Triangle[];
   private readonly radius: number;
   private scaledRadius: number;
+  // Where the shape's own origin ended up this frame, read off the transform's
+  // translation column (HAL-124). The shape's rotation lives in the linear part
+  // and its own pose carries no translation, so this column is whatever the
+  // camera put there and a spin cannot touch it — which is exactly what the
+  // selection box needs and what the posed points cannot give it.
+  private originX: number;
+  private originY: number;
+  private originZ: number;
   // Allocated with the mesh even though only GOURAUD refills it: it is two
   // Float32Arrays sized to the points array — 68KB on the largest shape in the
   // registry — and allocating them on the first frame the chip is picked would
@@ -144,6 +147,9 @@ class Mesh {
     this.triangles = [...options.triangles];
     this.radius = options.boundingRadius;
     this.scaledRadius = options.boundingRadius;
+    this.originX = 0;
+    this.originY = 0;
+    this.originZ = 0;
     this.vertexNormals = new VertexNormals(this.points.length);
   }
 
@@ -204,54 +210,60 @@ class Mesh {
     return bounds;
   }
 
-  // The projected box, folded on demand the way getBounds above is and for the
-  // same reason: the points hold whatever this frame's setTransform wrote, so
-  // the box describes the pose about to be drawn.
+  // The box the viewport's selection bracket is drawn from: the shape's posed
+  // origin, squared off by its bounding radius.
   //
-  // Over the points rather than the triangles, which is the whole cost argument.
-  // The raster path projects each vertex once per incident face — 720
-  // projections on the sphere for its 143 points, 23760 on the torus knot for
-  // its 3960 — so reading the box off the triangles would be five folds of the
-  // work this one is. One scratch record for the whole loop, and the mesh's own
-  // points are the only thing walked.
+  // Deliberately not the tight AABB of the projected vertices, which is what
+  // this shipped as and what HAL-124 replaced. A rotating solid's screen box
+  // genuinely changes size on every frame — the extreme vertex keeps changing —
+  // so a bracket that tracked it exactly breathed continuously and dragged its
+  // label along the moving left edge. Tightness is not worth a bracket that
+  // never sits still; a spinning shape has to sit inside a box that does.
   //
-  // Null rather than an empty box when nothing is left to bracket: a caller that
-  // got zeros would draw a degenerate mark in the corner instead of hiding the
-  // bracket, which is the honest answer while a mesh is still off the stage on
-  // its way in.
+  // Both inputs are invariant under rotation by construction, so the stillness
+  // is structural rather than smoothed. boundingRadius is already orientation-
+  // invariant on purpose — see its getter, where the depth histogram needs the
+  // same property for the same reason — and originX/Y/Z is the transform column
+  // a turntable cannot reach. Neither is a filter over past frames, so the box
+  // has no lag when the camera moves.
+  //
+  // The cost is a square that circumscribes rather than hugs, which reads as
+  // loose on a flat or elongated shape. That is the trade, and it is the same
+  // one the design's own fixed square made before any of this existed.
+  //
+  // Two projections rather than a fold over the points, and the second is what
+  // turns the radius into screen pixels: it is the origin displaced along +x,
+  // which is screen-x in this space, so the pair share one projection path and
+  // Mesh still needs no camera of its own to size anything.
   public projectedBounds(pass: ProjectedBoundsPass): ScreenRect | null {
-    const projected: ScreenPoint = { x: 0, y: 0 };
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let survivors = 0;
+    const anchor = this.points[0];
 
-    for (const point of this.points) {
-      // A vertex behind the eye projects mirrored across the vanishing point, so
-      // folding it in would drag the box somewhere the shape is not.
-      if (!point.project(projected)) {
-        continue;
-      }
-
-      survivors += 1;
-      minX = Math.min(minX, projected.x);
-      maxX = Math.max(maxX, projected.x);
-      minY = Math.min(minY, projected.y);
-      maxY = Math.max(maxY, projected.y);
-    }
-
-    if (survivors < MIN_BOUNDS_VERTICES) {
+    if (!anchor) {
       return null;
     }
 
-    const left = clampTo(minX + pass.offsetX, pass.targetWidth);
-    const right = clampTo(maxX + pass.offsetX, pass.targetWidth);
-    const top = clampTo(minY + pass.offsetY, pass.targetHeight);
-    const bottom = clampTo(maxY + pass.offsetY, pass.targetHeight);
+    const centre: ScreenPoint = { x: 0, y: 0 };
+    const edge: ScreenPoint = { x: 0, y: 0 };
 
-    // Both edges clamped to the same side: the mesh is wholly past that edge of
-    // the target and none of it is on screen to bracket.
+    // E2's near plane, asked once of the origin rather than counted over the
+    // vertices: a shape whose own centre is behind the eye has no box worth
+    // drawing, and the projection is singular there anyway.
+    if (!anchor.withPosition(this.originX, this.originY, this.originZ).project(centre)) {
+      return null;
+    }
+
+    anchor.withPosition(this.originX + this.scaledRadius, this.originY, this.originZ).project(edge);
+
+    const half = Math.abs(edge.x - centre.x);
+    const left = clampTo(centre.x - half + pass.offsetX, pass.targetWidth);
+    const right = clampTo(centre.x + half + pass.offsetX, pass.targetWidth);
+    const top = clampTo(centre.y - half + pass.offsetY, pass.targetHeight);
+    const bottom = clampTo(centre.y + half + pass.offsetY, pass.targetHeight);
+
+    // Both edges clamped to the same side: the box is wholly past that edge of
+    // the target and there is nothing on screen to bracket. Null rather than a
+    // zero-size rect, so the caller hides the bracket instead of drawing a
+    // degenerate mark in the corner while a mesh is still on its way in.
     if (right - left <= 0 || bottom - top <= 0) {
       return null;
     }
@@ -365,6 +377,12 @@ class Mesh {
     // Derived from the matrix rather than passed in, so nothing has to thread
     // the SCALE row down through the render path to reach it.
     this.scaledRadius = this.radius * uniformScaleOf(transform);
+
+    // The fourth column, kept for projectedBounds — see the field for why it is
+    // the one part of this matrix a turntable cannot move.
+    this.originX = transform[0][3];
+    this.originY = transform[1][3];
+    this.originZ = transform[2][3];
   }
 
   // The material half of setTransform above, and deliberately the same shape:
