@@ -123,8 +123,7 @@ const entries = {
   torusKnot25: {
     family: "KNOTS",
     title: "Cinquefoil knot",
-    description:
-      "The (2, 5) torus knot, 5₁ — Solomon's seal, five lobes of the same tube sweep in gold over deep blue.",
+    description: "The (2, 5) torus knot, 5₁ — Solomon's seal, five lobes of the same tube sweep in two tones of amber.",
     geometricFeature:
       "Two turns around the main axis to five through the hole; coprime p and q are what make the curve close as one loop.",
     densityLabel: "High density",
@@ -144,7 +143,7 @@ const entries = {
   torusKnot27: {
     family: "KNOTS",
     title: "Septafoil knot",
-    description: "The (2, 7) torus knot, 7₁ — seven lobes in mint and violet, the longest curve of the four.",
+    description: "The (2, 7) torus knot, 7₁ — seven lobes in mint over deep green, the longest curve of the four.",
     geometricFeature:
       "Its curve is the longest in the registry, so the sweep spends its whole tessellation budget on path segments.",
     densityLabel: "High density",
@@ -164,7 +163,7 @@ const entries = {
   torusKnot34: {
     family: "KNOTS",
     title: "(3, 4) torus knot",
-    description: "The (3, 4) torus knot, 8₁₉ — the only one of the four with p > 2, in peach over deep teal.",
+    description: "The (3, 4) torus knot, 8₁₉ — the only one of the four with p > 2, in pale cyan over deep teal.",
     geometricFeature:
       "Three turns around the main axis rather than two, so three strands cross every section of the torus instead of two.",
     densityLabel: "High density",
