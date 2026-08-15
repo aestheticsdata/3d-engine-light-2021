@@ -69,6 +69,62 @@ describe("resetAll", () => {
   });
 });
 
+// The preset pair (E8b). Both rest on the same distinction resetAll does — a
+// value is a setting once it has been REGISTERED, and a setState-only key is
+// frame telemetry — which is what keeps the live drawn-triangle count out of a
+// saved file and arbitrary keys off disk out of the store.
+describe("snapshot", () => {
+  it("returns every registered slice at its current value", () => {
+    const store = new UIStateStore();
+    store.registerSlice({ sceneSelection: "MESH_01", spin: 24 });
+    store.setState({ spin: 90 });
+
+    expect(store.snapshot()).toEqual({ sceneSelection: "MESH_01", spin: 90 });
+  });
+
+  it("omits a key that was only ever setState'd", () => {
+    const store = new UIStateStore();
+    store.registerSlice({ spin: 24 });
+    store.setState({ pitch: 45 });
+
+    expect(store.snapshot()).toEqual({ spin: 24 });
+  });
+});
+
+describe("hydrate", () => {
+  it("restores a slice the patch does not mention to its default", () => {
+    const store = new UIStateStore();
+    store.registerSlice({ spin: 24, pitch: 0 });
+    store.setState({ spin: 90, pitch: 45 });
+
+    store.hydrate({ spin: 12 });
+
+    expect(store.getState()).toEqual({ spin: 12, pitch: 0 });
+  });
+
+  it("drops a key nothing registered", () => {
+    const store = new UIStateStore();
+    store.registerSlice({ spin: 24 });
+
+    store.hydrate({ spin: 12, pitch: 45 });
+
+    expect(store.getState()).toEqual({ spin: 12 });
+  });
+
+  // One repaint for the whole file, exactly as RESET gets one for the whole
+  // console: a notification per slice would fan a preset load out into thirty.
+  it("notifies once for the whole patch", () => {
+    const store = new UIStateStore();
+    store.registerSlice({ spin: 24, pitch: 0, sky: true });
+
+    const seen: Readonly<UIState>[] = [];
+    store.subscribe((state) => seen.push({ ...state }));
+    store.hydrate({ spin: 12, pitch: 45, sky: false });
+
+    expect(seen).toEqual([{ spin: 12, pitch: 45, sky: false }]);
+  });
+});
+
 describe("subscribe", () => {
   it("returns an unsubscribe that stops delivery", () => {
     const store = new UIStateStore();

@@ -97,40 +97,18 @@
           <span class="toolbar__spacer"></span>
 
           <span class="toolbar__cluster">
-            <button
-              class="btn btn--secondary"
-              type="button"
-              data-placeholder="true"
-              title="Not wired to the engine yet."
-              aria-describedby="ph-capture"
-            >CAPTURE PNG</button>
-            <button
-              class="btn btn--secondary"
-              type="button"
-              data-placeholder="true"
-              title="Not wired to the engine yet."
-              aria-describedby="ph-save"
-            >SAVE PRESET</button>
-            <button
-              class="btn btn--secondary"
-              type="button"
-              data-placeholder="true"
-              title="Not wired to the engine yet."
-              aria-describedby="ph-load"
-            >LOAD</button>
-            <button
-              class="btn btn--code"
-              type="button"
-              data-placeholder="true"
-              title="Not wired to the engine yet."
-              aria-describedby="ph-copy"
-            >&lt;/&gt; COPY CODE</button>
+            <button class="btn btn--secondary" type="button" data-action="capturePng">CAPTURE PNG</button>
+            <button class="btn btn--secondary" type="button" data-action="savePreset">SAVE PRESET</button>
+            <button class="btn btn--secondary" type="button" data-action="loadPreset">LOAD</button>
+            <button class="btn btn--code" type="button" data-action="copyCode">&lt;/&gt; COPY CODE</button>
           </span>
 
-          <span class="placeholder-hint" id="ph-capture">Not wired to the engine yet.</span>
-          <span class="placeholder-hint" id="ph-save">Not wired to the engine yet.</span>
-          <span class="placeholder-hint" id="ph-load">Not wired to the engine yet.</span>
-          <span class="placeholder-hint" id="ph-copy">Not wired to the engine yet.</span>
+          <!-- LOAD's actual file picker. A real input rather than one built in
+               TypeScript, because markup belongs here — and hidden rather than
+               styled away, so it is out of the tab order and out of the flex row
+               without a rule in the stylesheet to keep it that way. The button
+               above clicks it; SessionActions reads what comes back. -->
+          <input type="file" id="presetFile" accept="application/json" hidden />
         </div>
       </div>
 

@@ -204,6 +204,56 @@ class UIStateStore {
     this.notify();
   }
 
+  // Every registered slice at its current value — what SAVE PRESET writes and
+  // COPY CODE prints (E8b).
+  //
+  // Keyed off `defaults` rather than `state`, which is the same distinction
+  // resetAll rests on: a key is only a slice once its owner has registered it
+  // with the value RESET restores, so a key that only ever arrived through
+  // setState is not part of the scene and is not saved.
+  //
+  // That test is necessary and not sufficient, and the caller has to know it.
+  // drawnTriangles is registered — RESET has to zero the readout — while being
+  // pure renderer output, so this method reports it and scenePreset.ts is what
+  // keeps it out of the file. There is no flag here to distinguish them: this
+  // store's business is which values exist, not which ones mean something.
+  public snapshot(): Partial<UIState> {
+    const values: Record<string, unknown> = {};
+
+    for (const key of Object.keys(this.defaults)) {
+      values[key] = (this.state as Record<string, unknown>)[key];
+    }
+
+    return values as Partial<UIState>;
+  }
+
+  // The write half, and deliberately not setState: a preset arrives as a WHOLE
+  // scene, so this starts from the defaults rather than from whatever the
+  // console happens to be showing. A slice the file does not mention therefore
+  // loads at its default, which is what makes a preset saved before a later
+  // ticket added a slice still load — and it is why the format needs no
+  // migration for an added slice.
+  //
+  // Unregistered keys are dropped rather than assigned. The file is
+  // user-supplied, and a store that accepted arbitrary keys off disk would be a
+  // store no widget could reason about.
+  public hydrate(patch: Partial<UIState>) {
+    const accepted: Record<string, unknown> = {};
+
+    // Object.hasOwn rather than `in`, because the patch ultimately comes off
+    // disk: `in` walks the prototype chain, so a slice sharing a name with
+    // anything on Object.prototype would be "present" in every patch ever
+    // passed here and hydrate to a function.
+    for (const key of Object.keys(this.defaults)) {
+      if (Object.hasOwn(patch, key)) {
+        accepted[key] = (patch as Record<string, unknown>)[key];
+      }
+    }
+
+    Object.assign(this.state, this.defaults, accepted);
+    this.notify();
+  }
+
   // Returns the unsubscribe function.
   public subscribe(listener: Listener): () => void {
     this.listeners.add(listener);

@@ -33,9 +33,16 @@ class SliderRow {
   private readonly valueNode: HTMLElement;
   private readonly labelNode: HTMLElement;
   private readonly format: (value: number) => string;
+  // Held as numbers as well as written onto the element, so setValue can clamp
+  // in the same space its caller reads back rather than parsing the attribute
+  // again on every write.
+  private readonly min: number;
+  private readonly max: number;
 
   constructor(options: SliderRowOptions) {
     this.format = options.format;
+    this.min = options.min;
+    this.max = options.max;
 
     this.root = document.createElement("label");
     this.root.className = "slider-row";
@@ -90,10 +97,22 @@ class SliderRow {
   }
 
   // Used by RESET, which writes the store's defaults back through the rows
-  // rather than rebuilding them.
-  public setValue(value: number) {
-    this.input.value = String(value);
-    this.writeValue(value);
+  // rather than rebuilding them, and by preset load (E8b), which writes numbers
+  // that came off disk.
+  //
+  // Returns what was actually applied, and clamps to get there. The element
+  // sanitises an out-of-range assignment on its own, so without this the thumb,
+  // the printed value and the engine would disagree about the same write: the
+  // track would sit at its end, the read-out would print 99999, and the caller
+  // would hand 99999 to the rig. This row is the one place that knows the range,
+  // so it is the one place that can answer with the number that survived it.
+  public setValue(value: number): number {
+    const applied = Math.min(this.max, Math.max(this.min, value));
+
+    this.input.value = String(applied);
+    this.writeValue(applied);
+
+    return applied;
   }
 
   // slider.css already paints the disabled track and thumb. What it cannot

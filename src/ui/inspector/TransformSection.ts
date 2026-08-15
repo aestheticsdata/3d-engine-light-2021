@@ -148,17 +148,32 @@ class TransformSection {
   // camera, as CameraSection.setCameraUi.
   public syncFromStore() {
     const state = this.store.getState();
-    const pitch = state.pitch ?? DEFAULT_PITCH_DEGREES;
-    const yaw = state.yaw ?? DEFAULT_YAW_DEGREES;
-    const roll = state.roll ?? DEFAULT_ROLL_DEGREES;
-    const spin = state.spin ?? DEFAULT_SPIN_DEGREES_PER_SECOND;
-    const scale = state.scale ?? DEFAULT_SCALE;
 
-    this.pitch.setValue(pitch);
-    this.yaw.setValue(yaw);
-    this.roll.setValue(roll);
-    this.spin.setValue(spin);
-    this.scale.setValue(scale);
+    // The row's answer, not the store's: setValue clamps to the range the row
+    // owns, and applying the number that was asked for rather than the one that
+    // survived would let a preset file (E8b) pose the shape somewhere no slider
+    // can reach while the track sits at its end.
+    const pitch = this.pitch.setValue(state.pitch ?? DEFAULT_PITCH_DEGREES);
+    const yaw = this.yaw.setValue(state.yaw ?? DEFAULT_YAW_DEGREES);
+    const roll = this.roll.setValue(state.roll ?? DEFAULT_ROLL_DEGREES);
+    const spin = this.spin.setValue(state.spin ?? DEFAULT_SPIN_DEGREES_PER_SECOND);
+    const scale = this.scale.setValue(state.scale ?? DEFAULT_SCALE);
+
+    // And back into the store, when the clamp actually moved something. Clamping
+    // on the way to the rig alone would leave the store holding a number no row
+    // shows and no control can produce — which SAVE PRESET would then write
+    // straight back out, laundering a hand-edited file into one the console
+    // appears to vouch for. Only a file can get one in here, so on every normal
+    // path this costs one comparison per row and no notification.
+    if (
+      pitch !== state.pitch ||
+      yaw !== state.yaw ||
+      roll !== state.roll ||
+      spin !== state.spin ||
+      scale !== state.scale
+    ) {
+      this.store.setState({ pitch, yaw, roll, spin, scale });
+    }
 
     this.apply.onPitch(pitch);
     this.apply.onYaw(yaw);

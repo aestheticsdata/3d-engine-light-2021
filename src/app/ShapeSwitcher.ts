@@ -60,6 +60,14 @@ class ShapeSwitcher {
     return this.currentPrimitiveName;
   }
 
+  // What the scene is becoming, which is what a preset has to record (E8b):
+  // `current` is still null through the opening entrance and stays one shape
+  // behind for the whole 1250ms of a switch, so saving from it would write down
+  // the shape being left rather than the one on screen.
+  public get target(): string | null {
+    return this.targetPrimitiveName;
+  }
+
   // An arrow property: it is handed to the primitive picker as a change
   // callback and would lose its `this` as a plain method.
   public request = (primitive: string) => {
