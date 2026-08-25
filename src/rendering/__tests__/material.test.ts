@@ -230,16 +230,19 @@ describe("the resolved channels", () => {
 // can actually settle. The geometry half is snapshot:geometry's, and the
 // transform half is ShapeRig's; what is left is whether the resolution is the
 // identity at the defaults, for every one of the several thousand triangles in
-// the twenty shapes rather than for the handful anyone would think to check.
+// the registry rather than for the handful anyone would think to check. The
+// count pinned below moves whenever the registry legitimately grows — water
+// brought it to twenty-one (HAL-156) — and pinning it is the point: a shape
+// vanishing from the registry must fail here, not slip out silently.
 //
 // Colours are compared parsed, not as strings: the registry authors
 // `rgba(0,180,89,1)` and the blend prints `rgba(0, 180, 89, 1)`, which is the
 // same colour spelled differently and the same pixel either way.
 describe("the default material over the whole registry", () => {
-  it("resolves every authored triangle in all twenty shapes to the colour it was authored with", () => {
+  it("resolves every authored triangle in all twenty-one shapes to the colour it was authored with", () => {
     const shapes = Object.entries(data);
 
-    expect(shapes).toHaveLength(20);
+    expect(shapes).toHaveLength(21);
 
     shapes.forEach(([name, object3D]) => {
       object3D.triangles.forEach((triangle, index) => {
