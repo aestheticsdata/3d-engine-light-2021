@@ -97,7 +97,7 @@
   --size-crosshair: 24px;
   --size-selection-corner: 14px;
   --size-selection-label-h: 16px;
-  --size-camera-readout-minw: 148px;
+  --size-camera-readout-w: 200px;
   --size-tooltip-max-w: 220px; /* NEW — no design equivalent, carried over from main.css L330 */
 
   /* dividers + primitives */

@@ -27,12 +27,19 @@
 }
 
 /* The desktop camera readout. Mobile collapses it to three stacked chips, which
-   the viewport ticket owns, so this has no mobile block. */
+   the viewport ticket owns, so this has no mobile block.
+
+   Fixed width, not a min-width (HAL-166): cam.pos/cam.rot/target print three
+   live signed one-decimal numbers each, and their digit count changes every
+   frame as the camera orbits — a min-width let the panel grow and shrink with
+   them instead of holding still. 200px covers the widest row (a 7-char key
+   plus three space-separated values up to "-1234.5", the range the FOV and
+   zoom sliders can reach together) with room to spare. */
 .hud-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-width: var(--size-camera-readout-minw);
+  width: var(--size-camera-readout-w);
   padding: var(--space-3) var(--space-4-5);
   background: var(--elevation-hud-bg);
   border: var(--size-hairline) solid var(--elevation-hud-border);
