@@ -149,6 +149,13 @@
   pointer-events: auto;
 }
 
+/* Same opt-in as the expand toggle beside it — this is theatre mode's only
+   surviving play/pause control, so it must be clickable through the HUD's
+   pointer-events:none layer. */
+.viewport-hud__playpause-btn {
+  pointer-events: auto;
+}
+
 .viewport-hud__camera {
   flex: 0 0 auto;
 }
