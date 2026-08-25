@@ -197,7 +197,12 @@
                  sidebar itself never scrolls. -->
             <section class="panel panel--fill shape-story" data-mpanel="scene">
               <div class="panel__header">
-                <span class="panel__title">shape story</span>
+                <!-- Written by ShapeStoryPanel, because this card has two modes:
+                     a molecule retitles it MOLECULE PROPERTIES. Lowercase here
+                     and in the panel's own strings — .panel__title uppercases in
+                     CSS, and a pre-shouted string would be a second styling
+                     source. -->
+                <span id="shapeStoryHeader" class="panel__title">shape story</span>
                 <!-- Carries a second class only so the mobile branch can drop it:
                      the design's mobile card is the title alone, and hiding it
                      there beats shipping a second header. -->
@@ -209,15 +214,18 @@
                 <p id="shapeStoryDescription" class="shape-story__text"></p>
                 <p id="shapeStoryFeature" class="shape-story__text shape-story__text--dim"></p>
                 <span class="badge badge--info">
-                  <span class="badge__label">DENSITY</span>
+                  <!-- DENSITY for a solid, FORMULA for a molecule: the badge is
+                       the card's one emphasised slot, and the formula is the
+                       first line anyone looks for. -->
+                  <span id="shapeStoryBadgeLabel" class="badge__label">DENSITY</span>
                   <span id="shapeStoryDensity" class="badge__value"></span>
                 </span>
                 <div class="shape-story__footer">
-                  <div class="shape-story__row">
+                  <div id="shapeStoryGeneratorRow" class="shape-story__row">
                     <span class="shape-story__key">GENERATOR</span>
                     <span id="shapeStoryGenerator" class="shape-story__value"></span>
                   </div>
-                  <div class="shape-story__row">
+                  <div id="shapeStoryWindingRow" class="shape-story__row">
                     <span class="shape-story__key">WINDING</span>
                     <!-- A literal, not a data field: every primitive in this
                          engine emits counter-clockwise triangles, and commit
@@ -227,6 +235,12 @@
                          ShapeInfo alongside `generator`. -->
                     <span class="shape-story__value">counter-clockwise</span>
                   </div>
+                  <!-- Molecule mode only, and empty for the twenty solids:
+                       ShapeStoryPanel fills it with one .shape-story__row per
+                       property plus the derived MOLAR MASS, in place of the two
+                       rows above. It sits between them and REFERENCES so the
+                       links stay the last thing in the footer in both modes. -->
+                  <div id="shapeStoryProperties"></div>
                   <!-- Not in the mockup: COS-212 shipped the reference links and
                        this rebuild keeps them, as the value slot of a third row.
                        syncShapeReferences fills the container; the row hides
@@ -312,6 +326,67 @@
                        #app[data-viewport], the same shape TabGroup uses for
                        data-tab. -->
                   <div class="viewport-hud__top-right">
+                    <!-- Theatre mode folds the whole toolbar away (layout.css),
+                         taking #playPause with it, so this is the transport's
+                         third mount and the only one theatre mode leaves
+                         standing. TransportBar binds every [data-transport]
+                         node already; this needs no TS change, only a mount. -->
+                    <button
+                      type="button"
+                      class="quick-toggle viewport-hud__playpause-btn"
+                      data-transport="toggle"
+                    >PAUSE</button>
+
+                    <!-- Invert toggles (HAL-163): independent per axis, both
+                         off by default, sitting left of the expand toggle. -->
+                    <button
+                      type="button"
+                      id="viewportInvertPitchToggle"
+                      class="hud-icon-btn viewport-hud__invert-pitch-btn"
+                      aria-pressed="false"
+                      aria-label="Invert vertical drag"
+                    >
+                      <svg
+                        class="hud-icon-btn__glyph"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M8 1V15M5 4L8 1L11 4M5 12L8 15L11 12"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      id="viewportInvertYawToggle"
+                      class="hud-icon-btn viewport-hud__invert-yaw-btn"
+                      aria-pressed="false"
+                      aria-label="Invert horizontal drag"
+                    >
+                      <svg
+                        class="hud-icon-btn__glyph"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M1 8H15M4 5L1 8L4 11M12 5L15 8L12 11"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
+
                     <button
                       type="button"
                       id="viewportExpandToggle"

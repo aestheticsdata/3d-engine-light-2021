@@ -75,6 +75,68 @@ Making it required means the compiler catches any future primitive that forgets 
 
 **`showStory` — drop it.** In the mockup the card is behind `showStory: this.props.showShapeStory ?? true` (design L1398, gating the `<sc-if>` at L134 desktop and L837 mobile), a design-tool preview prop with no production equivalent. Render the card unconditionally; there is no reason to make it optional.
 
+## Molecule mode
+
+Added by HAL-157, for the MOLECULES family. The card has **two** modes now, and this section is
+binding on the second exactly as everything above is on the first. For the twenty solids nothing
+here applies and nothing above changes.
+
+`ShapeStoryPanel.show(primitive, info, molecule?)` takes a third argument, `moleculeInfo[primitive]`,
+which is `undefined` for every non-molecule. **Its presence is the whole of the switch** — no flag,
+no second method, no branch in `Main`.
+
+| Slot | Solid | Molecule |
+| --- | --- | --- |
+| `.panel__title` | `shape story` | `molecule properties` |
+| Badge label | `DENSITY` | `FORMULA` |
+| Badge value | `info.densityLabel` | `moleculeFormula(structure.atoms)` |
+| GENERATOR row | shown | hidden |
+| WINDING row | shown | hidden |
+| `#shapeStoryProperties` | empty | one row per property, then MOLAR MASS |
+| REFERENCES | `info.references` | `molecule.references` |
+
+The header strings stay **lowercase in code**: `.panel__title` uppercases in CSS, so a pre-shouted
+string would be a second styling source. Singular *molecule* — one is on screen, and this card's rule
+is that its header names what it is showing. The `read` note is untouched, and still drops below
+900px.
+
+**The badge swap loses nothing.** POINTS and TRIANGLES sit on the SHAPE INFO card directly above and
+are the real numbers, where `densityLabel` was only prose. Molecules still declare a `densityLabel` —
+the field stays required, and stays honest, even while this card does not print it.
+
+**GENERATOR and WINDING hide rather than being repurposed.** WINDING is a hardcoded literal in the
+markup (see above); left standing under a chemistry header it would be the card asserting something
+about a molecule that it is not saying. Hiding is the `hidden` attribute plus one rule —
+`.shape-story__row[hidden] { display: none }` — because the UA's own `[hidden]` rule loses to the
+author-level `.shape-story__row { display: flex }`.
+
+**The property rows are the footer's own rows.** `#shapeStoryProperties` is `display: contents`, so
+the injected rows become real flex items of `.shape-story__footer` and take its `gap` — a block
+wrapper would have to restate that gap and the two would drift. The rows reuse
+`.shape-story__row` / `__key` / `__value` unchanged; the links reuse `.shape-story__link`, 44px touch
+targets and all. **Those two rules are the only CSS this mode adds.**
+
+**Four properties maximum**, plus the derived MOLAR MASS, which is always last: the reader meets what
+the file states before what was computed from it. The mass is formatted to 2 dp with `g/mol` **by the
+panel** — `molarMass` returns a number precisely so it can be printed more than one way. The footer is
+pinned with `margin-top: auto` and the card still has to fit at 320px, where every row pushes the
+prose up.
+
+**Three reference links, hard.** The REFERENCES row lays links out inline at a 14px gap with a 44px
+touch target each on mobile, so a fourth wraps the row and unpins the footer. PubChem and Wikipedia
+are mandatory, ChEBI where the molecule has an entry. All are static strings in `moleculeInfo.ts`;
+nothing is fetched, at build time or run time. The rejected sources and the licensing reasons are in
+HAL-153 and are not to be re-litigated.
+
+**Every write must be total, and this is the mode's one real trap.** The same nodes are repainted on
+every shape change, so each thing molecule mode touches — header, badge label, the two hidden rows,
+the injected properties, *and the GENERATOR value itself* — has to be written back on the solid path
+too. A field only one branch touches is a field that survives the switch away. `syncMode` is the
+single place both branches go through, so there is one list to keep total rather than two that must
+agree. The GENERATOR text is cleared entering molecule mode: nothing reads a hidden row, so it buys
+no pixel, but a row holding the previous shape's generator is exactly that untotal write. It was
+found by driving ten switches and diffing the card, which is the only way it surfaces.
+
 ## Constraints
 
 - Shell has already replaced `src/index.html` wholesale and re-provided every id `Main`'s constructor resolves (D2). `shapeStoryTitle`, `shapeStoryDescription`, `shapeStoryFeature`, `shapeStoryDensity`, `shapeStoryReferences` all hard-fail if absent — keep every one of them and add `shapeStoryGenerator`.

@@ -422,6 +422,14 @@ const entries = {
   },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
+// The narrow shape of the table above, before the widening below throws it
+// away. moleculeInfo.ts reads its key set out of this: the entries whose
+// `family` is literally "MOLECULES" are exactly the shapes that owe chemistry,
+// so a molecule landing in the registry without a moleculeInfo entry is a
+// compile error there rather than an empty card. Exported as a type only —
+// nothing may import these entries as a value and re-widen them itself.
+export type ShapeInfoEntries = typeof entries;
+
 const shapeInfo: Record<string, ShapeInfo> = entries;
 
 export default shapeInfo;
