@@ -35,7 +35,12 @@
 /* Extends a control's hit area without touching its painted size — several
    mobile controls are drawn under the 44 touch target on purpose, because the
    design is the reference. Consumers set the class and the custom property;
-   no other file may add a pseudo-element for this. */
+   no other file may add a pseudo-element for this.
+   --tap-pad sets both axes. --tap-pad-x / --tap-pad-y override one each, for a
+   control in a tight row where the same inset on both axes would reach past the
+   gap and cover a neighbour's painted box — a pad that steals a sibling's clicks
+   is worse than the small target it set out to fix (HAL-164). Setting neither
+   keeps the original uniform behaviour, so existing consumers are untouched. */
 .tap-pad {
   position: relative;
 }
@@ -43,5 +48,5 @@
 .tap-pad::after {
   content: "";
   position: absolute;
-  inset: calc(-1 * var(--tap-pad, 6px));
+  inset: calc(-1 * var(--tap-pad-y, var(--tap-pad, 6px))) calc(-1 * var(--tap-pad-x, var(--tap-pad, 6px)));
 }
