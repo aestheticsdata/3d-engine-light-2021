@@ -431,6 +431,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  ammonia: {
+    family: "MOLECULES",
+    title: "Ammonia",
+    description:
+      "Three white hydrogens on a blue nitrogen, tipped into a shallow pyramid by a lone pair this model does not draw.",
+    geometricFeature:
+      "Four spheres and three rods in one mesh; the hydrogens stand 120° apart in azimuth but only 106.7° apart between bonds, and that gap is the whole difference between a pyramid and a flat triangle.",
+    densityLabel: "Low density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it

@@ -22,6 +22,7 @@
 // to be re-litigated: the reasoning is in HAL-153, and it is licensing rather
 // than taste.
 
+import ammonia from "@data/molecules/ammonia";
 import methane from "@data/molecules/methane";
 import water from "@data/molecules/water";
 
@@ -80,6 +81,20 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/297" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Methane" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16183" },
+    ],
+  },
+  ammonia: {
+    structure: ammonia,
+    properties: [
+      // Experiment's number, where methane's is symmetry's: C3v leaves the bond
+      // angle free, so this one is measured rather than fixed at arccos(-1/3).
+      { label: "GEOMETRY", value: "trigonal pyramidal, 106.7°" },
+      { label: "BOILING POINT", value: "−33.3 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/222" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Ammonia" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16134" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;
