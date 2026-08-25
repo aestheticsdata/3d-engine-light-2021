@@ -56,7 +56,28 @@
    its own, so it lines up with the chip row it sits beside instead of
    inventing a second square size. */
 
+/* The pad is bounded by the neighbours, not by --size-touch-min, and the two
+   axes are bounded by different things — so it is not the (44 - 22) / 2 the
+   touch floor would suggest. Measured, that value takes each button's pad over
+   the next one's glyph, and on a narrow desktop over the quick-toggle band as
+   well, so a click meant for WIRE lands on the expand toggle. A pad that
+   answers for a sibling is worse than the small target it set out to fix.
+   Along the packed axis the ceiling is half the row's own gap: that tiles the
+   gap exactly, which both removes the dead seam between two buttons and cannot
+   reach a neighbour's box. That axis flips between the branches — the cluster
+   is a row here and a column under 900 (viewport.css) — so the mobile block at
+   the foot of this file swaps the two values rather than reusing these.
+   Across it the ceiling is the 8px of clearance to the quick-toggle band at
+   top: 40px; 5px keeps 3px of it.
+   Every value adds a hairline back, because an absolutely positioned
+   pseudo-element resolves `inset` against its containing block's PADDING box
+   while all of the above is measured on the border box. Without it each pad
+   lands a border short — a 2px seam left unclaimed in the middle of the gap,
+   which the computed value hides and only a click at the edge finds. */
 .hud-icon-btn {
+  --tap-pad-y: calc(var(--space-2) + var(--size-hairline));
+  --tap-pad-x: calc(var(--space-2) / 2 + var(--size-hairline));
+
   display: flex;
   flex: none;
   align-items: center;
@@ -77,11 +98,28 @@
   outline-offset: var(--size-hairline);
 }
 
+/* Border only, which is the one hover treatment the design system gives an
+   overlay control (02-primitives.md L216) and what .quick-toggle below already
+   does. It used to paint the glyph accent as well, and that was the bug behind
+   HAL-164: the pressed rule said the same two things, so a toggle under the
+   cursor — where it always is just after a click — rendered identically on and
+   off, and read as dead rather than as toggled. Hover states the pointer, the
+   fill states the value; they must not share a channel. */
 @media (hover: hover) {
   .hud-icon-btn:hover {
-    color: var(--color-accent);
-    border-color: var(--color-accent-overlay-border);
+    border-color: var(--color-accent);
   }
+}
+
+/* Filled, borrowed wholesale from .quick-toggle.is-on: this overlay already has
+   a vocabulary for an on/off control and a second one would only invite the
+   collision above back. It covers all three glyph buttons — both invert toggles
+   and the expand toggle, which ViewportExpander writes aria-pressed on too, so
+   theatre mode needs no rule of its own. */
+.hud-icon-btn[aria-pressed="true"] {
+  background: var(--color-accent-overlay);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .hud-icon-btn__glyph {
@@ -95,26 +133,19 @@
 
 /* Off #app's own attribute rather than a class on the button: the same shape
    TabGroup uses for data-tab, and it is what lets ViewportExpander write one
-   attribute and touch no class list. */
-#app[data-viewport="expanded"] .hud-icon-btn {
-  color: var(--color-accent);
-}
-
+   attribute and touch no class list.
+   Only the glyph swap keys off it. The accent colour that used to live here as
+   well went with HAL-164: written when the overlay carried exactly one glyph
+   button, it reached every .hud-icon-btn once HAL-163 added two more, so in
+   theatre mode both invert toggles were painted on whatever their real state
+   was. The pressed rule above is keyed to the state itself and says it once for
+   all three. */
 #app[data-viewport="expanded"] .hud-icon-btn__glyph--expand {
   display: none;
 }
 
 #app[data-viewport="expanded"] .hud-icon-btn__glyph--collapse {
   display: block;
-}
-
-/* The two invert toggles (HAL-163) carry their "on" state on aria-pressed
-   directly, rather than an #app attribute — each is independent of the
-   other, so there is no single shared state for #app to hold. */
-.viewport-hud__invert-pitch-btn[aria-pressed="true"],
-.viewport-hud__invert-yaw-btn[aria-pressed="true"] {
-  color: var(--color-accent);
-  border-color: var(--color-accent-overlay-border);
 }
 
 .quick-toggle {
@@ -149,6 +180,25 @@
 }
 
 @media (max-width: 899px) {
+  /* The cluster is a column here (viewport.css), so the axis each pad is
+     allowed to grow along is the opposite of the desktop one and the two
+     values swap. Vertically the neighbour is now directly above and below, at
+     --space-2-5, so half that gap is the whole budget; horizontally nothing
+     sits beside the column, so this is the one axis with room to spend on the
+     touch floor, and it is the phone that needs it most.
+     It buys about 43 rather than the 44 the arithmetic asks for: the column is
+     flex-end against a stage inset of --space-4, so the right half of the pad
+     runs out of stage before it runs out of value. Measured, not assumed. The
+     shortfall is left standing rather than bought back by widening the left
+     half, because left is canvas and a pad over canvas is drag-orbit the
+     viewport stops receiving — the same reason the camera readout beside these
+     buttons stays opted out. 44 on both axes is not reachable for this cluster
+     without moving it; 28 tall is the sibling gap's ceiling, not a choice. */
+  .hud-icon-btn {
+    --tap-pad-y: calc(var(--space-2-5) / 2 + var(--size-hairline));
+    --tap-pad-x: calc((var(--size-touch-min) - var(--size-hud-chip)) / 2 + var(--size-hairline));
+  }
+
   /* The denser background replaces the blur on mobile — deliberate asymmetry,
      backdrop-filter is expensive on phones and the extra alpha reads the same. */
   .hud-chip,
