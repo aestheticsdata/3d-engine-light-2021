@@ -22,6 +22,7 @@
 // to be re-litigated: the reasoning is in HAL-153, and it is licensing rather
 // than taste.
 
+import methane from "@data/molecules/methane";
 import water from "@data/molecules/water";
 
 import type { Molecule } from "@data/molecules/types";
@@ -64,6 +65,21 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/962" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Water" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15377" },
+    ],
+  },
+  methane: {
+    structure: methane,
+    properties: [
+      // Not measured, unlike water's bend: tetrahedral symmetry fixes this
+      // angle at arccos(−1/3) whatever the bond length, which is why the
+      // molecule file builds from cube corners rather than from the angle.
+      { label: "GEOMETRY", value: "tetrahedral, 109.47°" },
+      { label: "BOILING POINT", value: "−161.5 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/297" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Methane" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16183" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;

@@ -32,3 +32,4 @@ key is the shape the console boots on.
 | mucuboctahedron | 216 | 696 |
 | murhombicuboctahedron | 672 | 2392 |
 | water | 657 | 1104 |
+| methane | 1119 | 1872 |

@@ -420,6 +420,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  methane: {
+    family: "MOLECULES",
+    title: "Methane",
+    description:
+      "Four white hydrogens at the corners of a regular tetrahedron around a grey carbon — the shape every chemistry course opens on.",
+    geometricFeature:
+      "Five spheres and four rods in one mesh; where water's bend is experiment's number, the 109.47° between any two C–H bonds is symmetry's — arccos(−1/3), at any bond length.",
+    densityLabel: "Low density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it
