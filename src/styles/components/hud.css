@@ -108,6 +108,15 @@
   display: block;
 }
 
+/* The two invert toggles (HAL-163) carry their "on" state on aria-pressed
+   directly, rather than an #app attribute — each is independent of the
+   other, so there is no single shared state for #app to hold. */
+.viewport-hud__invert-pitch-btn[aria-pressed="true"],
+.viewport-hud__invert-yaw-btn[aria-pressed="true"] {
+  color: var(--color-accent);
+  border-color: var(--color-accent-overlay-border);
+}
+
 .quick-toggle {
   height: var(--size-chip-quick);
   padding: 0 var(--space-5);
