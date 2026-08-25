@@ -29,7 +29,7 @@ class OrbitInvertToggles {
     this.yawButton = scope.require<HTMLButtonElement>("#viewportInvertYawToggle", "Invert-yaw toggle is missing.");
     this.onPitchInvertChange = options.onPitchInvertChange;
     this.onYawInvertChange = options.onYawInvertChange;
-    this.pitchInverted = false;
+    this.pitchInverted = true;
     this.yawInverted = false;
 
     this.pitchButton.addEventListener("click", this.onPitchClick);

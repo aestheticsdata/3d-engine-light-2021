@@ -337,13 +337,14 @@
                       data-transport="toggle"
                     >PAUSE</button>
 
-                    <!-- Invert toggles (HAL-163): independent per axis, both
-                         off by default, sitting left of the expand toggle. -->
+                    <!-- Invert toggles (HAL-163): independent per axis, sitting
+                         left of the expand toggle. Vertical drag is inverted by
+                         default; horizontal is not. -->
                     <button
                       type="button"
                       id="viewportInvertPitchToggle"
                       class="hud-icon-btn tap-pad viewport-hud__invert-pitch-btn"
-                      aria-pressed="false"
+                      aria-pressed="true"
                       aria-label="Invert vertical drag"
                     >
                       <svg

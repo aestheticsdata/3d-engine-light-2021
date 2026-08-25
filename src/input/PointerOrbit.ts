@@ -71,8 +71,8 @@ class PointerOrbit {
   private orbitPitch: number;
   private orbitYaw: number;
   // Independent per axis: a user flipping vertical drag should not also flip
-  // horizontal, and the reverse. Off by default — current drag direction is
-  // unchanged until one is switched on.
+  // horizontal, and the reverse. Vertical starts inverted by default; horizontal
+  // does not, so its drag direction is unchanged until switched on.
   private invertPitch: boolean;
   private invertYaw: boolean;
 
@@ -91,7 +91,7 @@ class PointerOrbit {
     this.orbitLastY = 0;
     this.orbitPitch = 0;
     this.orbitYaw = 0;
-    this.invertPitch = false;
+    this.invertPitch = true;
     this.invertYaw = false;
 
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
