@@ -409,6 +409,17 @@ const entries = {
       },
     ],
   },
+  water: {
+    family: "MOLECULES",
+    title: "Water",
+    description:
+      "The first molecule of the registry: two white hydrogens on a red oxygen in CPK colours, bent rather than straight.",
+    geometricFeature:
+      "Three spheres and two rods in one mesh; the 104.45° bend between the O–H bonds is experiment's number, not a styling choice.",
+    densityLabel: "Low density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 const shapeInfo: Record<string, ShapeInfo> = entries;

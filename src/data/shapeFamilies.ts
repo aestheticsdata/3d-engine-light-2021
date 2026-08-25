@@ -29,10 +29,14 @@
 // the next shape of their kind rather than a bucket to be merged away now and
 // unpicked later.
 //
+// MOLECULES arrived with HAL-153: ball-and-stick chemistry beside the
+// mathematics. It trails the list because a new family is appended rather than
+// sorted in — the sections above it are where returning eyes expect them.
+//
 // Inert data with no behaviour, so it stays a table rather than becoming a class
 // (decisions.md D1a).
 
-const shapeFamilies = ["UNCATEGORIZED", "POLYHEDRA", "KNOTS", "FRACTALS", "SURFACES"] as const;
+const shapeFamilies = ["UNCATEGORIZED", "POLYHEDRA", "KNOTS", "FRACTALS", "SURFACES", "MOLECULES"] as const;
 
 export type ShapeFamily = (typeof shapeFamilies)[number];
 
