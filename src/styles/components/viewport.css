@@ -156,6 +156,13 @@
   pointer-events: auto;
 }
 
+/* Same opt-in, for the two invert toggles (HAL-163) sitting left of the
+   expand button. */
+.viewport-hud__invert-pitch-btn,
+.viewport-hud__invert-yaw-btn {
+  pointer-events: auto;
+}
+
 .viewport-hud__camera {
   flex: 0 0 auto;
 }

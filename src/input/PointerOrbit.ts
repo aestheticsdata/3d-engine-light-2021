@@ -70,6 +70,11 @@ class PointerOrbit {
   private orbitLastY: number;
   private orbitPitch: number;
   private orbitYaw: number;
+  // Independent per axis: a user flipping vertical drag should not also flip
+  // horizontal, and the reverse. Off by default — current drag direction is
+  // unchanged until one is switched on.
+  private invertPitch: boolean;
+  private invertYaw: boolean;
 
   constructor(options: PointerOrbitOptions) {
     this.canvas = options.canvas;
@@ -86,6 +91,8 @@ class PointerOrbit {
     this.orbitLastY = 0;
     this.orbitPitch = 0;
     this.orbitYaw = 0;
+    this.invertPitch = false;
+    this.invertYaw = false;
 
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
     this.canvas.addEventListener("pointermove", this.onPointerMove);
@@ -103,6 +110,14 @@ class PointerOrbit {
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.canvas.removeEventListener("pointercancel", this.onPointerCancel);
     this.canvas.removeEventListener("wheel", this.onWheel);
+  }
+
+  public setInvertPitch(invert: boolean) {
+    this.invertPitch = invert;
+  }
+
+  public setInvertYaw(invert: boolean) {
+    this.invertYaw = invert;
   }
 
   private beginOrbit(pointerId: number, x: number, y: number) {
@@ -125,14 +140,14 @@ class PointerOrbit {
     // (0, 0, -r) to (-r·sinθ, …), so a positive yaw swings the face the user is
     // grabbing to the *left*. The cursor has to subtract for the shape to
     // follow the drag rather than run away from it.
-    this.orbitYaw -= dx * DRAG_DEGREES_PER_PIXEL;
+    this.orbitYaw -= dx * DRAG_DEGREES_PER_PIXEL * (this.invertYaw ? -1 : 1);
     // Unclamped, and deliberately so on both axes now. The rig used to stop
     // pitch at ±89 and this total was left running against that clamp; it no
     // longer clamps at all, because a drag that hits a wall after 178° while
     // yaw spins freely is the one gesture in the console that cannot be
     // repeated indefinitely. The PITCH row still saturates at its own ±89 —
     // a range input has to be bounded — while the camera carries on past it.
-    this.orbitPitch -= dy * DRAG_DEGREES_PER_PIXEL;
+    this.orbitPitch -= dy * DRAG_DEGREES_PER_PIXEL * (this.invertPitch ? -1 : 1);
 
     this.onOrbit(this.orbitPitch, this.orbitYaw);
   }
