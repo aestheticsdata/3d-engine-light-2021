@@ -8,18 +8,17 @@
 # ONE-TIME SERVER SETUP (ks-b):
 #
 # 1) Create releases directory:
-#    sudo mkdir -p /var/www/1991computer/halcyon/releases
+#    sudo mkdir -p /var/www/halcyon/releases
 #
 # 2) Create initial symlink (required for first deploy):
-#    sudo ln -s /var/www/1991computer/halcyon/releases \
-#              /var/www/1991computer/halcyon/current
+#    sudo ln -s /var/www/halcyon/releases /var/www/halcyon/current
 #
 # 3) Ensure nginx serves the "current" symlink. The app has its own
 #    subdomain, so this is a server block of its own rather than a
 #    location under the studio site:
 #    server {
 #        server_name halcyon.1991computer.com;
-#        root /var/www/1991computer/halcyon/current;
+#        root /var/www/halcyon/current;
 #        index index.html;
 #        try_files $uri $uri/ /index.html;
 #    }
@@ -40,11 +39,12 @@
 
 set -euo pipefail
 
+# The app owns its directory directly under /var/www, like every other app
+# on this box — never inside the studio site's webroot.
 SERVER_USER="debian"
 SERVER_HOST="ks-b"
-REMOTE_ROOT="/var/www/1991computer"
 APP_NAME="halcyon"
-REMOTE_FRONT="$REMOTE_ROOT/$APP_NAME"
+REMOTE_FRONT="/var/www/$APP_NAME"
 
 GREEN="\033[0;32m"
 BLUE="\033[38;5;81m"
