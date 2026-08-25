@@ -62,6 +62,21 @@
   gap: var(--space-5);
 }
 
+/* Molecule mode (HAL-157) hides GENERATOR and WINDING, and the attribute alone
+   cannot do it: the UA's [hidden] { display: none } loses to the author-level
+   class rule above, so the state has to be spelled out here. */
+.shape-story__row[hidden] {
+  display: none;
+}
+
+/* display: contents, so the property rows this container is filled with become
+   real flex items of the footer and take its own gap. A block wrapper would
+   need that gap restated, and the two would drift. Empty — every solid — it
+   contributes nothing at all. */
+#shapeStoryProperties {
+  display: contents;
+}
+
 .shape-story__key {
   font: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
   letter-spacing: var(--tracking-lg);

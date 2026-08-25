@@ -14,6 +14,7 @@ import RenderLoop from "@app/RenderLoop";
 import ShapeSwitcher from "@app/ShapeSwitcher";
 import CameraRig from "@camera/CameraRig";
 import data from "@data/data";
+import moleculeInfo from "@data/moleculeInfo";
 import shapeInfo from "@data/shapeInfo";
 import PointerOrbit from "@input/PointerOrbit";
 import MeshFactory from "@primitives/MeshFactory";
@@ -54,6 +55,7 @@ import ShapeThumbnails from "@ui/inspector/ShapeThumbnails";
 import WorldTab from "@ui/inspector/WorldTab";
 import KeyboardShortcuts from "@ui/KeyboardShortcuts";
 import MaterialSummary from "@ui/MaterialSummary";
+import OrbitInvertToggles from "@ui/OrbitInvertToggles";
 import QuickToggles from "@ui/QuickToggles";
 import RenderPipelinePanel from "@ui/RenderPipelinePanel";
 import SessionActions from "@ui/SessionActions";
@@ -202,6 +204,7 @@ class Main {
   private readonly procedural: ProceduralTextures;
   private readonly mapper: AffineTextureMapper;
   private readonly pointerOrbit: PointerOrbit;
+  private readonly orbitInvertToggles: OrbitInvertToggles;
   private readonly shapes: ShapeSwitcher;
   private readonly unsubscribe: () => void;
   // A change detector, not a second copy of the state: this class publishes the
@@ -378,6 +381,10 @@ class Main {
       onOrbit: (pitch, yaw) => this.applyPointerOrbit(pitch, yaw),
       onZoom: (value) => this.applyPointerZoom(value),
       onReset: () => this.applyPointerReset(),
+    });
+    this.orbitInvertToggles = new OrbitInvertToggles({
+      onPitchInvertChange: (inverted) => this.pointerOrbit.setInvertPitch(inverted),
+      onYawInvertChange: (inverted) => this.pointerOrbit.setInvertYaw(inverted),
     });
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
@@ -611,6 +618,7 @@ class Main {
     // other widget is pure DOM writes and has nothing to release.
     this.system.dispose();
     this.pointerOrbit.dispose();
+    this.orbitInvertToggles.dispose();
     this.viewportExpander.dispose();
     this.resizeObserver?.disconnect();
 
@@ -918,7 +926,9 @@ class Main {
     this.statusBar.setTexture(material);
     this.shapeInfo.show(primitive, object3D, material);
     this.shapeInfo.setOpacity(this.pipeline.opacity);
-    this.shapeStory.show(primitive, shapeInfo[primitive]);
+    // The third argument is undefined for the twenty solids, and its presence is
+    // the whole of the mode switch — no flag and no branch here.
+    this.shapeStory.show(primitive, shapeInfo[primitive], moleculeInfo[primitive]);
   }
 
   // The surface-describing half of the above, for when the material moved rather
