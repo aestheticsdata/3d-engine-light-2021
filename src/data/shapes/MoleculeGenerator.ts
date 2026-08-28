@@ -22,8 +22,21 @@
 //
 // CENTRED on the centroid of the atom positions, not the centre of mass: the
 // pivot is what SPIN turns about, so it has to be the visual centre or the
-// molecule wobbles. Scaled so max(|position| + drawn ball radius) lands on
-// 100, the envelope the rest of the registry sits in.
+// molecule wobbles.
+//
+// SCALED BY A CONSTANT SHARED WITH EVERY OTHER MOLECULE, which is the one rule
+// here worth reading twice. Each molecule used to be rescaled independently so
+// that its own widest atom landed on the registry's 100-unit envelope, which
+// gave every molecule the same stage presence and made the drawn size of an
+// atom depend on how big the REST of its molecule was. An oxygen came out at
+// 35.2 units in water and 7.6 in caffeine — the same atom, 4.65 times the
+// size — and water's oxygen against CO2's, both triatomic, already differed by
+// 1.6 times. Relative sizes inside one molecule were right; across the family
+// they meant nothing, which is worse than useless on a teaching card.
+//
+// So the conversion from Angstroms to engine units is now a constant. A carbon
+// is one size everywhere, and a molecule that is genuinely five times larger
+// than water looks five times larger, because it is.
 
 import MeshBuilder from "@data/builders/MeshBuilder";
 import Vec3Math from "@data/builders/Vec3Math";
@@ -41,10 +54,37 @@ type Vec3 = [number, number, number];
 // double the denominator and halve the bar for every shape in the console.
 // GeometryWidget cannot be imported from here (it imports the registry, and
 // this file is in it), so the two agree by construction instead.
+//
+// TRIED AND REVERTED (HAL-173): 16384, with MAX_LAT_SEGMENTS at 17, to double
+// every ball. It worked and it cost too much. Caffeine went to 15424 triangles
+// and became the densest shape in the registry, which moved the console's
+// derived bar to 16384 and halved it for the twenty-four shapes that had not
+// changed; caffeine's frame time went from 3.7 ms to 7.4 ms. The balls were
+// visibly rounder and it was not worth the frame rate. Anyone proposing it
+// again should have a plan for the frame time first, not for the bar.
 const TRIANGLE_BUDGET = 8192;
 
-// The envelope the rest of the registry sits in.
+// The envelope the rest of the registry sits in. Molecules no longer fill it —
+// only the largest one comes close — but it is still the ceiling, and the
+// constructor throws rather than letting a molecule out past it.
 const ENVELOPE_RADIUS = 100;
+
+// The whole family's Angstrom-to-engine-unit conversion, and the reason an
+// atom is the same size in every molecule.
+//
+// DECLARED, not derived from the registry, and that distinction is the point.
+// Deriving it — "the scale at which the largest current molecule fits" — would
+// silently resize every existing molecule the day a bigger one landed, which
+// is the same class of surprise this constant exists to remove. A declared
+// number means adding a molecule either fits or fails loudly, and never
+// quietly moves the twenty-four shapes that were already correct.
+//
+// 22 is the largest round value at which the biggest molecule in the registry
+// still clears the envelope: caffeine reaches 4.356 A, so 95.8 units. It has
+// deliberately little headroom, because a molecule much larger than caffeine
+// wants the resolution and render decisions of its own ticket rather than a
+// quiet scale change here.
+const ENGINE_UNITS_PER_ANGSTROM = 22;
 
 // The two drawn sizes, in Ångströms like everything in a molecule file, and
 // tuned against each other once here for the whole epic.
@@ -73,6 +113,10 @@ const ROD_RADIUS = 0.07;
 // come from the same constant. Unlike TRIANGLE_BUDGET there is no import
 // barrier here to force a restatement, so agreeing by construction is simply
 // available and taking it is free.
+//
+// Triangles per ball go as 2·lat·(lat + 2), so this knob roughly squares
+// rather than scales: 12 gives 336 and 17 would give 646. That is what made
+// the doubling recorded above cheap to reach and expensive to run.
 const MAX_LAT_SEGMENTS = 12;
 const MIN_LAT_SEGMENTS = 6;
 const LON_SEGMENTS_OFFSET = 2;
@@ -132,7 +176,17 @@ class MoleculeGenerator {
       ),
     );
 
-    this.scale = ENVELOPE_RADIUS / reach;
+    // Loud rather than quiet, and for the same reason latSegmentsFor throws
+    // instead of clamping: the alternative to this line is rescaling the whole
+    // family to fit one newcomer, which would change twenty-four meshes that
+    // nobody touched.
+    if (reach * ENGINE_UNITS_PER_ANGSTROM > ENVELOPE_RADIUS) {
+      throw new Error(
+        `${molecule.name} reaches ${reach.toFixed(3)} Å, which is ${(reach * ENGINE_UNITS_PER_ANGSTROM).toFixed(1)} engine units at the family's shared scale and past the ${ENVELOPE_RADIUS}-unit envelope. Shrinking the scale would resize every other molecule, so this is a decision, not a constant to nudge.`,
+      );
+    }
+
+    this.scale = ENGINE_UNITS_PER_ANGSTROM;
     this.centres = centred.map((position) => this.vec.scale(position, this.scale));
   }
 
