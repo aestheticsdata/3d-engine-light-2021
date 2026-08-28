@@ -23,6 +23,7 @@
 // than taste.
 
 import ammonia from "@data/molecules/ammonia";
+import caffeine from "@data/molecules/caffeine";
 import carbonDioxide from "@data/molecules/carbonDioxide";
 import methane from "@data/molecules/methane";
 import water from "@data/molecules/water";
@@ -119,6 +120,27 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/280" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Carbon_dioxide" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16526" },
+    ],
+  },
+  caffeine: {
+    structure: caffeine,
+    properties: [
+      // Not a bond angle, unlike the four before it: at twenty-four atoms the
+      // single number worth printing is what the skeleton IS, and caffeine's
+      // is a purine — a six-ring fused to a five-ring, sharing an edge.
+      { label: "GEOMETRY", value: "fused bicycle, planar purine" },
+      { label: "BONDING", value: "aromatic bicycle, three methyls" },
+      // Both verified against PubChem's own experimental properties for CID
+      // 2519 rather than taken from the ticket that asked for them. PubChem
+      // lists several melting points from different sources (235, 236.2, 238);
+      // 235 is the one most tables quote and the lowest it reports.
+      { label: "MELTING POINT", value: "235 °C" },
+      { label: "SOLUBILITY", value: "2.16 g/100 mL at 25 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/2519" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Caffeine" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:27732" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;
