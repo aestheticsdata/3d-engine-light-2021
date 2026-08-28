@@ -23,6 +23,7 @@
 // than taste.
 
 import ammonia from "@data/molecules/ammonia";
+import carbonDioxide from "@data/molecules/carbonDioxide";
 import methane from "@data/molecules/methane";
 import water from "@data/molecules/water";
 
@@ -95,6 +96,29 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/222" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Ammonia" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16134" },
+    ],
+  },
+  carbonDioxide: {
+    structure: carbonDioxide,
+    properties: [
+      // No tolerance and no determination behind this one: D∞h forces 180°,
+      // so unlike water's bend and ammonia's pyramid there is nothing here for
+      // experiment to report.
+      { label: "GEOMETRY", value: "linear, 180°" },
+      // Printed because the picture cannot say it: the data carries order 2 on
+      // both bonds and the mesh draws one rod each, so this row is where a
+      // reader learns what the rods are standing in for.
+      { label: "BONDING", value: "two double bonds" },
+      // Sublimes rather than boils — at 1 atm CO₂ has no liquid phase, which is
+      // why this row is not the BOILING POINT the other three carry. The
+      // precise figure is −78.4645(30) °C; −78.5 is that at the one decimal
+      // the rest of the card keeps.
+      { label: "SUBLIMES", value: "−78.5 °C at 1 atm" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/280" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Carbon_dioxide" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16526" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;

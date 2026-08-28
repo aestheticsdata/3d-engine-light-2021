@@ -34,6 +34,13 @@ const SHORT_LABELS: Record<string, string> = {
   icosidodecahedron: "ICOSIDOD",
   rhombicTriacontahedron: "RHOMBTRI",
   kisRhombicTriacontahedron: "KISRHTRI",
+  // The first entry that is not a truncation but a name of its own: the derived
+  // form gives CARBONDI, which reads as the cap cutting a word in half rather
+  // than as an abbreviation of anything. ASCII CO2 and not CO₂ — the chips are
+  // set in the same uppercased run as CUBOCT and TRICOSID, text-transform does
+  // nothing to a subscript codepoint, and a subscript glyph at chip size drops
+  // below legibility. The subscript form is the formula badge's, at its size.
+  carbonDioxide: "CO2",
 };
 
 export const primitiveChipLabel = (name: string): string => {

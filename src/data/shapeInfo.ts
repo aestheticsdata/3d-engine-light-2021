@@ -442,6 +442,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  carbonDioxide: {
+    family: "MOLECULES",
+    title: "Carbon Dioxide",
+    description:
+      "Two red oxygens double-bonded to a grey carbon and stretched into a dead straight line, the one shape in the family with no angle to get wrong.",
+    geometricFeature:
+      "Three spheres and two rods in one mesh — water's own count with the bend taken out; both bonds here are double, and every bond in this family draws as one rod whatever its order.",
+    densityLabel: "Low density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it

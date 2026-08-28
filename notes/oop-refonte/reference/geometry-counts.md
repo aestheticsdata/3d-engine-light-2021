@@ -34,3 +34,4 @@ key is the shape the console boots on.
 | water | 657 | 1104 |
 | methane | 1119 | 1872 |
 | ammonia | 888 | 1488 |
+| carbonDioxide | 657 | 1104 |

@@ -42,6 +42,14 @@ describe("primitiveChipLabel", () => {
     expect(primitiveChipLabel("torusKnot34")).toBe("TK34");
   });
 
+  // The map's other job, and the reason it is editorial rather than derived: a
+  // molecule's chip is a name from outside the key, not a truncation of it. The
+  // derived form here is CARBONDI. The ASCII digit is deliberate too — the chip
+  // run is uppercased, which does nothing to CO₂'s subscript.
+  it("gives a molecule its formula rather than a cut-down key", () => {
+    expect(primitiveChipLabel("carbonDioxide")).toBe("CO2");
+  });
+
   // Every long key in the registry today is in the map, so the cap is exercised
   // with a key that is not — which is also the case it exists for: a shape
   // landing before anyone writes it an abbreviation still gets a chip that fits.
