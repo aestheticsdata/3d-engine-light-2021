@@ -12,8 +12,10 @@
 
 import Vec3Math from "@data/builders/Vec3Math";
 import data from "@data/data";
+import moleculeInfo from "@data/moleculeInfo";
 import elements from "@data/molecules/elements";
 import waterMolecule from "@data/molecules/water";
+import shapeInfo from "@data/shapeInfo";
 import MoleculeGenerator from "@data/shapes/MoleculeGenerator";
 import { describe, expect, it } from "vitest";
 
@@ -33,8 +35,13 @@ const POLY_BUDGET = 8192;
 const BALL_POINTS = 195;
 const BALL_TRIANGLES = 336;
 const ROD_TRIANGLES = 48;
+// Three rings — one at each atom, one at the midpoint — of latSegments points.
+const ROD_POINTS = 3 * 12;
 const ENVELOPE_RADIUS = 100;
 const BALL_RADIUS_SCALE = 0.5;
+// Restated here for the same reason POLY_BUDGET is: the generator owns it, and
+// this suite has to agree with it by hand rather than by import.
+const ENGINE_UNITS_PER_ANGSTROM = 22;
 
 const vec = new Vec3Math();
 
@@ -42,15 +49,8 @@ const asVec = (point: number[]): Vec3 => [point[0], point[1], point[2]];
 
 const waterCentres = (): Vec3[] => {
   const centroid = vec.centroid(waterMolecule.atoms.map((atom) => atom.position));
-  const centred = waterMolecule.atoms.map((atom) => vec.sub(atom.position, centroid));
-  const reach = Math.max(
-    ...centred.map(
-      (position, index) =>
-        vec.magnitude(position) + elements[waterMolecule.atoms[index].element].covalentRadius * BALL_RADIUS_SCALE,
-    ),
-  );
 
-  return centred.map((position) => vec.scale(position, ENVELOPE_RADIUS / reach));
+  return waterMolecule.atoms.map((atom) => vec.scale(vec.sub(atom.position, centroid), ENGINE_UNITS_PER_ANGSTROM));
 };
 
 // The face normal by the registry's cross convention, and the triangle's own
@@ -76,7 +76,7 @@ describe("MoleculeGenerator", () => {
   const mesh = new MoleculeGenerator(waterMolecule).build();
 
   it("builds water at the derived resolution, inside the poly budget", () => {
-    expect(mesh.points.length).toBe(3 * BALL_POINTS + 2 * 36);
+    expect(mesh.points.length).toBe(3 * BALL_POINTS + 2 * ROD_POINTS);
     expect(mesh.triangles.length).toBe(3 * BALL_TRIANGLES + 2 * ROD_TRIANGLES);
     expect(mesh.triangles.length).toBeLessThanOrEqual(POLY_BUDGET);
   });
@@ -141,18 +141,82 @@ describe("MoleculeGenerator", () => {
     expect(fills.filter((fill) => fill === hydrogen).length).toBe(2 * BALL_TRIANGLES + 2 * (ROD_TRIANGLES / 2));
   });
 
-  it("scales the farthest ball onto the registry envelope, and no point past it", () => {
-    const distances = mesh.points.map((point) => Math.hypot(point[0], point[1], point[2]));
-    const farthest = Math.max(...distances);
+  it("keeps every molecule inside the registry envelope", () => {
+    Object.entries(shapeInfo)
+      .filter(([, info]) => info.family === "MOLECULES")
+      .forEach(([key]) => {
+        const distances = data[key as keyof typeof data].points.map((point) =>
+          Math.hypot(point[0], point[1], point[2]),
+        );
 
-    expect(farthest).toBeLessThanOrEqual(ENVELOPE_RADIUS + 1e-6);
-    expect(farthest).toBeGreaterThan(ENVELOPE_RADIUS - 1);
+        expect(Math.max(...distances)).toBeLessThanOrEqual(ENVELOPE_RADIUS + 1e-6);
+      });
   });
 
-  it("centres the mesh on the atoms' centroid: the two hydrogens straddle x = 0", () => {
-    const xs = mesh.points.map((point) => point[0]);
+  // The invariant that replaced "every molecule fills the envelope", and the
+  // reason it was replaced: filling the envelope made the drawn size of an atom
+  // depend on how big the rest of its molecule was, so an oxygen came out 4.65x
+  // larger in water than in caffeine. Over the whole family rather than over a
+  // pair, because the failure is a spread and a pair can agree by luck.
+  it("draws a given element at one size in every molecule", () => {
+    const radii = new Map<string, Set<number>>();
 
-    expect(Math.abs(Math.max(...xs) + Math.min(...xs))).toBeLessThan(1e-6);
+    Object.entries(moleculeInfo).forEach(([, info]) => {
+      info?.structure.atoms.forEach((atom) => {
+        const drawn = elements[atom.element].covalentRadius * BALL_RADIUS_SCALE * ENGINE_UNITS_PER_ANGSTROM;
+        radii.set(atom.element, (radii.get(atom.element) ?? new Set()).add(Number(drawn.toFixed(9))));
+      });
+    });
+
+    expect(radii.size).toBeGreaterThan(1);
+    radii.forEach((sizes) => {
+      expect(sizes.size).toBe(1);
+    });
+  });
+
+  // The envelope is a ceiling now rather than a target, so something has to
+  // stop a molecule slipping past it. Shrinking the shared scale to fit a
+  // newcomer would resize every mesh that was already right.
+  it("throws rather than rescaling the family when a molecule overflows the envelope", () => {
+    const sprawl: Molecule = {
+      name: "Sprawl",
+      atoms: [
+        { element: "H", position: [0, 0, 0] },
+        { element: "H", position: [12, 0, 0] },
+      ],
+      bonds: [{ a: 0, b: 1, order: 1 }],
+    };
+
+    expect(() => new MoleculeGenerator(sprawl)).toThrow(/envelope/);
+  });
+
+  // Asserted as translation invariance rather than as "the two hydrogens
+  // straddle x = 0", which is what this checked until HAL-173. That older form
+  // read the mesh's x extent, and it happened to work only because the ball
+  // tessellation was symmetric about x at an even longitude count: at 12 lat
+  // segments the ball took 14 longitudes, and max + min cancelled. Seventeen
+  // takes 19, an odd count whose sampling is not mirror-symmetric, so the
+  // extent no longer cancels — by 0.046 units on a 3.41-unit hydrogen — while
+  // the centring it was standing in for is untouched.
+  //
+  // Centring on the centroid IS translation invariance, so this asserts it
+  // directly and cannot be fooled by how the sphere is sampled.
+  it("centres the mesh on the atoms' centroid, so moving the molecule changes nothing", () => {
+    const shifted = new MoleculeGenerator({
+      ...waterMolecule,
+      atoms: waterMolecule.atoms.map((atom) => ({
+        ...atom,
+        position: [atom.position[0] + 7, atom.position[1] - 3, atom.position[2] + 11] as Vec3,
+      })),
+    }).build();
+
+    const drift = Math.max(
+      ...shifted.points.flatMap((point, index) =>
+        point.map((value, axis) => Math.abs(value - mesh.points[index][axis])),
+      ),
+    );
+
+    expect(drift).toBeLessThan(1e-9);
   });
 
   it("throws rather than clamping when a molecule cannot fit the budget", () => {

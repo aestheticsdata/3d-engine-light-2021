@@ -442,6 +442,28 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  carbonDioxide: {
+    family: "MOLECULES",
+    title: "Carbon Dioxide",
+    description:
+      "Two red oxygens double-bonded to a grey carbon and stretched into a dead straight line, the one shape in the family with no angle to get wrong.",
+    geometricFeature:
+      "Three spheres and two rods in one mesh — water's own count with the bend taken out; both bonds here are double, and every bond in this family draws as one rod whatever its order.",
+    densityLabel: "Low density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
+  caffeine: {
+    family: "MOLECULES",
+    title: "Caffeine",
+    description:
+      "Twenty-four atoms in a flat two-ring plate with three methyl groups standing off it — the first molecule here too big to derive by hand.",
+    geometricFeature:
+      "Twenty-four spheres and twenty-five rods in one mesh; the fused purine bicycle is planar to under a thousandth of an Ångström, and the nine methyl hydrogens are the only atoms that leave that plane.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it
