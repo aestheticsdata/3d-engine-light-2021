@@ -37,10 +37,11 @@ const BALL_TRIANGLES = 336;
 const ROD_TRIANGLES = 48;
 // Three rings — one at each atom, one at the midpoint — of latSegments points.
 const ROD_POINTS = 3 * 12;
-// 100·√3, the corner of the registry's cube. It was 100 until nicotine, whose
-// 109.3 units is smaller than the donut's 110 and was being refused anyway;
-// MoleculeGenerator's own comment carries the measurement across the whole
-// baseline. Restated here by hand for the same reason POLY_BUDGET is.
+// 100·√3, the corner of the registry's cube. It was 100 until the baseline was
+// read back and the ceiling turned out to sit under the donut's 110 and the
+// cross's 108.6; MoleculeGenerator's own comment carries that measurement
+// across the whole registry. Restated here by hand for the same reason
+// POLY_BUDGET is.
 const ENVELOPE_RADIUS = 100 * Math.sqrt(3);
 const BALL_RADIUS_SCALE = 0.5;
 // Restated here for the same reason POLY_BUDGET is: the generator owns it, and
