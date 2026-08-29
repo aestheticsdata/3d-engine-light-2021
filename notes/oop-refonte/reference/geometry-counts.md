@@ -38,3 +38,4 @@ key is the shape the console boots on.
 | caffeine | 4857 | 7964 |
 | aspirin | 4851 | 8064 |
 | glucose | 4824 | 7920 |
+| nicotine | 4528 | 7320 |
