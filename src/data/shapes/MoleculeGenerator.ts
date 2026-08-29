@@ -72,9 +72,9 @@ const TRIANGLE_BUDGET = 8192;
 // out of the geometry baseline, eight shapes already reach past 100: cross
 // 108.6, donut 110.0, the four torus knots 115.7–116.0, cube and pyramid
 // 173.2, and the Menger sponge 181.9. 100 is the sphere's radius and the
-// polyhedra's circumradius, not the console's ceiling — and holding molecules
-// to it rejected nicotine at 109.3 units, which is smaller than the donut that
-// has drawn since the first commit.
+// polyhedra's circumradius, not the console's ceiling — and it was refusing
+// molecules at reaches the donut and the cross have drawn at since the first
+// commit.
 //
 // 173.2 is 100·√3: the corner of the cube whose half-edge is 100, which is
 // exactly where cube and pyramid sit. It is the largest reach in the registry

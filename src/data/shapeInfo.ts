@@ -486,17 +486,6 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
-  nicotine: {
-    family: "MOLECULES",
-    title: "Nicotine",
-    description:
-      "Twenty-six atoms in two rings that do not share a plane: a flat aromatic pyridine and a puckered saturated pyrrolidine, meeting at 73° across a bond that turns.",
-    geometricFeature:
-      "Twenty-six spheres and twenty-seven rods in two rings: the pyridine flat to a ten-thousandth of an Ångström, the pyrrolidine puckered by 0.26, and their mean planes 73° apart across the single bond that joins them.",
-    densityLabel: "High density",
-    generator: "ball-and-stick sweep",
-    textureSummary: "No textures",
-  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it
