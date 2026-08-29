@@ -475,6 +475,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  glucose: {
+    family: "MOLECULES",
+    title: "Glucose",
+    description:
+      "Twenty-four atoms in the pyranose CHAIR, not the flat hexagon of the textbook: three ring atoms up, three down, and every hydroxyl lying out in the ring's own plane.",
+    geometricFeature:
+      "Twenty-four spheres and twenty-four rods; the six ring atoms deviate up to 0.275 Å from their mean plane and the ring torsions alternate in sign, which is what a chair is — and all five substituents sit equatorial, which is what makes this the β anomer.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it
