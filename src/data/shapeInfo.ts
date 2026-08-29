@@ -464,6 +464,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  aspirin: {
+    family: "MOLECULES",
+    title: "Aspirin",
+    description:
+      "Twenty-one atoms: a benzene ring flat to four hundred-thousandths of an Ångström, with an acetate group standing square to it and a carboxylic acid half-turned out of the plane.",
+    geometricFeature:
+      "Twenty-one spheres and twenty-one rods, the densest mesh in the registry at 8064 of the 8192-triangle budget — and the first molecule here with a conformer rather than a shape, since the acetate and the acid both turn about single bonds.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it

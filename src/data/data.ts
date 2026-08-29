@@ -1,4 +1,5 @@
 import ammonia from "@data/shapes/ammonia";
+import aspirin from "@data/shapes/aspirin";
 import caffeine from "@data/shapes/caffeine";
 import carbonDioxide from "@data/shapes/carbonDioxide";
 import cross from "@data/shapes/cross";
@@ -29,7 +30,7 @@ import type { Data3D } from "@data/types";
 export type { Data3D, Object3D } from "@data/types";
 
 // `satisfies` rather than an annotation, so the key list survives into the type
-// system: `keyof typeof data` is the twenty-five names, not `string`. That is
+// system: `keyof typeof data` is the twenty-six names, not `string`. That is
 // what lets shapeInfo.ts be checked against this registry — a shape added here
 // and left unclassified there is a compile error rather than a solid that
 // quietly falls out of the picker. The shape of each entry is still enforced.
@@ -59,6 +60,7 @@ const data = {
   ammonia,
   carbonDioxide,
   caffeine,
+  aspirin,
 } satisfies Data3D;
 
 export default data;

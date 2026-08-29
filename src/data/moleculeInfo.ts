@@ -23,6 +23,7 @@
 // than taste.
 
 import ammonia from "@data/molecules/ammonia";
+import aspirin from "@data/molecules/aspirin";
 import caffeine from "@data/molecules/caffeine";
 import carbonDioxide from "@data/molecules/carbonDioxide";
 import methane from "@data/molecules/methane";
@@ -141,6 +142,30 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/2519" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Caffeine" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:27732" },
+    ],
+  },
+  aspirin: {
+    structure: aspirin,
+    properties: [
+      // Both kept under caffeine's thirty-one characters, which is what the
+      // value column fits before it wraps and leaves a one-word widow. The
+      // GEOMETRY row names the one thing a still picture of aspirin has to get
+      // across, and names it as the angle the header measured: this is not the
+      // flat hexagon-with-tails of the packet insert.
+      { label: "GEOMETRY", value: "flat ring, acetate at 90°" },
+      { label: "BONDING", value: "aromatic ring, ester, carboxyl" },
+      // Both read off PubChem's experimental section for CID 2244 rather than
+      // from the ticket. PubChem lists 135, 135 (rapid heating) and 138-140 for
+      // the melt; 135 is the one it leads with and the one most tables quote.
+      // The solubility is its "In water, 4,600 mg/L at 25 °C", converted once
+      // to the same g/100 mL that caffeine's row uses so the two compare.
+      { label: "MELTING POINT", value: "135 °C" },
+      { label: "SOLUBILITY", value: "0.46 g/100 mL at 25 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Aspirin" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15365" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;

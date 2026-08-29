@@ -36,3 +36,4 @@ key is the shape the console boots on.
 | ammonia | 888 | 1488 |
 | carbonDioxide | 657 | 1104 |
 | caffeine | 4857 | 7964 |
+| aspirin | 4851 | 8064 |
