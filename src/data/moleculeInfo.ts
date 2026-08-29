@@ -23,9 +23,12 @@
 // than taste.
 
 import ammonia from "@data/molecules/ammonia";
+import aspirin from "@data/molecules/aspirin";
 import caffeine from "@data/molecules/caffeine";
 import carbonDioxide from "@data/molecules/carbonDioxide";
+import glucose from "@data/molecules/glucose";
 import methane from "@data/molecules/methane";
+import nicotine from "@data/molecules/nicotine";
 import water from "@data/molecules/water";
 
 import type { Molecule } from "@data/molecules/types";
@@ -141,6 +144,73 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/2519" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Caffeine" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:27732" },
+    ],
+  },
+  aspirin: {
+    structure: aspirin,
+    properties: [
+      // Both kept under caffeine's thirty-one characters, which is what the
+      // value column fits before it wraps and leaves a one-word widow. The
+      // GEOMETRY row names the one thing a still picture of aspirin has to get
+      // across, and names it as the angle the header measured: this is not the
+      // flat hexagon-with-tails of the packet insert.
+      { label: "GEOMETRY", value: "flat ring, acetate at 90°" },
+      { label: "BONDING", value: "aromatic ring, ester, carboxyl" },
+      // Both read off PubChem's experimental section for CID 2244 rather than
+      // from the ticket. PubChem lists 135, 135 (rapid heating) and 138-140 for
+      // the melt; 135 is the one it leads with and the one most tables quote.
+      // The solubility is its "In water, 4,600 mg/L at 25 °C", converted once
+      // to the same g/100 mL that caffeine's row uses so the two compare.
+      { label: "MELTING POINT", value: "135 °C" },
+      { label: "SOLUBILITY", value: "0.46 g/100 mL at 25 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/2244" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Aspirin" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15365" },
+    ],
+  },
+  glucose: {
+    structure: glucose,
+    properties: [
+      // "chair" earns the row over any bond angle: it is the one word that
+      // separates this shape from the hexagon a reader arrives with, and
+      // "equatorial" is the measurement that pins it to the β anomer, since
+      // PubChem's own record leaves that centre undefined.
+      { label: "GEOMETRY", value: "chair ring, groups equatorial" },
+      { label: "BONDING", value: "pyranose ring, five hydroxyls" },
+      // From PubChem's experimental section for CID 5793. 146 °C is the value it
+      // leads with. The solubility is its "In water, 4.79X10+5 mg/L at 20 °C",
+      // converted once to g/100 mL; unlike caffeine's and aspirin's rows this
+      // one is at 20 °C, because PubChem publishes no 25 °C figure for glucose
+      // and quoting one temperature as another would be the easiest lie here.
+      { label: "MELTING POINT", value: "146 °C" },
+      { label: "SOLUBILITY", value: "47.9 g/100 mL at 20 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/5793" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Glucose" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:4167" },
+    ],
+  },
+  nicotine: {
+    structure: nicotine,
+    properties: [
+      { label: "GEOMETRY", value: "two rings, 73° apart" },
+      { label: "BONDING", value: "pyridine and pyrrolidine" },
+      // The first molecule in this family that is a LIQUID at room temperature,
+      // which is the whole point of printing a melting point next to caffeine's
+      // 235 °C. Both from PubChem's experimental section for CID 89594; the
+      // solubility row is its "In water, 1X10+6 mg/L at 25 °C (miscible)", left
+      // as the word rather than converted, because a g/100 mL figure for a
+      // liquid that mixes in all proportions would be inventing a limit.
+      { label: "MELTING POINT", value: "−79 °C" },
+      { label: "SOLUBILITY", value: "miscible at 25 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/89594" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Nicotine" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:18723" },
     ],
   },
 } satisfies Record<MoleculeKey, MoleculeInfo>;

@@ -464,6 +464,39 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  aspirin: {
+    family: "MOLECULES",
+    title: "Aspirin",
+    description:
+      "Twenty-one atoms: a benzene ring flat to four hundred-thousandths of an Ångström, with an acetate group standing square to it and a carboxylic acid half-turned out of the plane.",
+    geometricFeature:
+      "Twenty-one spheres and twenty-one rods, the densest mesh in the registry at 8064 of the 8192-triangle budget — and the first molecule here with a conformer rather than a shape, since the acetate and the acid both turn about single bonds.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
+  glucose: {
+    family: "MOLECULES",
+    title: "Glucose",
+    description:
+      "Twenty-four atoms in the pyranose CHAIR, not the flat hexagon of the textbook: three ring atoms up, three down, and every hydroxyl lying out in the ring's own plane.",
+    geometricFeature:
+      "Twenty-four spheres and twenty-four rods; the six ring atoms deviate up to 0.275 Å from their mean plane and the ring torsions alternate in sign, which is what a chair is — and all five substituents sit equatorial, which is what makes this the β anomer.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
+  nicotine: {
+    family: "MOLECULES",
+    title: "Nicotine",
+    description:
+      "Twenty-six atoms in two rings that do not share a plane: a flat aromatic pyridine and a puckered saturated pyrrolidine, meeting at 73° across a bond that turns.",
+    geometricFeature:
+      "Twenty-six spheres and twenty-seven rods in two rings: the pyridine flat to a ten-thousandth of an Ångström, the pyrrolidine puckered by 0.26, and their mean planes 73° apart across the single bond that joins them.",
+    densityLabel: "High density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
 } satisfies Record<keyof typeof data, ShapeInfo>;
 
 // The narrow shape of the table above, before the widening below throws it

@@ -64,10 +64,34 @@ type Vec3 = [number, number, number];
 // again should have a plan for the frame time first, not for the bar.
 const TRIANGLE_BUDGET = 8192;
 
-// The envelope the rest of the registry sits in. Molecules no longer fill it —
-// only the largest one comes close — but it is still the ceiling, and the
-// constructor throws rather than letting a molecule out past it.
-const ENVELOPE_RADIUS = 100;
+// How far a molecule may reach from its own centroid before the constructor
+// refuses to build it.
+//
+// This was 100, described as "the envelope the rest of the registry sits in",
+// and that description was WRONG about the registry it was describing. Read
+// out of the geometry baseline, eight shapes already reach past 100: cross
+// 108.6, donut 110.0, the four torus knots 115.7–116.0, cube and pyramid
+// 173.2, and the Menger sponge 181.9. 100 is the sphere's radius and the
+// polyhedra's circumradius, not the console's ceiling — and holding molecules
+// to it rejected nicotine at 109.3 units, which is smaller than the donut that
+// has drawn since the first commit.
+//
+// 173.2 is 100·√3: the corner of the cube whose half-edge is 100, which is
+// exactly where cube and pyramid sit. It is the largest reach in the registry
+// that a shape arrives at by construction rather than by subdivision, so it is
+// the number with a reason behind it. The sponge is past it and is its own
+// case.
+//
+// RAISING THIS CEILING MOVES NOTHING. It is compared against, never multiplied
+// by; every mesh in the registry is byte-identical either side of this change,
+// which is exactly what makes it a different act from touching the scale
+// below. That one would resize all seven molecules to admit an eighth.
+//
+// It still bites where it was meant to. The triangle budget caps a molecule at
+// 68 atoms, and 68 atoms strung out in a line would reach well past this — a
+// molecule that large wants the render decisions of its own ticket, which is
+// what the throw is for.
+const ENVELOPE_RADIUS = 100 * Math.sqrt(3);
 
 // The whole family's Angstrom-to-engine-unit conversion, and the reason an
 // atom is the same size in every molecule.
@@ -79,11 +103,14 @@ const ENVELOPE_RADIUS = 100;
 // number means adding a molecule either fits or fails loudly, and never
 // quietly moves the twenty-four shapes that were already correct.
 //
-// 22 is the largest round value at which the biggest molecule in the registry
-// still clears the envelope: caffeine reaches 4.356 A, so 95.8 units. It has
-// deliberately little headroom, because a molecule much larger than caffeine
-// wants the resolution and render decisions of its own ticket rather than a
-// quiet scale change here.
+// 22 was chosen as the largest round value at which the biggest molecule then
+// in the registry cleared a 100-unit envelope: caffeine reaches 4.356 A, so
+// 95.8 units. That envelope has since been corrected upward — see above — and
+// this number did NOT follow it. It cannot: raising the scale to use the new
+// headroom would resize every molecule already drawn, which is the one thing
+// this constant exists to prevent. 22 is now simply the family's declared
+// scale, and the reasoning that first landed on it is history rather than a
+// derivation to redo.
 const ENGINE_UNITS_PER_ANGSTROM = 22;
 
 // The two drawn sizes, in Ångströms like everything in a molecule file, and
@@ -182,7 +209,7 @@ class MoleculeGenerator {
     // nobody touched.
     if (reach * ENGINE_UNITS_PER_ANGSTROM > ENVELOPE_RADIUS) {
       throw new Error(
-        `${molecule.name} reaches ${reach.toFixed(3)} Å, which is ${(reach * ENGINE_UNITS_PER_ANGSTROM).toFixed(1)} engine units at the family's shared scale and past the ${ENVELOPE_RADIUS}-unit envelope. Shrinking the scale would resize every other molecule, so this is a decision, not a constant to nudge.`,
+        `${molecule.name} reaches ${reach.toFixed(3)} Å, which is ${(reach * ENGINE_UNITS_PER_ANGSTROM).toFixed(1)} engine units at the family's shared scale and past the ${ENVELOPE_RADIUS.toFixed(1)}-unit envelope. Shrinking the scale would resize every other molecule, so this is a decision, not a constant to nudge.`,
       );
     }
 
