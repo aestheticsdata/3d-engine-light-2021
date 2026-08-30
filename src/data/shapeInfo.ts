@@ -474,6 +474,17 @@ const entries = {
     generator: "ball-and-stick sweep",
     textureSummary: "No textures",
   },
+  benzene: {
+    family: "MOLECULES",
+    title: "Benzene",
+    description:
+      "Six grey carbons in a flat regular hexagon, each with one white hydrogen pointing straight out from the centre — the ring every other aromatic in this family is built around.",
+    geometricFeature:
+      "Twelve spheres and twelve rods in one mesh, and the only shape here whose two shells share one set of six azimuths: a hexagon's side equals its circumradius, so the carbons sit at the C–C length and the hydrogens at C–C plus C–H, on the same spokes.",
+    densityLabel: "Medium density",
+    generator: "ball-and-stick sweep",
+    textureSummary: "No textures",
+  },
   caffeine: {
     family: "MOLECULES",
     title: "Caffeine",

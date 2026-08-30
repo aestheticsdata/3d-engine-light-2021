@@ -209,7 +209,7 @@ describe("the resolved channels", () => {
   // Over the registry rather than over three hand-picked colours: this is the
   // invariant Lighting relies on for every triangle it shades, and the blend has
   // four branches that could each drift from it on their own.
-  it("agrees with its own fill string on every triangle of all twenty-eight shapes", () => {
+  it("agrees with its own fill string on every triangle of all twenty-nine shapes", () => {
     const material = materialOf({ baseColor: "rgb(128, 200, 255)" });
     const disagreements = Object.entries(data).flatMap(([name, object3D]) =>
       object3D.triangles
@@ -234,17 +234,17 @@ describe("the resolved channels", () => {
 // count pinned below moves whenever the registry legitimately grows — water
 // brought it to twenty-one (HAL-156) and the molecules of HAL-153 have moved
 // it by one apiece since, as prismatic {4,5} has for HAL-147 — and pinning it
-// is the point: a shape vanishing
-// from the registry must fail here, not slip out silently.
+// is the point: a shape vanishing from the registry must fail here, not slip
+// out silently.
 //
 // Colours are compared parsed, not as strings: the registry authors
 // `rgba(0,180,89,1)` and the blend prints `rgba(0, 180, 89, 1)`, which is the
 // same colour spelled differently and the same pixel either way.
 describe("the default material over the whole registry", () => {
-  it("resolves every authored triangle in all twenty-eight shapes to the colour it was authored with", () => {
+  it("resolves every authored triangle in all twenty-nine shapes to the colour it was authored with", () => {
     const shapes = Object.entries(data);
 
-    expect(shapes).toHaveLength(28);
+    expect(shapes).toHaveLength(29);
 
     shapes.forEach(([name, object3D]) => {
       object3D.triangles.forEach((triangle, index) => {

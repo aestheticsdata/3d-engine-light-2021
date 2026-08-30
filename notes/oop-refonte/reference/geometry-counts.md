@@ -36,6 +36,7 @@ key is the shape the console boots on.
 | methane | 1119 | 1872 |
 | ammonia | 888 | 1488 |
 | carbonDioxide | 657 | 1104 |
+| benzene | 2772 | 4608 |
 | caffeine | 4857 | 7964 |
 | aspirin | 4851 | 8064 |
 | glucose | 4824 | 7920 |
