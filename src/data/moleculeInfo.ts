@@ -24,6 +24,7 @@
 
 import ammonia from "@data/molecules/ammonia";
 import aspirin from "@data/molecules/aspirin";
+import benzene from "@data/molecules/benzene";
 import caffeine from "@data/molecules/caffeine";
 import carbonDioxide from "@data/molecules/carbonDioxide";
 import glucose from "@data/molecules/glucose";
@@ -122,6 +123,40 @@ const entries = {
       { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/280" },
       { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Carbon_dioxide" },
       { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16526" },
+    ],
+  },
+  benzene: {
+    structure: benzene,
+    properties: [
+      // No angle in the row, unlike the four small molecules: D6h leaves
+      // nothing for experiment to report — both of benzene's 120° are fixed by
+      // symmetry the way methane's arccos(−1/3) is — so the word that earns
+      // the space is the one a reader cannot get from the picture, which is
+      // that the ring is flat.
+      { label: "GEOMETRY", value: "planar hexagonal ring" },
+      // The row this molecule exists to carry. HAL-161 asked for "aromatic —
+      // delocalised, not alternating"; that is thirty-nine characters against
+      // the thirty-one this column fits, so it is trimmed to the string this
+      // file's own header nominated for benzene long before the molecule
+      // landed. "Delocalised" is the half that cannot be dropped: the data
+      // below alternates order 2 and order 1 around the ring because `Bond`
+      // has an order and aromatic is not one of its values, and this row is
+      // the only place a reader is told that alternation is a notation rather
+      // than the molecule. The mesh happens to agree with the truth and not
+      // with the data — every bond draws as one identical rod — so this row is
+      // correcting the textbook Kekulé diagram a reader arrives with, not the
+      // picture beside it.
+      { label: "BONDING", value: "aromatic — delocalised ring" },
+      // PubChem's experimental section for CID 241 lists 80.08 °C (CRC
+      // Handbook, 94th ed.), 80.09 °C and a bare 80 °C. 80.1 is the first of
+      // those at the one decimal the rest of the card keeps, and the figure
+      // most tables quote.
+      { label: "BOILING POINT", value: "80.1 °C" },
+    ],
+    references: [
+      { label: "PubChem", url: "https://pubchem.ncbi.nlm.nih.gov/compound/241" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Benzene" },
+      { label: "ChEBI", url: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16716" },
     ],
   },
   caffeine: {
