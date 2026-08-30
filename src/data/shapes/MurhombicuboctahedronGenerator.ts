@@ -130,7 +130,7 @@ class MurhombicuboctahedronGenerator {
     return this.builder.build({
       cells: this.buildCells(),
       radius: RADIUS,
-      colorFor: (sides, inner) => this.colorFor(sides, inner),
+      colorFor: (tone) => this.colorFor(tone.sides, tone.inner),
     });
   }
 

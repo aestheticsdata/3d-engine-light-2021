@@ -409,6 +409,27 @@ const entries = {
       },
     ],
   },
+  prismaticFourFive: {
+    family: "POLYHEDRA",
+    title: "Prismatic {4,5}",
+    description:
+      "Gott's prismatic pseudopolyhedron in cool slate: two square tilings one cube apart, joined through open shafts.",
+    geometricFeature:
+      "Five squares at every vertex, which forces both the spacing and the thickness — one shaft per 2x2 block of squares, and sheets exactly one edge apart.",
+    densityLabel: "Medium density",
+    generator: "punched slab + shaft walls",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Skew_apeirohedron",
+      },
+      {
+        label: "Gott 1967",
+        url: "https://www.jstor.org/stable/2314879",
+      },
+    ],
+  },
   water: {
     family: "MOLECULES",
     title: "Water",

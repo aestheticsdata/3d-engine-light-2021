@@ -54,17 +54,35 @@ export interface SkewCell {
   faces: number[][][];
 }
 
+// One side of one face, as the colouring is asked about it. An options object
+// rather than three positional arguments (R4), which also lets a generator take
+// only the fields it colours by and leave the rest unread.
+export interface SkewFaceTone {
+  sides: number;
+  // Which of the face's two skins this is: the one the outside sees, or the one
+  // facing the labyrinth behind it.
+  inner: boolean;
+  // The unit direction the OUTER skin is seen from.
+  //
+  // The polygon's own size was the whole of the key while both sponges here mixed
+  // squares with hexagons. It is not enough for one whose faces are all the same
+  // polygon: `sides` cannot tell a sheet from a shaft wall, and such a sponge in a
+  // single flat tone shows no openings at all — the wall seen through a hole is
+  // painted exactly the colour of the sheet around it. Direction is what is left,
+  // and it is what MengerSpongeGenerator has always coloured by.
+  outward: number[];
+}
+
 export interface SkewApeirohedronOptions {
   cells: SkewCell[];
   radius: number;
-  // Keyed on the polygon's own size and on which side of the surface is being
-  // painted, because those are the only two things the colouring ever varies by.
-  colorFor: (sides: number, inner: boolean) => string;
+  colorFor: (tone: SkewFaceTone) => string;
 }
 
 interface OrientedFace {
   ring: number[][];
   sides: number;
+  outward: number[];
 }
 
 // Coordinates here are built out of sqrt(2), and a face shared between two
@@ -113,7 +131,7 @@ class SkewApeirohedronBuilder {
     });
 
     rings.forEach((ring, index) => {
-      this.emitBothSides(ring, faces[index].sides, options.colorFor);
+      this.emitBothSides(ring, faces[index], options.colorFor);
     });
 
     return this.builder.mesh;
@@ -144,7 +162,10 @@ class SkewApeirohedronBuilder {
         }
 
         seen.add(key);
-        faces.push({ ring: this.orient(ring, offsets, cell.sideA), sides: ring.length });
+
+        const oriented = this.orient(ring, offsets, cell.sideA);
+
+        faces.push({ ring: oriented, sides: oriented.length, outward: this.outwardOf(oriented) });
       });
     });
 
@@ -152,8 +173,13 @@ class SkewApeirohedronBuilder {
   }
 
   // Away from the cell centre when the cell is on side A, towards it when it is
-  // not — so the outward face of the surface is always the one looking into a
-  // side-B tunnel, wherever on the sponge it sits.
+  // not — so the ring's own normal always points into side-B space, wherever on
+  // the sponge the face sits.
+  //
+  // That normal is NOT the direction the outer tone is seen from; it is the
+  // opposite one. `outwardOf` below is the field to read for that, and the two
+  // are deliberately named apart because reading this one as "the outward side"
+  // is how a sponge gets painted inside out.
   //
   // The offsets are what the outward direction is read from rather than the
   // translated ring: they are already measured from the cell centre, so the
@@ -169,14 +195,26 @@ class SkewApeirohedronBuilder {
   // the winding whose world-space (b-a) x (c-a) points back towards the body it
   // encloses. The first fan below is that winding for the ring as oriented; the
   // second is its mirror, and is the face's other side.
-  private emitBothSides(ring: number[], sides: number, colorFor: (sides: number, inner: boolean) => string) {
-    const outer = colorFor(sides, false);
-    const inner = colorFor(sides, true);
+  private emitBothSides(ring: number[], face: OrientedFace, colorFor: (tone: SkewFaceTone) => string) {
+    const outer = colorFor({ sides: face.sides, inner: false, outward: face.outward });
+    const inner = colorFor({ sides: face.sides, inner: true, outward: face.outward });
 
     for (let i = 1; i < ring.length - 1; i += 1) {
       this.builder.addTriangle([ring[0], ring[i], ring[i + 1], outer]);
       this.builder.addTriangle([ring[0], ring[i + 1], ring[i], inner]);
     }
+  }
+
+  // The side the outer skin is painted on, which is NOT the side the oriented
+  // ring's own normal points at. The renderer keeps the winding whose world-space
+  // normal points AWAY from the camera — PolyhedronBuilder's header states the
+  // same rule for the convex solids, and it is why addQuadByCoords reverses the
+  // corner list it is handed — and emitBothSides paints the outer tone on the
+  // ring as oriented. So that tone is the one seen from behind the ring's normal.
+  private outwardOf(ring: number[][]): number[] {
+    const normal = this.vec.cross(this.vec.sub(ring[1], ring[0]), this.vec.sub(ring[2], ring[0]));
+
+    return this.vec.normalize(this.vec.scale(normal, -1));
   }
 
   private keyOf(point: number[]): string {
