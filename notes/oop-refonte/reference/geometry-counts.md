@@ -31,6 +31,7 @@ key is the shape the console boots on.
 | truncatedIcosidodecahedron | 120 | 236 |
 | mucuboctahedron | 216 | 696 |
 | murhombicuboctahedron | 672 | 2392 |
+| prismaticFourFive | 128 | 464 |
 | water | 657 | 1104 |
 | methane | 1119 | 1872 |
 | ammonia | 888 | 1488 |
