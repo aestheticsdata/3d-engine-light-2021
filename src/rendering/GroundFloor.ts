@@ -23,18 +23,21 @@
 // tests that projection's own bounding box against the canvas before the
 // fade, the fog or the fill run, so an invisible cell costs four divides and
 // nothing else.
+//
+// HAL-174: the rim dissolve is also how this layer withdraws, so the curve moved
+// to groundRimFade.ts where it can be asserted without a canvas. `reveal` scales
+// the disc's whole reach — rim band and all — and the far cells go first, which
+// leaves the patch directly under the shape as the last floor standing. At a
+// reveal of 1 nothing about the sheet moves.
 
 import GroundNearClip from "@rendering/GroundNearClip";
+import { rimFadeAt } from "@rendering/groundRimFade";
 import { isPolygonOnScreen } from "@rendering/screenVisibility";
 import { GROUND_DEPTH_METRES, metresToUnits } from "@rendering/worldScale";
 
 import type Fog from "@rendering/Fog";
 import type { GroundVertex } from "@rendering/GroundNearClip";
 import type GroundProjection from "@rendering/GroundProjection";
-
-// The outer share of the ground's radius that the rim dissolve occupies. The
-// inner three-quarters stay fully opaque.
-const RIM_FADE_FRACTION = 0.25;
 
 const FLOOR_LIGHT_CELL = "rgba(244, 243, 238, 1)";
 const FLOOR_DARK_CELL = "rgba(122, 124, 128, 1)";
@@ -45,6 +48,11 @@ export interface GroundFloorOptions {
   ground: GroundProjection;
   stepMetres: number;
   fog: Fog;
+  // How much of the disc is still there, 1 as the layer ships and 0 once it has
+  // withdrawn entirely (HAL-174). A number rather than a second boolean beside
+  // the renderer's own switch: the switch says what the user asked for, this
+  // says how far the picture has got round to agreeing.
+  reveal: number;
 }
 
 class GroundFloor {
@@ -52,12 +60,14 @@ class GroundFloor {
   private readonly clip: GroundNearClip;
   private readonly cellSize: number;
   private readonly fog: Fog;
+  private readonly reveal: number;
 
   constructor(options: GroundFloorOptions) {
     this.ground = options.ground;
     this.clip = new GroundNearClip(options.ground);
     this.cellSize = metresToUnits(options.stepMetres);
     this.fog = options.fog;
+    this.reveal = options.reveal;
   }
 
   // The two passes are public and separate rather than one draw(): the cells
@@ -110,8 +120,20 @@ class GroundFloor {
         // standing as a hard grey slab. Depth has no side to pick.
         const midX = xLeft + this.cellSize / 2;
         const midZ = zNear + this.cellSize / 2;
+        const alpha = this.fadeAt(midX, midZ) * this.fogAt(midX, midZ);
 
-        context.globalAlpha = this.fadeAt(midX, midZ) * this.fogAt(midX, midZ);
+        // A cell the dissolve has already taken to nothing still costs a
+        // fillStyle, a path and a fill to paint invisibly, and a withdrawing
+        // floor (HAL-174) leaves most of the sheet in exactly that state for
+        // the second half of the sweep. The same early-out isPolygonOnScreen
+        // performs one test above, against the other reason a cell cannot be
+        // seen — and at a reveal of 1 it only ever catches cells the rim had
+        // already faded out completely, so the shipped frame is untouched.
+        if (alpha <= 0) {
+          continue;
+        }
+
+        context.globalAlpha = alpha;
         // Modulo twice, because row and col are signed now that the sheet is
         // centred — a bare % would give -1 and paint two light cells adjacent.
         context.fillStyle = (((row + col) % 2) + 2) % 2 === 0 ? FLOOR_LIGHT_CELL : FLOOR_DARK_CELL;
@@ -133,31 +155,12 @@ class GroundFloor {
     context.restore();
   }
 
-  // Faded by distance across the ground itself, not by depth from the eye. The
-  // sheet is finite, so its rim is the thing that must never be visible as an
-  // edge — and the rim is a circle in the plane whatever the camera is doing,
-  // while depth stops tracking it the moment the view goes grazing or drops
-  // underneath. Keying on the plane's own radius makes the floor a disc that
-  // dissolves at its edge from every angle.
-  //
-  // Opaque over the whole inner disc and dissolving only across the outer
-  // RIM_FADE_FRACTION of the radius. A fade that starts at the middle is not a
-  // horizon, it is a translucent floor — the sky reads straight through the
-  // ground the user is standing over, which is not what any of this is for.
+  // The cell's distance across the ground itself, handed to the dissolve that
+  // owns the curve. The radius is the whole of what this class contributes —
+  // groundRimFade is where the reach, the rim band and the reveal live, and it
+  // is pinned by its own suite rather than through a canvas.
   private fadeAt(x: number, z: number): number {
-    const reach = metresToUnits(GROUND_DEPTH_METRES);
-    const rim = reach * RIM_FADE_FRACTION;
-    const beyond = Math.hypot(x, z) - (reach - rim);
-
-    if (beyond <= 0) {
-      return 1;
-    }
-
-    const remaining = Math.max(0, 1 - beyond / rim);
-
-    // Smoothstep rather than linear, so the disc meets full opacity without a
-    // visible ring where the ramp begins.
-    return remaining * remaining * (3 - 2 * remaining);
+    return rimFadeAt(Math.hypot(x, z), this.reveal);
   }
 
   // Multiplied into the rim dissolve above rather than replacing it (COS-247).
@@ -176,13 +179,21 @@ class GroundFloor {
     return this.fog.groundAlpha(this.ground.depthAt(x, z));
   }
 
+  // The band goes with the disc (HAL-174), and uniformly, unlike the cells: it
+  // is pinned to the horizon rather than to the ground's own radius, so there is
+  // no reach in it to shrink. Leaving it alone would strand a lit horizon line
+  // over a frame with no floor left under it. At a reveal of 1 this is
+  // globalAlpha's own default and nothing about the band moves.
   public drawFade(context: CanvasRenderingContext2D, horizonY: number, frameHeight: number) {
     const floorFade = context.createLinearGradient(0, horizonY, 0, frameHeight);
     floorFade.addColorStop(0, "rgba(255, 225, 238, 0.22)");
     floorFade.addColorStop(0.18, "rgba(255, 255, 255, 0.06)");
     floorFade.addColorStop(1, "rgba(0, 0, 0, 0.02)");
+    context.save();
+    context.globalAlpha = this.reveal;
     context.fillStyle = floorFade;
     context.fillRect(0, horizonY, context.canvas.width, frameHeight - horizonY + 4);
+    context.restore();
   }
 }
 

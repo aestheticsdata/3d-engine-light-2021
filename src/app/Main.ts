@@ -7,6 +7,7 @@
 // describe the same frame. Everything that belonged to one widget has gone to
 // that widget.
 
+import SceneryFade from "@animations/SceneryFade";
 import ShapeTransitionMachine from "@animations/shapeTransitionMachine";
 import CameraController, { DEFAULT_ZOOM_SLIDER_VALUE } from "@app/CameraController";
 import FPSMeter from "@app/FPSMeter";
@@ -75,6 +76,7 @@ import UIStateStore from "@ui/UIStateStore";
 import ViewportExpander from "@ui/ViewportExpander";
 import ViewportHUD from "@ui/ViewportHUD";
 
+import type { SceneryLayers } from "@animations/SceneryFade";
 import type { BootContext } from "@app/Bootstrapper";
 import type { CameraAngles } from "@camera/CameraRig";
 import type { ViewPresetKey } from "@camera/viewPresets";
@@ -136,6 +138,9 @@ class Main {
   // backing store and repaints the whole background.
   private pendingResizeRaf: number | null;
   private readonly sceneGraph: SceneGraphPanel;
+  // The molecule rule's own state (HAL-174): how much of the sky and the floor
+  // are still standing, and what the pair was before a molecule took them.
+  private readonly scenery: SceneryFade;
   private readonly shapeInfo: ShapeInfoPanel;
   private readonly shapeStory: ShapeStoryPanel;
   private readonly pipeline: RenderPipelinePanel;
@@ -386,6 +391,9 @@ class Main {
       onPitchInvertChange: (inverted) => this.pointerOrbit.setInvertPitch(inverted),
       onYawInvertChange: (inverted) => this.pointerOrbit.setInvertYaw(inverted),
     });
+    // On the shape transition's own duration, so the world and the object settle
+    // on the same beat rather than 1250ms apart.
+    this.scenery = new SceneryFade(TRANSITION_DURATION_MS);
     this.shapes = new ShapeSwitcher({
       objects3D: this.objects3D,
       transitionMachine: new ShapeTransitionMachine({
@@ -401,6 +409,16 @@ class Main {
         // the object the row describes changes underneath it.
         this.uiState.setState({ sceneSelection: MESH_ROW_ID });
         this.shapeTab.setActivePrimitive(primitive);
+
+        // At the START of the transition, not the end: SKY DOME, CHECKER FLOOR
+        // and the viewport's two pills read the new intent immediately while
+        // the picture takes 1250ms to agree with them. A toggle that stays lit
+        // for a second and a quarter over a sky that is visibly leaving is
+        // worse than one that is briefly ahead of its layer.
+        if (this.applySceneryRule(primitive)) {
+          this.syncWorldLayers();
+        }
+
         this.animateShapeInfoPanel(primitive);
       },
     });
@@ -865,6 +883,33 @@ class Main {
   // sky flag have to be read in the same pass or a toggle can leave the colour
   // describing the previous frame.
   private syncWorldLayers() {
+    // Every flip made by hand lands here — the WORLD tab's rows, the viewport's
+    // pills and the keyboard actions all write the store and raise this one
+    // callback — and every one of them is instant (HAL-174). Only the molecule
+    // rule animates; making every SKY press a 1250ms dissolve is a change to a
+    // control nobody asked to slow down. snapTo compares against the pair it is
+    // already animating toward, so the rule's own write passes through it
+    // untouched, and so do FOG and GRID STEP, which share this callback and
+    // must not cut a withdrawal short.
+    this.scenery.snapTo(this.sceneryLayers());
+    this.pushWorldLayers();
+    this.worldTab.syncEnvironmentUi();
+    this.quickToggles.syncFromStore();
+    this.renderPausedFrame();
+  }
+
+  // The renderer half of the sync above, on its own because the withdrawal calls
+  // it on every frame it moves and the two UI surfaces have nothing to re-read:
+  // the booleans they draw flipped once, at the start of the fade.
+  //
+  // That per-frame call is also what carries a moving reveal into Surface3D's
+  // background-snapshot signature, through the layersVersion bump setLayers
+  // already makes. The price is a full-canvas getImageData per frame for the
+  // length of the transition — roughly 75 readbacks over 1250ms at 1024x640 —
+  // and it is accepted: it is bounded, the cache serves hits again the moment
+  // the sweep settles, and it lands inside the one window where the console is
+  // already drawing two meshes for exactly the same 1250ms.
+  private pushWorldLayers() {
     const state = this.uiState.getState();
     const sky = state.sky ?? DEFAULT_SKY;
 
@@ -873,12 +918,57 @@ class Main {
       floor: state.floor ?? DEFAULT_FLOOR,
       grid: state.grid ?? DEFAULT_GRID,
       shadow: state.shadow ?? DEFAULT_SHADOW,
+      skyReveal: this.scenery.skyReveal,
+      floorReveal: this.scenery.floorReveal,
     });
     this.background.setWorld({ gridStepMetres: state.gridStep ?? DEFAULT_GRID_STEP });
     this.fog.setValues({ amount: state.fog ?? DEFAULT_FOG, skyEnabled: sky });
-    this.worldTab.syncEnvironmentUi();
-    this.quickToggles.syncFromStore();
-    this.renderPausedFrame();
+  }
+
+  // The two switches the molecule rule animates, read through the same defaults
+  // every other reader of them uses. A slice the user has never touched is
+  // absent, not off.
+  private sceneryLayers(): SceneryLayers {
+    const state = this.uiState.getState();
+
+    return { sky: state.sky ?? DEFAULT_SKY, floor: state.floor ?? DEFAULT_FLOOR };
+  }
+
+  // A molecule is not standing in a landscape: it is a structure held in
+  // nothing, and the checker floor and the photographed sky are the two layers
+  // that give a SOLID its sense of ground and scale. Selecting one withdraws
+  // both; leaving one hands back whatever they were before it was picked, which
+  // is not the same as forcing them on — a floor already switched off before the
+  // molecule must stay off after it.
+  //
+  // Molecule-ness comes off moleculeInfo rather than a list of its own: it is
+  // defined for exactly the keys whose shapeInfo entry declares family
+  // "MOLECULES", and repaintForPrimitive already branches on the same table for
+  // the story card. One more read of it, not a second list that can drift.
+  //
+  // Returns whether the pair moved, so a solid-to-solid switch — every one of
+  // which reaches here — costs nothing beyond the lookup.
+  private applySceneryRule(primitive: string | null): boolean {
+    if (!primitive) {
+      return false;
+    }
+
+    if (moleculeInfo[primitive]) {
+      this.scenery.enter(this.sceneryLayers(), this.now());
+      this.uiState.setState({ sky: false, floor: false });
+
+      return true;
+    }
+
+    const restored = this.scenery.leave(this.now());
+
+    if (!restored) {
+      return false;
+    }
+
+    this.uiState.setState({ sky: restored.sky, floor: restored.floor });
+
+    return true;
   }
 
   // Every pipeline change lands on the same three readouts and the same repaint,
@@ -1097,6 +1187,14 @@ class Main {
 
     this.shapes.update(timestamp);
     this.shapes.syncQueue(timestamp);
+
+    // The scenery's withdrawal rides the same clock and the same beat as the
+    // transition above (HAL-174), so the world and the shape settle together.
+    // Pushed only on the frames a reveal actually moved — see pushWorldLayers
+    // for what each of those frames costs Surface3D's snapshot cache.
+    if (this.scenery.update(timestamp)) {
+      this.pushWorldLayers();
+    }
 
     // Read before advance, not after: advance is what clears a finished ease, so
     // a check made afterwards would skip the one frame carrying the angles the
@@ -1385,6 +1483,13 @@ class Main {
     this.shapeTab.syncFromStore();
     this.renderTab.syncFromStore();
     this.worldTab.syncFromStore();
+    // A preset arrives as a WHOLE scene, so its own sky and floor win outright
+    // and become what leaving a molecule restores — there is nothing older left
+    // to remember. It needs no special case beyond this: both are registered
+    // slices, absent from RESERVED_PRESET_KEYS and TELEMETRY_KEYS alike, so a
+    // file saved while a molecule was displayed already carries them off and
+    // round-trips on its own.
+    this.scenery.adopt(this.sceneryLayers());
     this.syncWorldLayers();
     this.pipeline.syncOpacityAvailability();
     this.syncPipelineReadouts();
@@ -1416,6 +1521,16 @@ class Main {
     this.shapeTab.syncFromStore();
     this.renderTab.syncFromStore();
     this.worldTab.syncFromStore();
+    // RESET hands SKY DOME and CHECKER FLOOR back their registered defaults —
+    // both true — and does not change the shape, so on a molecule it would
+    // restore exactly the horizon the rule exists to take away. adopt() drops
+    // what was remembered from before the molecule was picked, since the
+    // defaults are what RESET means by "what they were"; the rule is then
+    // re-asserted against them and settled rather than animated, because RESET
+    // is not an animated moment anywhere else in the console.
+    this.scenery.adopt(this.sceneryLayers());
+    this.applySceneryRule(this.shapes.target);
+    this.scenery.settle();
     this.syncWorldLayers();
     this.pipeline.syncOpacityAvailability();
     this.syncPipelineReadouts();

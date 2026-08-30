@@ -34,6 +34,7 @@
 // reads the posed mesh bounds every frame, and the vignette, which sits on top
 // of everything.
 
+import { formatRgba, parseCssColor } from "@rendering/cssColor";
 import { SKY_HORIZON } from "@rendering/fogCurve";
 import GroundFloor from "@rendering/GroundFloor";
 import GroundGrid from "@rendering/GroundGrid";
@@ -49,6 +50,7 @@ import { chartTokens } from "@ui/chartTokens";
 
 import type Camera from "@primitives/Camera";
 import type RenderTarget from "@primitives/RenderTarget";
+import type { RGBA } from "@rendering/cssColor";
 import type Fog from "@rendering/Fog";
 import type FrameBuffer from "@rendering/FrameBuffer";
 import type { GroundHorizon } from "@rendering/GroundProjection";
@@ -60,6 +62,23 @@ import type { ShadowBlob } from "@rendering/shadowEllipse";
 const SKY_COVERAGE_RATIO = 0.62;
 const SKY_OVERSCAN_RATIO = 0.04;
 const SKY_ALPHA = 0.9;
+
+// The width of the sweep's soft edge (HAL-174), measured along its own axis —
+// the top of the frame to the horizon line, so 0.5 is half that span. It is also
+// what staggers the two ends: the boundary starts one band above the frame and
+// finishes one band below the horizon, which is why the zenith is gone long
+// before the horizon band is and why the horizon reaches full cover at exactly
+// the reveal the flat fill takes over.
+const SKY_SWEEP_BAND = 0.5;
+
+// bgApp as channels, so the sweep can lay the same colour down at a per-stop
+// alpha. Parsed once here rather than per frame: chartTokens is frozen, and the
+// fallback keeps the parse a fact rather than an assumption, the way Fog's own
+// does. Black is the right one to fall back to — it is what a frame with no sky
+// is already meant to be.
+const BG_APP: RGBA = parseCssColor(chartTokens.bgApp) ?? [0, 0, 0, 1];
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 interface BackgroundRendererOptions {
   width: number;
@@ -75,6 +94,15 @@ export interface BackgroundLayers {
   floor: boolean;
   grid: boolean;
   shadow: boolean;
+  // How much of each of the two withdrawing layers is still standing, 1 as they
+  // ship and 0 once gone (HAL-174). They ride here beside the switches rather
+  // than arriving through a call of their own because they are the same
+  // decision seen twice: the boolean is what the user asked for, the reveal is
+  // how far the picture has got round to agreeing. A molecule flips the switch
+  // at once and takes the shape transition's own 1250ms to empty the reveal, so
+  // a layer whose switch reads off is still painted until its reveal is 0.
+  skyReveal: number;
+  floorReveal: number;
 }
 
 // Bundled rather than three positional args (R4): context is the one every
@@ -135,6 +163,8 @@ class BackgroundRenderer {
   private floorEnabled: boolean;
   private gridEnabled: boolean;
   private shadowEnabled: boolean;
+  private skyReveal: number;
+  private floorReveal: number;
   private gridStepMetres: number;
   // Bumped by setLayers/setWorld (E3b/COS-242) — the two calls that can move
   // anything Surface3D's background snapshot depends on. resize() is not
@@ -156,6 +186,8 @@ class BackgroundRenderer {
     this.floorEnabled = true;
     this.gridEnabled = false;
     this.shadowEnabled = false;
+    this.skyReveal = 1;
+    this.floorReveal = 1;
     this.gridStepMetres = 4;
     this.layersChangeCount = 0;
   }
@@ -173,6 +205,8 @@ class BackgroundRenderer {
     this.floorEnabled = layers.floor;
     this.gridEnabled = layers.grid;
     this.shadowEnabled = layers.shadow;
+    this.skyReveal = layers.skyReveal;
+    this.floorReveal = layers.floorReveal;
     this.layersChangeCount += 1;
   }
 
@@ -209,6 +243,7 @@ class BackgroundRenderer {
     context.clearRect(0, 0, this.width, this.height);
 
     const ground = new GroundProjection({ renderTarget, camera, cameraTransform });
+
     // Where the ground actually vanishes, which is only the render target's
     // centre while the camera is level. Everything painted in bands — the haze,
     // the glow, the floor's dissolve — is drawn inside alignToHorizon() below,
@@ -218,40 +253,7 @@ class BackgroundRenderer {
     const horizon = ground.horizon();
     const horizonY = renderTarget.centerY;
 
-    if (this.skyEnabled) {
-      // The camera's forward direction in world space is row 2 of its own
-      // matrix, so its azimuth is what the sky has to pan against.
-      const azimuth = Math.atan2(cameraTransform[2][0], cameraTransform[2][2]);
-      const focalPx = camera.focalLength * renderTarget.scale;
-
-      this.alignToHorizon(context, renderTarget, horizon, () => {
-        this.renderSky(context, azimuth, focalPx);
-        this.renderAtmosphere(context, horizonY);
-      });
-      // Gradient, photograph and haze: three layers under one switch, counted
-      // separately because they really are three passes over the frame. The
-      // photograph is one whatever the yaw makes its tile count, which is the
-      // per-layer rule this class counts by.
-      stats.addDrawCall();
-      stats.addDrawCall();
-
-      if (this.skyImage) {
-        stats.addDrawCall();
-      }
-    } else {
-      // A flat fill rather than leaving the cleared canvas transparent, so the
-      // frame is a dark image and not a hole. On screen the two are
-      // indistinguishable — what shows through is --color-bg-app, the same
-      // colour this paints — but the canvas is an exportable artefact and a
-      // transparent PNG is not the same thing as a black one.
-      //
-      // It does not survive everywhere: GroundFloor's destination-out fade
-      // punches back through it around the horizon, exactly as it already does
-      // to the sky.
-      context.fillStyle = chartTokens.bgApp;
-      context.fillRect(0, 0, this.width, this.height);
-      stats.addDrawCall();
-    }
+    this.paintSky({ request, ground, horizon, horizonY });
 
     // Only while the eye is above the plane. From below, the floor is in front
     // of everything standing on it, so Surface3D paints it after the meshes
@@ -295,7 +297,7 @@ class BackgroundRenderer {
   // renderPostMeshLayers below, since both blend over the mesh, not under
   // it).
   public renderSnapshotLayers(request: BackgroundRenderRequest) {
-    const { context, camera, renderTarget, cameraTransform, stats } = request;
+    const { context, camera, renderTarget, cameraTransform } = request;
 
     context.save();
     context.clearRect(0, 0, this.width, this.height);
@@ -304,25 +306,7 @@ class BackgroundRenderer {
     const horizon = ground.horizon();
     const horizonY = renderTarget.centerY;
 
-    if (this.skyEnabled) {
-      const azimuth = Math.atan2(cameraTransform[2][0], cameraTransform[2][2]);
-      const focalPx = camera.focalLength * renderTarget.scale;
-
-      this.alignToHorizon(context, renderTarget, horizon, () => {
-        this.renderSky(context, azimuth, focalPx);
-        this.renderAtmosphere(context, horizonY);
-      });
-      stats.addDrawCall();
-      stats.addDrawCall();
-
-      if (this.skyImage) {
-        stats.addDrawCall();
-      }
-    } else {
-      context.fillStyle = chartTokens.bgApp;
-      context.fillRect(0, 0, this.width, this.height);
-      stats.addDrawCall();
-    }
+    this.paintSky({ request, ground, horizon, horizonY });
 
     if (!ground.isEyeBelowGround) {
       this.paintFloorAndGrid({ request, ground, horizon, horizonY });
@@ -393,8 +377,13 @@ class BackgroundRenderer {
     const { request, ground, horizon, horizonY } = pass;
     const { context, renderTarget, fog, stats } = request;
 
-    if (this.floorEnabled) {
-      const floor = new GroundFloor({ ground, stepMetres: this.gridStepMetres, fog });
+    // The switch is no longer the whole answer (HAL-174): a molecule flips it off
+    // in the frame it is picked, and the disc has the shape transition's own
+    // 1250ms to finish shrinking. What decides whether there is anything left to
+    // paint is the reveal, and the switch only decides where the reveal is
+    // heading.
+    if (this.floorEnabled || this.floorReveal > 0) {
+      const floor = new GroundFloor({ ground, stepMetres: this.gridStepMetres, fog, reveal: this.floorReveal });
 
       floor.drawCells(context);
       this.alignToHorizon(context, renderTarget, horizon, () => floor.drawFade(context, horizonY, this.height));
@@ -418,6 +407,112 @@ class BackgroundRenderer {
     // rather than on a switch — two mid-transition, none while the near plane
     // has rejected them — so it is the one that counts its own.
     new GroundShadow(ground, fog).draw(context, blobs, stats);
+  }
+
+  // Sky, photograph and haze under one switch — and, since HAL-174, under one
+  // reveal beside it. One method behind render() and renderSnapshotLayers()
+  // alike, where the two carried the same block twice: the sweep below has to
+  // land in both, and a mask only half the frames paint is a mask the snapshot
+  // cache would flicker.
+  private paintSky(pass: GroundPass) {
+    const { request, horizon, horizonY } = pass;
+    const { context, camera, renderTarget, cameraTransform, stats } = request;
+
+    if (!this.skyEnabled && this.skyReveal <= 0) {
+      // A flat fill rather than leaving the cleared canvas transparent, so the
+      // frame is a dark image and not a hole. On screen the two are
+      // indistinguishable — what shows through is --color-bg-app, the same
+      // colour this paints — but the canvas is an exportable artefact and a
+      // transparent PNG is not the same thing as a black one.
+      //
+      // It does not survive everywhere: GroundFloor's destination-out fade
+      // punches back through it around the horizon, exactly as it already does
+      // to the sky.
+      context.fillStyle = chartTokens.bgApp;
+      context.fillRect(0, 0, this.width, this.height);
+      stats.addDrawCall();
+      return;
+    }
+
+    // The camera's forward direction in world space is row 2 of its own
+    // matrix, so its azimuth is what the sky has to pan against.
+    const azimuth = Math.atan2(cameraTransform[2][0], cameraTransform[2][2]);
+    const focalPx = camera.focalLength * renderTarget.scale;
+
+    this.alignToHorizon(context, renderTarget, horizon, () => {
+      this.renderSky(context, azimuth, focalPx);
+      this.renderAtmosphere(context, horizonY);
+      this.maskSky(context, horizonY);
+    });
+    // Gradient, photograph and haze: three layers under one switch, counted
+    // separately because they really are three passes over the frame. The
+    // photograph is one whatever the yaw makes its tile count, which is the
+    // per-layer rule this class counts by.
+    stats.addDrawCall();
+    stats.addDrawCall();
+
+    if (this.skyImage) {
+      stats.addDrawCall();
+    }
+
+    // The withdrawal's own pass over the frame, counted by the same rule and
+    // only on the frames that actually pay for it — at a full reveal maskSky
+    // returns before its fill.
+    if (this.skyReveal < 1) {
+      stats.addDrawCall();
+    }
+  }
+
+  // The sky's withdrawal (HAL-174). A globalAlpha ramp over the whole layer
+  // would be a dimmer switch; what this lays down is a boundary that travels —
+  // bgApp behind it, untouched sky ahead of it — sweeping from the top of the
+  // frame down to the horizon as the reveal runs 1 → 0. The sky drains from the
+  // zenith and the horizon band is the last of it to go, which is the same
+  // reading as the floor's shrinking disc.
+  //
+  // Painted inside alignToHorizon along with everything else band-shaped here,
+  // so the sweep tilts with roll and slides with pitch for free rather than
+  // deriving the horizon a second time.
+  //
+  // Toward bgApp rather than toward transparency, for the reason the flat fill
+  // above exists: the canvas is an exportable artefact and a transparent PNG is
+  // not a black one. The two meet exactly. The gradient's far stop reaches full
+  // opacity as the reveal reaches 0 — and beyond the horizon a CanvasGradient
+  // holds its last stop, so the ground's half of the frame goes with it — which
+  // makes the endpoint of this sweep the existing off-state rather than a new
+  // one that approximates it.
+  //
+  // No destination-out: a punch-through composite would eat the fill under the
+  // sky as well, and avoiding that would need an offscreen buffer this does not.
+  private maskSky(context: CanvasRenderingContext2D, horizonY: number) {
+    if (this.skyReveal >= 1) {
+      return;
+    }
+
+    // Offsets along the gradient's own axis, where 0 is the top of the frame and
+    // 1 the horizon. `foot` is where the boundary has reached and `head` is
+    // where it is already fully opaque behind; both run past their end of the
+    // axis, which is what staggers the zenith and the horizon.
+    const swept = 1 - this.skyReveal;
+    const foot = swept * (1 + SKY_SWEEP_BAND);
+    const head = foot - SKY_SWEEP_BAND;
+    const alphaAt = (offset: number): number => clamp01((foot - offset) / SKY_SWEEP_BAND);
+    const mask = context.createLinearGradient(0, 0, 0, horizonY);
+    // The two ends are always stops; the two kinks only while they fall inside
+    // the axis, since a CanvasGradient takes no offset outside 0..1. They are
+    // already in order — head precedes foot by one band's width.
+    const offsets = [0, ...[head, foot].filter((offset) => offset > 0 && offset < 1), 1];
+
+    offsets.forEach((offset) => {
+      mask.addColorStop(offset, formatRgba([BG_APP[0], BG_APP[1], BG_APP[2], alphaAt(offset)]));
+    });
+
+    // Oversized against the diagonal like every other fill in this frame: the
+    // rotation the horizon applies would otherwise leave the canvas corners bare.
+    const overscan = Math.hypot(this.width, this.height);
+
+    context.fillStyle = mask;
+    context.fillRect(-overscan, -overscan, this.width + 2 * overscan, this.height + 2 * overscan);
   }
 
   // Runs `paint` in a frame where the ground's vanishing line is horizontal and
