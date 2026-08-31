@@ -30,6 +30,7 @@ key is the shape the console boots on.
 | kisRhombicTriacontahedron | 62 | 120 |
 | truncatedIcosidodecahedron | 120 | 236 |
 | mucuboctahedron | 216 | 696 |
+| mucube | 123 | 480 |
 | muoctahedron | 216 | 808 |
 | murhombicuboctahedron | 672 | 2392 |
 | prismaticFourFive | 128 | 464 |
