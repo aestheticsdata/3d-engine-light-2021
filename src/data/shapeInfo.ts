@@ -451,6 +451,27 @@ const entries = {
       },
     ],
   },
+  mutetrahedron: {
+    family: "POLYHEDRA",
+    title: "Mutetrahedron",
+    description:
+      "Coxeter's completion of the regular trio, in rust: every hexagon of the quarter cubic honeycomb, with its triangles opened out as the tunnels.",
+    geometricFeature:
+      "Six hexagons at every vertex and triangular holes; the second sublattice is point-inverted, without which not one hexagon would be shared.",
+    densityLabel: "High density",
+    generator: "quarter cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Regular_skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Quarter_cubic_honeycomb",
+      },
+    ],
+  },
   prismaticFourFive: {
     family: "POLYHEDRA",
     title: "Prismatic {4,5}",

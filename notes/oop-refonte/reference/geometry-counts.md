@@ -33,6 +33,7 @@ key is the shape the console boots on.
 | mucube | 123 | 480 |
 | muoctahedron | 216 | 808 |
 | murhombicuboctahedron | 672 | 2392 |
+| mutetrahedron | 275 | 1360 |
 | prismaticFourFive | 128 | 464 |
 | water | 657 | 1104 |
 | methane | 1119 | 1872 |
