@@ -388,6 +388,27 @@ const entries = {
       },
     ],
   },
+  mucube: {
+    family: "POLYHEDRA",
+    title: "Mucube",
+    description:
+      "One of the two sponges Petrie found, in brass: unit cubes stripped to open tubes, six of them meeting around every faceless cube.",
+    geometricFeature:
+      "Six squares at every vertex and square holes; the all-even and all-odd cubes become the holes, which is the one assignment leaving two faces on every edge.",
+    densityLabel: "Medium density",
+    generator: "cubic tubes + faceless holes",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Regular_skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Cubic_honeycomb",
+      },
+    ],
+  },
   muoctahedron: {
     family: "POLYHEDRA",
     title: "Muoctahedron",
