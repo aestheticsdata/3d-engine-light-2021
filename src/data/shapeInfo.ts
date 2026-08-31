@@ -388,6 +388,27 @@ const entries = {
       },
     ],
   },
+  muoctahedron: {
+    family: "POLYHEDRA",
+    title: "Muoctahedron",
+    description:
+      "Petrie's regular sponge {6,4|4}, in copper: every hexagon of the Kelvin foam, with all of its squares opened out as the tunnels.",
+    geometricFeature:
+      "Four hexagons at every vertex and square holes; the honeycomb puts one square and two hexagons on each edge, so deleting the squares leaves exactly two faces there.",
+    densityLabel: "Medium density",
+    generator: "bitruncated cubic lattice",
+    textureSummary: "No textures",
+    references: [
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Regular_skew_apeirohedron",
+      },
+      {
+        label: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Bitruncated_cubic_honeycomb",
+      },
+    ],
+  },
   murhombicuboctahedron: {
     family: "POLYHEDRA",
     title: "Murhombicuboctahedron",
