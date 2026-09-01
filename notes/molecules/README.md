@@ -5,9 +5,10 @@ it, and **HAL-176**, the complex end. Ticket bodies live in Spira; this
 directory holds only what a ticket cannot.
 
 - **[reference/decisions.md](reference/decisions.md)** — the binding decisions
-  (D1): what the envelope is for, the number the stage's own frame puts on it,
-  and the molecule it refuses. Read it before arguing that a constant in
-  `MoleculeGenerator.ts` should move.
+  (D1–D2): what the envelope is for and the number the stage's own frame puts
+  on it, and what a molecule looks like when the budget squeezes it — the
+  compact style, its threshold, and the card row that names it. Read it before
+  arguing that a constant in `MoleculeGenerator.ts` should move.
 
 The family's other rules live where they always have and are not restated
 here: the shape story card's molecule mode is specified in
