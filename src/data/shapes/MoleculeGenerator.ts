@@ -65,33 +65,35 @@ type Vec3 = [number, number, number];
 const TRIANGLE_BUDGET = 8192;
 
 // How far a molecule may reach from its own centroid before the constructor
-// refuses to build it.
+// refuses to build it: the family's ceiling, set by what the stage can frame
+// at the default view. The ruling is molecules/reference/decisions.md D1.
 //
-// This was 100, described as "the envelope the rest of the registry sits in",
-// and that description was WRONG about the registry it was describing. Read
-// out of the geometry baseline, eight shapes already reach past 100: cross
-// 108.6, donut 110.0, the four torus knots 115.7–116.0, cube and pyramid
-// 173.2, and the Menger sponge 181.9. 100 is the sphere's radius and the
-// polyhedra's circumradius, not the console's ceiling — and it was refusing
-// molecules at reaches the donut and the cross have drawn at since the first
-// commit.
+// The two earlier values were both facts about other things. 100 was the
+// sphere's radius and the polyhedra's circumradius, misread as a registry
+// ceiling eight shapes were already past; 100·√3 ≈ 173.2 was the corner of
+// the cube — the largest reach a solid arrives at by construction, which is
+// an argument about the solids and says nothing about how long a molecule may
+// be. Retinol was being refused at 199.1 units by a wall built out of a cube.
 //
-// 173.2 is 100·√3: the corner of the cube whose half-edge is 100, which is
-// exactly where cube and pyramid sit. It is the largest reach in the registry
-// that a shape arrives at by construction rather than by subdivision, so it is
-// the number with a reason behind it. The sponge is past it and is its own
-// case.
+// 230 is the stage's own number. At the default view — FOV 94 at zoom 50, so
+// focal 298.4 and the eye 318.3 out (CameraController.ts) — a shape spinning
+// about the origin projects its reach R to a half-extent of fl·R/√(D² − R²)
+// pixels, which fills the 320-pixel half-height at R = 232.8. 230 is the
+// largest round value under that limit, chosen the same way 22 was below.
+// Declared rather than imported: this file cannot depend on src/app, and a
+// moved UI default must not silently change which data files compile.
 //
 // RAISING THIS CEILING MOVES NOTHING. It is compared against, never multiplied
 // by; every mesh in the registry is byte-identical either side of this change,
 // which is exactly what makes it a different act from touching the scale
-// below. That one would resize all seven molecules to admit an eighth.
+// below.
 //
-// It still bites where it was meant to. The triangle budget caps a molecule at
-// 68 atoms, and 68 atoms strung out in a line would reach well past this — a
-// molecule that large wants the render decisions of its own ticket, which is
-// what the throw is for.
-const ENVELOPE_RADIUS = 100 * Math.sqrt(3);
+// It still bites, and where it bites it is final: β-carotene reaches 324.1
+// units, past the default eye itself at 318.3, so its spin would sweep
+// through the camera. No family ceiling admits it — only a stage that pulls
+// back for what it is given does, and that is a camera ticket, not a constant
+// to nudge.
+const ENVELOPE_RADIUS = 230;
 
 // The whole family's Angstrom-to-engine-unit conversion, and the reason an
 // atom is the same size in every molecule.

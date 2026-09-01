@@ -48,12 +48,14 @@ const BALL_TRIANGLES = 336;
 const ROD_TRIANGLES = 48;
 // Three rings — one at each atom, one at the midpoint — of latSegments points.
 const ROD_POINTS = 3 * 12;
-// 100·√3, the corner of the registry's cube. It was 100 until the baseline was
-// read back and the ceiling turned out to sit under the donut's 110 and the
-// cross's 108.6; MoleculeGenerator's own comment carries that measurement
-// across the whole registry. Restated here by hand for the same reason
-// POLY_BUDGET is.
-const ENVELOPE_RADIUS = 100 * Math.sqrt(3);
+// The family ceiling: what the stage frames at the default view, rounded down
+// to 230. It was 100 — the sphere's radius misread as a registry ceiling —
+// then the cube corner's 100·√3, whose argument turned out to be about the
+// solids and not about molecules at all; the derivation is in
+// MoleculeGenerator's own comment and the ruling in
+// molecules/reference/decisions.md D1. Restated here by hand for the same
+// reason POLY_BUDGET is.
+const ENVELOPE_RADIUS = 230;
 const BALL_RADIUS_SCALE = 0.5;
 // Restated here for the same reason POLY_BUDGET is: the generator owns it, and
 // this suite has to agree with it by hand rather than by import.
@@ -252,7 +254,7 @@ describe("MoleculeGenerator", () => {
     expect(fills.filter((fill) => fill === hydrogen).length).toBe(2 * BALL_TRIANGLES + 2 * (ROD_TRIANGLES / 2));
   });
 
-  it.each(moleculeCases)("keeps the mesh inside the registry envelope: $key", ({ mesh: built }) => {
+  it.each(moleculeCases)("keeps the mesh inside the family envelope: $key", ({ mesh: built }) => {
     const distances = built.points.map((point) => Math.hypot(point[0], point[1], point[2]));
 
     expect(Math.max(...distances)).toBeLessThanOrEqual(ENVELOPE_RADIUS + 1e-6);
@@ -287,9 +289,12 @@ describe("MoleculeGenerator", () => {
       name: "Sprawl",
       atoms: [
         { element: "H", position: [0, 0, 0] },
-        // Twenty Ångströms apart, so the reach is 223 engine units. It was
-        // twelve when the ceiling was 100, which is now inside it.
-        { element: "H", position: [20, 0, 0] },
+        // Twenty-four Ångströms apart, so the reach is 267 engine units. This
+        // fixture has now been stretched twice — twelve Å overflowed the
+        // 100-unit ceiling, twenty the cube corner's 173.2 — and each stretch
+        // was a recorded raise of the ceiling, not drift; the current one is
+        // decisions.md D1.
+        { element: "H", position: [24, 0, 0] },
       ],
       bonds: [{ a: 0, b: 1, order: 1 }],
     };
