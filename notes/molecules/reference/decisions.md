@@ -121,5 +121,104 @@ since its first commit — and for a molecule the question does not even arise,
 because HAL-174 withdraws the scenery whenever one is on stage, which the
 stage look for this ruling confirmed. And nothing here says
 anything about *resolution* — what a molecule looks like when the triangle
-budget squeezes it is HAL-177's ruling, which appends to this file when it
-lands.
+budget squeezes it is D2, below.
+
+## D2 — Below nine bands a molecule is drawn compact on purpose, and the card says so
+
+`latSegmentsFor` in
+[`MoleculeGenerator.ts`](../../../src/data/shapes/MoleculeGenerator.ts) walks
+the one resolution knob down from twelve until the molecule fits the
+8192-triangle budget, and throws at six. The walk is the right mechanism and
+no policy at all: resolution falls out of the atom and bond counts, nobody
+chooses it, no file can influence it, and no reader is told. Where the family
+draws today and where the epic's measurements put what is planned:
+
+| lat | who draws there | reads as |
+| -- | -- | -- |
+| 12 | water, methane, ammonia, CO₂, benzene, aspirin (8064 of 8192) | round |
+| 11 | glucose (7920), caffeine (7964) | round |
+| 10 | cholesterol's heavy skeleton, 7960 — planned, HAL-179 | round |
+| 9 | lanosterol's heavy skeleton (7362), squalene's (6984) | read as balls on D1's stage look |
+| 8 | coronene full-atom (7104) — measured at scoping, not in the registry | **visibly faceted** |
+| 7 | retinol full-atom (7854) | faceted |
+| 6 | C₆₀ (7920, the floor) | **a six-band lump** |
+
+A reader looking at a six-band C₆₀ beside a twelve-band water cannot tell
+*drawn at low resolution because it is large* from *badly modelled*, and
+neither the engine nor the card can say which. That ambiguity, not the
+triangle count, is the defect this ruling removes.
+
+**HAL-169's answer C won — the trade is made deliberate — and D1's
+measurements scope it.** The rejected answers, so they stay rejected: **A —
+ship it faceted and say nothing** — free, and it leaves the ambiguity in
+place permanently, in a console whose entire card philosophy is that it
+explains what it shows. **B — raise the budget** — not a live option but a
+*tried* one: HAL-173 raised it to 16384 with seventeen bands, caffeine went
+to 15424 triangles and became the registry's densest shape, the console's
+derived bar halved for twenty-four shapes that had not changed, caffeine's
+frame time doubled from 3.7 ms to 7.4 ms, and the whole thing was reverted.
+The record sits above `TRIANGLE_BUDGET` in `MoleculeGenerator.ts`; anyone
+reopening B owes a frame-time plan, not a bar plan.
+
+**The scope, measured rather than assumed.** After hydrogen suppression
+(HAL-179), every named molecule in the epic's bands draws at nine bands or
+better — the sterols at nine and ten, coronene's skeleton at eleven. What
+still hits the floor is the all-carbon cages, which have no hydrogens to
+suppress: C₆₀ draws at six, and C₇₀ (70 atoms, 105 bonds, 9240 triangles at
+the floor) does not draw at all. So the deliberate trade is not the general
+regime HAL-169 imagined. It is the exception lane for the cages, and it is
+allowed to be simple.
+
+**The mechanism: compact is a drawing style, not a mesh saving.** Same walk,
+same lat, same triangle count — **ball radius at a quarter of the covalent
+radius instead of ball-and-stick's half**. The number is derived, not tasted:
+facet legibility is screen-space, and at half the radius a six-band ball's
+latitude band is exactly the height of a twelve-band ball's at full radius
+(π·r/2 over 6 equals π·r over 12), so 0.25 is the scale at which the floor's
+bands shrink back to full resolution's; the longitude facet binds looser, at
+0.286. Rods stay at `ROD_RADIUS`, which is what makes the picture rod-heavy —
+a compact hydrogen ball approaches the rod's own girth, which is the licorice
+look every chemistry viewer reaches for at scale, here on purpose. **The
+threshold is the walked lat: eight and below draws compact, nine and above
+draws ball-and-stick unchanged.** Nine is where the recorded evidence splits
+— lanosterol's skeleton drew at nine on D1's stage look and read as balls;
+coronene at eight was recorded visibly faceted when the band was scoped. The
+first compact molecule to land (C₆₀, HAL-169) confirms 0.25 against the
+stage, and both numbers move only through this file.
+
+**A molecule file says nothing about its own resolution.** The formula's rule,
+applied again: derived, one derivation, one place. A file that could declare
+a radius or a band count could contradict the arithmetic the way a declared
+formula could contradict the mesh, and per-file knobs are rejected for
+exactly that reason — HAL-169's phrase "a property of the molecule" is
+honoured as *derived from* the molecule, never *declared by* it.
+
+**The reader is told on the card, by derivation, exactly when it is true.**
+The MOLECULE PROPERTIES card gains a **DETAIL** row if and only if the walk
+landed at eight or below — produced by the panel from the same arithmetic
+that drew the mesh, never authored: `moleculeInfo` may not carry the label,
+so the card cannot claim a squeeze that did not happen or stay silent about
+one that did. The row counts toward the card's four-row ceiling, so a compact
+molecule authors at most two properties beside the derived MOLAR MASS.
+Eleven-versus-twelve stays untold on purpose: glucose and caffeine are not
+faceted, and a row saying "reduced" over an invisible difference is noise
+that spends the card's scarcest resource. `notes/ui-refonte/ui/09-shape-story.md`
+gains the row's spec when the first compact molecule ships — a mode the spec
+does not mention is a rule broken in silence.
+
+**One invariant amended, deliberately.** "A given element is drawn at one
+size in every molecule" becomes per-style: one size in every ball-and-stick
+molecule, one smaller size in every compact molecule. The comparison the
+invariant protects survives inside each style, the DETAIL row is where a
+reader learns the styles differ, and the suite's cross-family size assertion
+splits by style when the first compact molecule lands — that split is
+licensed here, not a drift to be reverted.
+
+**What this does not rule.** Bonds-only (HAL-170) is not the compact style
+and does not become one: it was conceived as a reader-chosen render mode and
+that reasoning stands, but its budget arithmetic no longer buys what it
+claimed — the molecules past 68 heavy atoms it was written for are mostly
+refused by D1's envelope before the budget is ever consulted, so its
+re-scoping is the epic's business, not this file's. Nothing here licenses a
+per-molecule budget — the epic already refuses one — and nothing here
+reopens B.
