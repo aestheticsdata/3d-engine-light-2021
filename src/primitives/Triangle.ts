@@ -58,7 +58,9 @@
 // Six chips, and this class is where four of them are decided — POINTS is a
 // vertex pass on Mesh and never reaches a triangle at all.
 //
-//   WIRE      the stroke below, unfogged and unlit, unchanged since E5b.
+//   WIRE      the stroke below, unfogged and unlit. Unchanged since E5b but
+//             for its ink, which the caller now hands in rather than this
+//             file naming — see @rendering/diagnosticInk (HAL-191).
 //   FLAT      one lit colour per face, fog blended into it here.
 //   GOURAUD   the UNLIT colour, plus a diffuse term per vertex for the
 //             rasteriser to interpolate. Unlit is the whole point: fillRgba's
@@ -133,6 +135,12 @@ export interface TriangleRenderOptions {
   // A hardcoded 1 is a half-thickness hairline the moment the backing store
   // renders above the reference height, DPR included.
   lineWidth?: number;
+  // What the two diagnostic views draw with (HAL-191), and required for the
+  // reason the four above it are: an optional ink falls back to a constant, and
+  // a constant is precisely what left a molecule stroked in near-black on black.
+  // Mesh's POINTS pass reads this same field, which is what keeps the stroke and
+  // the dots one view of the geometry rather than two colours that can drift.
+  ink: RGBA;
 }
 
 // The four numbers and one flag clipToNear needs, built once per
@@ -338,7 +346,7 @@ class Triangle {
     // Unfogged, deliberately. A wireframe is the diagnostic view, and dissolving
     // the far edges is exactly what someone who switched to it is trying to see.
     if (options.wireframe) {
-      this.strokeWireframe(context, options.lineWidth ?? 1);
+      this.strokeWireframe(context, options.ink, options.lineWidth ?? 1);
       context.restore();
 
       return true;
@@ -682,8 +690,8 @@ class Triangle {
     });
   }
 
-  private strokeWireframe(context: CanvasRenderingContext2D, lineWidth: number) {
-    context.strokeStyle = "rgba(10, 20, 60, 0.95)";
+  private strokeWireframe(context: CanvasRenderingContext2D, ink: RGBA, lineWidth: number) {
+    context.strokeStyle = formatRgba(ink);
     context.lineWidth = lineWidth;
     this.tracePath(context);
     context.stroke();

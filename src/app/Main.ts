@@ -23,6 +23,7 @@ import RenderTarget from "@primitives/RenderTarget";
 import Surface3D from "@primitives/Surface3D";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
 import { CLOCK_RESOLUTION_THRESHOLD_MS, probeClockResolutionMs } from "@rendering/clockResolution";
+import { diagnosticInk } from "@rendering/diagnosticInk";
 import Fog from "@rendering/Fog";
 import Lighting from "@rendering/Lighting";
 import { DEFAULT_MESH_MATERIAL } from "@rendering/material";
@@ -1367,6 +1368,12 @@ class Main {
       // taller than the 640px reference would otherwise read half as thick on
       // a DPR 2 display or on any resize above the seed size (E9b/COS-250).
       lineWidth: this.renderTarget.scale,
+      // Read from the same two reveals pushWorldLayers hands the background
+      // (HAL-191), so the ink crosses over on the withdrawal's own clock rather
+      // than a frame either side of it: a molecule takes the sky and the floor
+      // away, and WIRE and POINTS in near-black on the bare bgApp were drawn,
+      // counted and invisible.
+      ink: diagnosticInk(this.scenery.skyReveal, this.scenery.floorReveal),
       // A per-triangle paint option, unlike zBufferEnabled below, which picks a
       // backend for the whole frame (E3c/COS-243). wireframe rides alongside
       // rather than being derived from it: the PIPELINE toggle owns that boolean

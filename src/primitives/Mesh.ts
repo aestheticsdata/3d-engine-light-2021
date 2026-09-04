@@ -5,7 +5,6 @@ import type Point3D from "@primitives/Point3D";
 import type { ScreenPoint } from "@primitives/Point3D";
 import type Triangle from "@primitives/Triangle";
 import type { DepthContext, NearClipContext, TriangleRenderOptions } from "@primitives/Triangle";
-import type { RGBA } from "@rendering/cssColor";
 import type Lighting from "@rendering/Lighting";
 import type { MeshMaterial } from "@rendering/material";
 import type Rasterizer from "@rendering/Rasterizer";
@@ -103,15 +102,6 @@ const clampTo = (value: number, extent: number): number => Math.min(extent, Math
 // with three rotations and the camera contributes a rotation and a translation.
 const uniformScaleOf = (transform: number[][]): number =>
   Math.sqrt(transform[0][0] ** 2 + transform[1][0] ** 2 + transform[2][0] ** 2);
-
-// POINTS mode's ink (E3c/COS-243), and the same near-black the wireframe strokes
-// with: the two are the diagnostic pair, one drawing the edges of the mesh and
-// one drawing its corners, and they read as one view of the geometry rather than
-// two unrelated overlays. Held as a tuple because that is what the rasteriser
-// takes; the painter path needs the string, folded once at import rather than
-// per point per frame.
-const POINT_INK: RGBA = [10, 20, 60, 0.95];
-const POINT_INK_CSS = formatRgba(POINT_INK);
 
 // Device pixels per side of a point's block, before the render target's own
 // scale. A fixed 2 is a half-visible dot the moment the backing store renders
@@ -437,11 +427,19 @@ class Mesh {
   // vanishing point, so it is dropped rather than drawn somewhere it is not.
   private renderPoints(pass: MeshRenderPass, drawnTriangles: number) {
     const size = Math.max(POINT_SIZE, Math.round(POINT_SIZE * (pass.options.lineWidth ?? 1)));
+    // The ink is read off the same field Triangle strokes the wireframe with
+    // (E3c/COS-243, and HAL-191 for where it now comes from): the two are the
+    // diagnostic pair, one drawing the mesh's edges and one drawing its corners,
+    // and they read as one view of the geometry rather than two unrelated
+    // overlays. The tuple is what the rasteriser takes; the painter path needs
+    // the string, folded once per pass rather than once per point per frame.
+    const ink = pass.options.ink;
+    const inkCss = formatRgba(ink);
 
     pass.stats.addDrawn(drawnTriangles);
     pass.context.save();
     pass.context.globalAlpha = Math.min(1, Math.max(0, pass.options.opacity ?? 1));
-    pass.context.fillStyle = POINT_INK_CSS;
+    pass.context.fillStyle = inkCss;
 
     for (const point of this.points) {
       if (point.isClipped) {
@@ -455,7 +453,7 @@ class Mesh {
       if (pass.rasterizer) {
         const invD = 1 / (point.zValue + pass.eyeDistance);
 
-        if (!pass.rasterizer.fillPoint(x, y, invD, POINT_INK, size)) {
+        if (!pass.rasterizer.fillPoint(x, y, invD, ink, size)) {
           continue;
         }
       } else {
