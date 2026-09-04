@@ -24,6 +24,7 @@ import Matrix3D from "@primitives/Matrix3D";
 import MeshFactory from "@primitives/MeshFactory";
 import RenderTarget from "@primitives/RenderTarget";
 import AffineTextureMapper from "@rendering/AffineTextureMapper";
+import { diagnosticInk } from "@rendering/diagnosticInk";
 import Fog from "@rendering/Fog";
 import Lighting from "@rendering/Lighting";
 import RenderStats from "@rendering/RenderStats";
@@ -144,6 +145,13 @@ class ShapeThumbnails {
         shadingMode: "FLAT",
         cullBackfaces: true,
         opacity: 1,
+        // Never read, since the mode above is FLAT and the ink is what the two
+        // diagnostic views stroke with (HAL-191). It is stated as the truth
+        // about a chip rather than defaulted: a tile has no sky and no floor
+        // behind it, so both reveals are 0, and the day someone renders the
+        // picker in WIRE that is already the answer that reads on the dark
+        // panel it sits on.
+        ink: diagnosticInk(0, 0),
       },
       stats: new RenderStats(),
       eyeDistance: camera.distance,
